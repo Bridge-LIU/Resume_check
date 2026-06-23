@@ -1,26 +1,132 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Tailwind v4 のデフォルト border-color (inherit=text color) を上書き */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: #e5e7eb;
+  }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* 文字選択をブランドカラーに統一（OS デフォルトの青/灰を避ける） */
+  ::selection {
+    background: rgba(37, 99, 235, 0.2); /* blue-600 / 20% */
+    color: #1e3a8a; /* blue-900 */
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* キーボードフォーカスの可視性をグローバルに保証（shadcn 未移行の要素のため） */
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  a:focus-visible,
+  summary:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* スクロールバーをブランドに統一（OS デフォルトの灰太線を避ける） */
+  @supports selector(::-webkit-scrollbar) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d4d4d8; /* zinc-300 */
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a1a1aa; /* zinc-400 */
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+  }
+  /* Firefox 用 */
+  * {
+    scrollbar-color: #d4d4d8 transparent;
+    scrollbar-width: thin;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 監査ログ等で頻出する 10px サイズの独自トークン（text-[10px] の置き換え用） */
+@utility text-2xs {
+  font-size: 10px;
+  line-height: 14px;
 }
+
+html {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI",
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP",
+    "Meiryo", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* スクロールバーの有無で mx-auto が ~17px 横方向にズレるのを防ぐ */
+  /* 縦スクロールバーは常時表示（旧ブラウザ対応） */
+  overflow-y: scroll;
+  /* モダンブラウザでは溝を常時確保（より自然） */
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Radix Select/Dialog/Popover の Portal が body をスクロールロックするとき、
+ * react-remove-scroll が injected stylesheet で !important つきの padding/margin を
+ * body に当てるため、中央寄せ（mx-auto）の位置がズレる。
+ * html 側で overflow-y:scroll + scrollbar-gutter:stable によりスクロールバー枠は
+ * 常時確保済みなので、body 側の補正は不要。
+ * ID + !important で specificity (1,0,1) にして勝つ。 */
+body#app-body,
+html body#app-body {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* mockup.html の .screen-card と同じ見た目を card クラスとして提供 */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+/* 既存の `bg-white rounded-xl border shadow-sm` 組合せも mockup と同じ見た目に */
+.bg-white.rounded-xl.border.shadow-sm,
+.bg-white.rounded-xl.border {
+  border-color: #e5e7eb;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 状態タグ */
+.pill {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-block;
+  font-weight: 500;
+}
+.pill-edit { background: #e4e4e7; color: #3f3f46; }
+.pill-qpub { background: #fef3c7; color: #92400e; }
+.pill-itv  { background: #ede9fe; color: #5b21b6; }
+.pill-eval { background: #dbeafe; color: #1e40af; }
+.pill-pass { background: #dcfce7; color: #166534; }
+.pill-fail { background: #fee2e2; color: #991b1b; }
+.pill-role-nw { background: #d1fae5; color: #065f46; }
+.pill-role-sv { background: #fed7aa; color: #9a3412; }
+.pill-role-sp { background: #e9d5ff; color: #6b21b6; }
+.pill-role-pm { background: #cffafe; color: #155e75; }
+.pill-role-it { background: #fef3c7; color: #92400e; }
+.pill-role-dev { background: #dbeafe; color: #1e3a8a; }

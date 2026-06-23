@@ -1,0 +1,99 @@
+# 面談AI評価ツール — 運用手順
+
+ローカル PC 専用の面談主催・評価ツール（設計書 v1.4）。`localhost:3939` で起動します。
+
+---
+
+## 必要なもの
+
+- **Windows 10/11**
+- **Node.js 20 以上** — [https://nodejs.org/ja/](https://nodejs.org/ja/) からインストール（インストーラの「Add to PATH」にチェック）
+- （任意）**Claude API キー** — 貼付モードだけ使うなら不要。API モードを使うなら [console.anthropic.com](https://console.anthropic.com/) から発行
+
+---
+
+## 初回起動
+
+1. このフォルダごと PC の好きな場所に置く（例: `C:\Users\<あなた>\Desktop\面談AI評価ツール`）
+2. **`start-app.bat` をダブルクリック**
+3. 初回だけ `npm install`（3〜5 分）と `next build`（1〜2 分）が走る
+4. 自動でブラウザが開き `http://localhost:3939` が表示される
+
+止めるときは黒い窓を閉じるか `Ctrl+C`。
+
+---
+
+## 2 回目以降
+
+- `start-app.bat` をダブルクリックするだけ
+- ビルド済みなので 5〜10 秒で起動
+
+---
+
+## 更新するとき
+
+コードを最新版に更新したい場合：
+
+- `update-app.bat` をダブルクリック
+- `git pull` → `npm install` → `next build` が走る
+- 終わったら `start-app.bat` で起動
+
+> git がない場合は手動でファイルを上書きしてから `update-app.bat`。
+
+---
+
+## データの場所
+
+PII（履歴書・議事録・評価）は全部 PC 内に保存されます。
+
+| 場所 | 中身 |
+|---|---|
+| `data/sessions/` | 各面談のデータ（候補者情報・議事録・評価） |
+| `data/master/` | 役割マスタ・評価条件マスタ |
+| `data/_trash/` | ゴミ箱（猶予期間内なら復元可能） |
+| `data/_backups/` | バックアップ ZIP（暗号化対応） |
+| `data/analytics/` | 匿名サマリ（PII 含まない） |
+| `data/logs/` | 監査ログ・削除ログ |
+| `config/settings.json` | 設定（API キー含む） |
+
+**バックアップ推奨**：`data/` フォルダごと定期的に別ドライブにコピーしてください。アプリ内の `/settings → バックアップ → 今すぐバックアップ` でも作成できます（暗号化推奨）。
+
+---
+
+## API キーの設定
+
+API モードを使う場合：
+
+1. アプリを起動
+2. `/settings` を開く
+3. 「Claude API」セクションに `sk-ant-...` を貼って保存
+
+または環境変数 `ANTHROPIC_API_KEY` を設定（環境変数があれば優先）。
+
+---
+
+## 困ったとき
+
+| 症状 | 対処 |
+|---|---|
+| `Node.js が見つかりません` | nodejs.org からインストール（PATH に追加） |
+| `ポート 3939 が使用中です` | 既に別の起動があるかも。タスクマネージャで `node.exe` を終了 |
+| ブラウザの📋ボタンが効かない | アドレスバーが `localhost` で始まっていることを確認。`http://172.x.x.x` 経由だとクリップボード API が動かない |
+| API モードでエラー | `/settings` でキー確認、`console.anthropic.com` で残高確認 |
+| データを別 PC に移したい | フォルダ丸ごとコピーすれば動く。`config/settings.json` の `dataRoot` を絶対パスにすれば外付け HDD でも可 |
+
+---
+
+## ポート変更
+
+既定は `3939`。変えたい場合は `package.json` の `scripts.start` を編集：
+
+```json
+"start": "next start -p 8080"
+```
+
+そのあと `start-app.bat` 内の `http://localhost:3939` も合わせて修正。
+
+---
+
+設計書本体は `files/面談AI評価ツール_設計書.md` を参照してください。

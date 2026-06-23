@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>フローチャート vs 実装 — 差分プレビュー</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f4f4f5;color:#18181b;
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Segoe UI",system-ui,sans-serif;
+    line-height:1.7;font-size:14px;padding:32px 24px 80px}
+  .wrap{max-width:1280px;margin:0 auto}
+  h1{font-size:24px;font-weight:700;margin:0 0 6px}
+  .lead{color:#71717a;font-size:13px;margin:0 0 28px}
+
+  /* ===== セクション見出し ===== */
+  h2{font-size:18px;font-weight:700;margin:36px 0 12px;
+    padding:8px 14px;background:linear-gradient(90deg,#18181b 0%,#3f3f46 100%);
+    color:#fafafa;border-radius:8px}
+  h3{font-size:15px;font-weight:600;margin:24px 0 10px;color:#3f3f46;
+    border-left:3px solid #2563eb;padding-left:10px}
+
+  /* ===== 対応表 ===== */
+  table.compare{width:100%;border-collapse:collapse;margin:14px 0 28px;
+    background:#fff;border:1px solid #e4e4e7;border-radius:10px;
+    overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  table.compare th{background:#fafafa;text-align:left;padding:10px 14px;
+    font-weight:600;border-bottom:1px solid #e4e4e7;color:#3f3f46;font-size:13px}
+  table.compare td{padding:10px 14px;border-bottom:1px solid #f4f4f5;vertical-align:top}
+  table.compare tr:last-child td{border-bottom:none}
+  table.compare tr:hover td{background:#fafafa}
+  .ok{color:#15803d;font-weight:700}
+  .warn{color:#b45309;font-weight:700}
+  .ng{color:#dc2626;font-weight:700}
+  code{background:#f4f4f5;color:#9d174d;padding:1px 6px;border-radius:4px;
+    font-size:.88em;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  /* ===== 差分カード ===== */
+  .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:14px 0}
+  @media (max-width:760px){.diff-grid{grid-template-columns:1fr}}
+  .panel{background:#fff;border:1px solid #e4e4e7;border-radius:10px;
+    padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+  .panel.plan{border-top:4px solid #2563eb}
+  .panel.actual{border-top:4px solid #15803d}
+  .panel-tag{display:inline-flex;align-items:center;gap:6px;
+    font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;
+    margin-bottom:10px;letter-spacing:.04em}
+  .panel.plan .panel-tag{background:#dbeafe;color:#1e40af}
+  .panel.actual .panel-tag{background:#dcfce7;color:#166534}
+  .panel h4{margin:0 0 8px;font-size:15px}
+  .panel p{margin:6px 0;color:#3f3f46;font-size:13.5px}
+  .panel ul{margin:8px 0;padding-left:20px;color:#3f3f46;font-size:13px}
+  .panel li{margin:3px 0}
+
+  /* ===== 差分バナー ===== */
+  .diff{margin:18px 0;padding:16px 20px;border-radius:10px;
+    background:#fffbeb;border:1px solid #fde68a;border-left:5px solid #b45309}
+  .diff.major{background:#fef2f2;border-color:#fecaca;border-left-color:#dc2626}
+  .diff.minor{background:#eff6ff;border-color:#bfdbfe;border-left-color:#2563eb}
+  .diff h3{margin:0 0 8px;border:none;padding:0;color:inherit;font-size:15px}
+  .diff .meta{font-size:12px;color:#71717a;margin-bottom:8px}
+
+  /* ===== 凡例 ===== */
+  .legend{display:flex;gap:12px;margin:6px 0 24px;flex-wrap:wrap;font-size:12px;color:#71717a}
+  .legend .item{display:inline-flex;align-items:center;gap:6px}
+  .legend .dot{width:10px;height:10px;border-radius:2px}
+
+  /* ===== ステップノード ===== */
+  .node{display:inline-block;padding:8px 14px;border-radius:6px;
+    font-size:12px;font-weight:600;margin:4px}
+  .node.plan-step{background:#fde6c4;color:#7c2d12;border:1px solid #fdba74}
+  .node.actual-step{background:#dcfce7;color:#166534;border:1px solid #86efac}
+  .node.mismatch{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+
+  /* ===== 結論バー ===== */
+  .conclusion{margin:32px 0 0;padding:18px 22px;border-radius:10px;
+    background:#f0fdf4;border:1px solid #86efac;
+    display:flex;gap:14px;align-items:flex-start}
+  .conclusion .icon{font-size:24px}
+  .conclusion h3{margin:0 0 4px;border:none;padding:0;color:#15803d;font-size:16px}
+  .conclusion p{margin:4px 0;color:#166534;font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>フローチャート vs 実装 — 差分プレビュー</h1>
+  <p class="lead">アップロードされた簡易フローチャートと、現在の Next.js 実装（設計書 v1.4 ベース）の対応関係。差分は 3 件のみで、いずれも設計書で意図的に選択された結果です。</p>
+
+  <div class="legend">
+    <span class="item"><span class="dot" style="background:#15803d"></span>一致</span>
+    <span class="item"><span class="dot" style="background:#b45309"></span>意図的な設計差分</span>
+    <span class="item"><span class="dot" style="background:#dc2626"></span>未対応 / 要追加実装</span>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>1. フロー要素 対応表（11 項目）</h2>
+
+  <table class="compare">
+    <thead>
+      <tr>
+        <th style="width:30%">フローチャート要素</th>
+        <th style="width:38%">実装場所</th>
+        <th style="width:10%">一致度</th>
+        <th style="width:22%">備考</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>①面談一覧ページ</td>
+        <td><code>app/page.tsx</code> + <code>SessionListTable</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>履歴書 → 要約（自動/手動）→ ②③</td>
+        <td><code>Section2Candidate.tsx</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>API/貼付モード両対応</td>
+      </tr>
+      <tr>
+        <td>④マスタより取得・編集更新</td>
+        <td><code>Section4Conditions.tsx</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>役割別マスタ → 凍結</td>
+      </tr>
+      <tr>
+        <td>②と④を使って⑤質問（自動/手動）</td>
+        <td><code>Section5Questions.tsx</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>API/貼付モード両対応</td>
+      </tr>
+      <tr>
+        <td>⑤を使って⑥⑦面談・議事録（Teams）</td>
+        <td><code>Section6Minutes.tsx</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>Teams コピペで貼付</td>
+      </tr>
+      <tr>
+        <td>②と④と⑥と⑨を使って⑧評価（自動/手動）</td>
+        <td><code>Section8Evaluation.tsx</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>API/貼付モード両対応</td>
+      </tr>
+      <tr>
+        <td>④求める人材条件マスタ（役割別）</td>
+        <td><code>data/master/roles/*.json</code> + <code>/master</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>⑨評価基準マスタ</td>
+        <td><code>data/master/eval_criteria.json</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>BARS + 重み</td>
+      </tr>
+      <tr>
+        <td>⑩保存期間マスタ</td>
+        <td><code>config/settings.json</code> の <code>retention</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>状態：実施前／実施完了</td>
+        <td><code>編集中</code> / <code>質問公開</code> ↔ <code>面談済</code> / <code>評価済</code></td>
+        <td class="ok">✓ 一致</td>
+        <td>4 段階に細分化</td>
+      </tr>
+      <tr style="background:#fffbeb">
+        <td><strong>ローカル Excel</strong></td>
+        <td>ローカル <strong>JSON</strong>（<code>data/</code> 配下）</td>
+        <td class="warn">⚠ 差分</td>
+        <td>設計書 §7 で JSON 採用</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ============================================ -->
+  <h2>2. 差分の詳細（3 件）</h2>
+
+  <!-- 差分 1: Excel vs JSON -->
+  <div class="diff">
+    <div class="meta">差分 #1 ・ 意図的な設計差分（設計書 v1.4 §7）</div>
+    <h3>📁 保存形式：Excel ではなく JSON</h3>
+    <div class="diff-grid">
+      <div class="panel plan">
+        <span class="panel-tag">📋 フローチャート（案）</span>
+        <h4>ローカル Excel</h4>
+        <p>左下に <code>ローカル Excel</code> のシリンダ表示。Excel ファイルで集中管理する想定。</p>
+        <ul>
+          <li>使い慣れた Excel で開ける</li>
+          <li>1 ファイルで全件管理</li>
+        </ul>
+      </div>
+      <div class="panel actual">
+        <span class="panel-tag">✅ 実装</span>
+        <h4>ローカル JSON（面談ごとにフォルダ）</h4>
+        <p><code>data/sessions/&lt;日時&gt;_&lt;氏名&gt;_&lt;役割&gt;/</code> の中に各セクションの JSON ファイル。</p>
+        <ul>
+          <li><code>session.json</code> / <code>candidate.json</code> / <code>conditions_snapshot.json</code> / <code>questions.json</code> / <code>minutes.json</code> / <code>evaluation.json</code></li>
+          <li>セクションごとに独立 → 部分更新が安全</li>
+          <li>マスタとの再現性（凍結スナップショット）を担保</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:#78350f">
+      <strong>選択理由：</strong>Excel は同時編集ロック・部分更新の困難・スキーマ崩れ・PII 混入が起きやすい。JSON はプログラム可読 + Git 履歴で追跡可 + 凍結スナップショット表現に最適。<br>
+      <strong>もし Excel 出力が必要なら：</strong>マスタ画面の「📥 エクスポート」と同じ仕組みで、面談一覧 → Excel 書き出しを追加実装可能（半日）。
+    </p>
+  </div>
+
+  <!-- 差分 2: ③ ⑦ が見えない -->
+  <div class="diff minor">
+    <div class="meta">差分 #2 ・ 設計書 §2 で明示済み</div>
+    <h3>🔀 工程 ③ / ⑦ は ② / ⑥ に畳み込み済み</h3>
+    <div class="diff-grid">
+      <div class="panel plan">
+        <span class="panel-tag">📋 フローチャート（案）</span>
+        <h4>9 工程に分かれている</h4>
+        <p>②③（情報要約）と ⑥⑦（議事録 + 事後要約）が分離。</p>
+        <div style="margin-top:8px">
+          <span class="node plan-step">② 面談者情報</span>
+          <span class="node plan-step">③ 情報要約</span>
+        </div>
+        <div>
+          <span class="node plan-step">⑥ 議事録</span>
+          <span class="node plan-step">⑦ 事後要約</span>
+        </div>
+      </div>
+      <div class="panel actual">
+        <span class="panel-tag">✅ 実装</span>
+        <h4>6 工程に整理（①②④⑤⑥⑧）</h4>
+        <p>③ は ② の中、⑦ は ⑥ の中に統合。主催者の見える工程数が減って認知負荷が下がる。</p>
+        <div style="margin-top:8px">
+          <span class="node actual-step">② 面談者情報（要約まで内包）</span>
+        </div>
+        <div>
+          <span class="node actual-step">⑥ 議事録（要約まで内包）</span>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:#1e40af">
+      <strong>設計意図：</strong>「要約」は ② / ⑥ それぞれの「保存前の任意処理」として位置づけ、独立工程にしない。<br>
+      <strong>機能的には等価：</strong>API 自動要約 ＋ 貼付モードの両方が、② と ⑥ の内部で選べる。
+    </p>
+  </div>
+
+  <!-- 差分 3: PDF only -->
+  <div class="diff">
+    <div class="meta">差分 #3 ・ 未対応 — 追加実装の判断要</div>
+    <h3>📎 履歴書アップロード：PDF のみ（Word / Excel 未対応）</h3>
+    <div class="diff-grid">
+      <div class="panel plan">
+        <span class="panel-tag">📋 フローチャート（案）</span>
+        <h4>履歴書 → 情報をもらう（Word・Excel・PDF 等）</h4>
+        <p>3 形式 + その他にも対応する想定。</p>
+        <ul>
+          <li>Word（.docx）</li>
+          <li>Excel（.xlsx）</li>
+          <li>PDF（.pdf）</li>
+          <li>その他テキスト形式</li>
+        </ul>
+      </div>
+      <div class="panel actual">
+        <span class="panel-tag">✅ 実装</span>
+        <h4>PDF のみ + テキスト貼付</h4>
+        <p>API モード時：<code>&lt;input type="file" accept="application/pdf"&gt;</code> で PDF 限定。</p>
+        <ul>
+          <li>Claude API の <code>document</code> ブロックが PDF/text のみ対応</li>
+          <li>Word/Excel は事前にユーザがコピー → 貼付モードで対応可能（迂回ルート）</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:10px;font-size:13px;color:#78350f">
+      <strong>追加対応案：</strong><br>
+      ① <strong>軽い対応（推奨）</strong>：UI に「Word/Excel の場合はコピペでお願いします」案内を入れる<br>
+      ② <strong>本格対応</strong>：mammoth.js (.docx) / xlsx (.xlsx) を導入 → ブラウザでテキスト抽出 → 既存のテキスト貼付フローに流す（1〜2 日）
+    </p>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>3. 状態遷移の対応</h2>
+
+  <div style="background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:20px;margin:14px 0">
+    <div class="diff-grid">
+      <div>
+        <h4 style="margin:0 0 10px;font-size:14px;color:#1e40af">📋 フローチャート（2 段階）</h4>
+        <div style="text-align:center;font-size:13px">
+          <span class="node plan-step" style="background:#fbcfe8;color:#831843">状態：実施前</span>
+          <div style="color:#a1a1aa;margin:6px 0">↓</div>
+          <span class="node plan-step" style="background:#bbf7d0;color:#14532d">状態：実施完了</span>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin:0 0 10px;font-size:14px;color:#15803d">✅ 実装（4 段階）</h4>
+        <div style="text-align:center;font-size:13px">
+          <span class="node actual-step">編集中</span>
+          <div style="color:#a1a1aa;margin:2px 0">↓ ⑤生成・公開</div>
+          <span class="node actual-step">質問公開</span>
+          <div style="color:#a1a1aa;margin:2px 0">↓ ⑥登録</div>
+          <span class="node actual-step">面談済</span>
+          <div style="color:#a1a1aa;margin:2px 0">↓ ⑧評価</div>
+          <span class="node actual-step">評価済</span>
+        </div>
+      </div>
+    </div>
+    <p style="margin:14px 0 0;font-size:13px;color:#71717a">
+      実装は <strong>実施前 = 編集中 + 質問公開</strong>、<strong>実施完了 = 面談済 + 評価済</strong> に対応。<br>
+      横断比較・一覧フィルタを細粒度に行うため 4 段階に細分化。簡易フローと矛盾なし。
+    </p>
+  </div>
+
+  <!-- ============================================ -->
+  <h2>4. 結論</h2>
+
+  <div class="conclusion">
+    <div class="icon">✅</div>
+    <div>
+      <h3>主要なフロー分岐は完全に実装されています</h3>
+      <p>・<strong>手動 / 自動</strong>の二系統 ＝ ②⑤⑧ の「貼付 / API」モード ✓<br>
+      ・<strong>マスタ / 凍結</strong>の分離 ＝ ④凍結スナップショット ✓<br>
+      ・<strong>実施前 / 実施完了</strong>の状態 ＝ 4 段階のステータス ✓<br>
+      ・<strong>マスタ群</strong>（④役割別／⑨評価基準／⑩保存期間） ＝ 全部実装済 ✓</p>
+      <p style="margin-top:8px"><strong>差分 3 件はいずれも軽微</strong>：JSON 採用は設計書で明示、③⑦ 畳み込みも設計書で明示、Word/Excel 対応のみ追加実装の判断余地あり。</p>
+    </div>
+  </div>
+
+  <p style="margin-top:36px;padding-top:16px;border-top:1px dashed #d4d4d8;color:#71717a;font-size:12px">
+    比較対象：<br>
+    ・フローチャート画像：ユーザーから提供された設計案<br>
+    ・実装：<code>C:\Users\admin\Desktop\Main\Resume_Claude</code> の現状<br>
+    ・設計書：<code>files/面談AI評価ツール_設計書.md</code> v1.4
+  </p>
+
+</div>
+</body>
+</html>

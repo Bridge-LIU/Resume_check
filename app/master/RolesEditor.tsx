@@ -1,0 +1,560 @@
+"use client";
+
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { Role } from "@/lib/types";
+import {
+  validateRoleMasterId,
+  validateRoleName,
+} from "@/lib/validation";
+import { useConfirm } from "@/components/ui/use-confirm";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tip } from "@/components/ui/tooltip";
+
+const EXPORT_VERSION = "1.0";
+
+interface ImportResult {
+  imported: string[];
+  skipped: { id: string; reason: string }[];
+  errors: { index: number; error: string }[];
+  message?: string;
+}
+
+type DraftRole = Role & { _isNew?: boolean; _originalId?: string };
+
+function pillClassFor(id: string): string {
+  if (id === "NW") return "pill pill-role-nw";
+  if (id === "Server") return "pill pill-role-sv";
+  if (id === "Special") return "pill pill-role-sp";
+  if (id === "PMO") return "pill pill-role-pm";
+  if (id === "ITSupport") return "pill pill-role-it";
+  return "pill bg-zinc-200 text-zinc-700";
+}
+
+function emptyRole(): DraftRole {
+  return {
+    id: "",
+    役割: "",
+    経験: "",
+    未経験可: false,
+    条件1_基本人物像: [],
+    条件2_未経験者必須: [],
+    _isNew: true,
+  };
+}
+
+function linesToArray(text: string): string[] {
+  return text
+    .split("\n")
+    .map((l) => l.replace(/^\s*-\s*/, "").trim())
+    .filter((l) => l.length > 0);
+}
+
+function arrayToLines(arr: string[]): string {
+  return arr.map((s) => `- ${s}`).join("\n");
+}
+
+/** 新エラーフォーマット { ok:false, error:{code,message,hint?} } を読んで人間向け文字列に整形 */
+async function readApiError(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await res.clone().json()) as {
+      error?: { message?: string; hint?: string };
+    };
+    const msg = body?.error?.message?.trim() || `${fallback} (HTTP ${res.status})`;
+    const hint = body?.error?.hint?.trim();
+    return hint ? `${msg}\n${hint}` : msg;
+  } catch {
+    return `${fallback} (HTTP ${res.status})`;
+  }
+}
+
+export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) {
+  const router = useRouter();
+  const [roles, setRoles] = useState<Role[]>(initialRoles);
+  const [editing, setEditing] = useState<DraftRole | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { confirm, ConfirmDialog } = useConfirm();
+
+  // textarea の生テキスト。editing.条件* は正規化された配列を保持し、
+  // controlled な textarea でも空行・行頭「- 」入力中の改行が消えないようにする。
+  const [text1, setText1] = useState<string>("");
+  const [text2, setText2] = useState<string>("");
+  const editingKey = editing
+    ? editing._isNew
+      ? "__new__"
+      : editing._originalId ?? editing.id
+    : null;
+  useEffect(() => {
+    if (editing) {
+      setText1(arrayToLines(editing.条件1_基本人物像));
+      setText2(arrayToLines(editing.条件2_未経験者必須));
+    }
+    // 編集対象が切り替わったタイミングだけ生テキストを再初期化
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingKey]);
+
+  function beginEdit(role: Role) {
+    setError(null);
+    setEditing({ ...role, _originalId: role.id });
+  }
+
+  function beginNew() {
+    setError(null);
+    setEditing(emptyRole());
+  }
+
+  function cancel() {
+    setEditing(null);
+    setError(null);
+  }
+
+  async function save() {
+    if (!editing) return;
+    const idResult = validateRoleMasterId(editing.id);
+    if (!idResult.ok) {
+      setError(idResult.error);
+      return;
+    }
+    const nameResult = validateRoleName(editing.役割);
+    if (!nameResult.ok) {
+      setError(nameResult.error);
+      return;
+    }
+    const isNew = editing._isNew;
+    const idChanged = !isNew && editing._originalId && editing._originalId !== idResult.value;
+    if ((isNew || idChanged) && roles.some((r) => r.id === idResult.value)) {
+      setError(`ID「${idResult.value}」は既に存在します`);
+      return;
+    }
+
+    const payload: Role = {
+      id: idResult.value,
+      役割: nameResult.value,
+      経験: editing.経験.trim(),
+      未経験可: editing.未経験可,
+      条件1_基本人物像: editing.条件1_基本人物像,
+      条件2_未経験者必須: editing.条件2_未経験者必須,
+    };
+
+    setError(null);
+    try {
+      const url = isNew
+        ? "/api/master/roles"
+        : `/api/master/roles/${encodeURIComponent(editing._originalId ?? editing.id)}`;
+      const res = await fetch(url, {
+        method: isNew ? "POST" : "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "保存に失敗しました"));
+      }
+      // 楽観更新
+      setRoles((prev) => {
+        if (isNew) return [...prev, payload];
+        return prev.map((r) => (r.id === editing._originalId ? payload : r));
+      });
+      setEditing(null);
+      startTransition(() => router.refresh());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  function exportRoles() {
+    setError(null);
+    setImportResult(null);
+    const payload = {
+      version: EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      roles,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    a.href = url;
+    a.download = `roles_${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function triggerImport() {
+    setError(null);
+    setImportResult(null);
+    fileInputRef.current?.click();
+  }
+
+  async function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // 同じファイル再選択で onChange が走るように
+    if (!file) return;
+
+    setImporting(true);
+    setError(null);
+    setImportResult(null);
+    try {
+      const text = await file.text();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        throw new Error("JSON として解析できませんでした");
+      }
+      // 受け付ける形: { roles: [...] } / Role[] のどちらでも
+      const rolesInFile = Array.isArray(parsed)
+        ? (parsed as unknown[])
+        : ((parsed as { roles?: unknown[] })?.roles ?? null);
+      if (!Array.isArray(rolesInFile)) {
+        throw new Error("ファイル内に roles 配列が見つかりません");
+      }
+      const count = rolesInFile.length;
+      if (count === 0) throw new Error("roles が空です");
+
+      const conflictIds = new Set(roles.map((r) => r.id));
+      const willConflict = rolesInFile.filter(
+        (r): r is { id: string } =>
+          !!r && typeof r === "object" && typeof (r as { id?: unknown }).id === "string" &&
+          conflictIds.has((r as { id: string }).id),
+      ).map((r) => r.id);
+
+      let overwrite = false;
+      if (willConflict.length > 0) {
+        overwrite = await confirm({
+          title: `${count} 件取り込みます`,
+          description:
+            `うち ${willConflict.length} 件は既存 ID と重複します:\n` +
+            `  ${willConflict.join(", ")}\n\n` +
+            `「上書き」= 既存を上書き / 「スキップ」= 重複分はスキップ`,
+          confirmLabel: "上書きする",
+          cancelLabel: "スキップ",
+          destructive: true,
+        });
+      } else {
+        const ok = await confirm({
+          title: `${count} 件の役割マスタを取り込みます`,
+          description: "よろしいですか？",
+          confirmLabel: "取り込む",
+        });
+        if (!ok) {
+          setImporting(false);
+          return;
+        }
+      }
+
+      const res = await fetch("/api/master/roles/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: EXPORT_VERSION, roles: rolesInFile, overwrite }),
+      });
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "取り込みに失敗しました"));
+      }
+      const data = (await res.json().catch(() => null)) as ImportResult | null;
+      if (!data) throw new Error("レスポンスを解析できませんでした");
+      setImportResult(data);
+      startTransition(() => router.refresh());
+      // 楽観的には refresh で initialRoles が再注入されないので、別途 GET し直す
+      try {
+        const r = await fetch("/api/master/roles", { cache: "no-store" });
+        if (r.ok) setRoles((await r.json()) as Role[]);
+      } catch {
+        /* 失敗は致命的でない */
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function remove(role: Role) {
+    const ok = await confirm({
+      title: `役割「${role.役割}」を削除しますか？`,
+      description: `ID: ${role.id}\n削除すると、この役割を使った新規面談が作成できなくなります（既存の面談は④凍結スナップショットを使うため影響なし）。`,
+      confirmLabel: "削除する",
+      destructive: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      const res = await fetch(`/api/master/roles/${encodeURIComponent(role.id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await readApiError(res, "削除に失敗しました"));
+      setRoles((prev) => prev.filter((r) => r.id !== role.id));
+      if (editing?._originalId === role.id) setEditing(null);
+      startTransition(() => router.refresh());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  return (
+    <section className="bg-white rounded-xl border shadow-sm">
+      <header className="px-6 py-3 border-b flex items-center gap-3">
+        <h2 className="font-bold text-sm">求める人材条件マスタ（役割別）</h2>
+        <span className="text-xs text-zinc-500">{roles.length} 件</span>
+        <div className="flex-1" />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={onImportFile}
+        />
+        <Tip content="JSON ファイルから役割マスタを取り込む">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={triggerImport}
+            disabled={importing}
+          >
+            {importing ? "取込中…" : "Import"}
+          </Button>
+        </Tip>
+        <Tip content="現在の役割マスタを JSON で書き出す">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={exportRoles}
+            disabled={roles.length === 0}
+          >
+            Export
+          </Button>
+        </Tip>
+        <Button
+          type="button"
+          onClick={beginNew}
+        >
+          ＋ 新規役割
+        </Button>
+      </header>
+
+      <div className="p-6 space-y-4">
+        {error && (
+          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2 whitespace-pre-line">
+            {error}
+          </div>
+        )}
+
+        {importResult && (
+          <div className="text-sm border rounded px-3 py-2 bg-zinc-50 space-y-1">
+            <div className="font-medium text-zinc-800">取り込み結果</div>
+            {importResult.imported.length > 0 && (
+              <div className="text-emerald-700">
+                取込: {importResult.imported.length} 件（{importResult.imported.join(", ")}）
+              </div>
+            )}
+            {importResult.skipped.length > 0 && (
+              <div className="text-amber-700">
+                スキップ: {importResult.skipped.length} 件（
+                {importResult.skipped.map((s) => `${s.id}: ${s.reason}`).join(" / ")}）
+              </div>
+            )}
+            {importResult.errors.length > 0 && (
+              <div className="text-red-700">
+                エラー: {importResult.errors.length} 件（
+                {importResult.errors.map((e) => `#${e.index} ${e.error}`).join(" / ")}）
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              onClick={() => setImportResult(null)}
+              className="text-xs text-zinc-500 h-auto p-0"
+            >
+              閉じる
+            </Button>
+          </div>
+        )}
+
+        <table className="w-full text-sm border rounded-lg overflow-hidden">
+          <thead className="bg-zinc-50 text-zinc-600 text-xs">
+            <tr>
+              <th className="text-left px-4 py-2 w-24">ID</th>
+              <th className="text-left px-4 py-2">役割</th>
+              <th className="text-left px-4 py-2 w-28">経験</th>
+              <th className="text-left px-4 py-2 w-20">未経験可</th>
+              <th className="text-right px-4 py-2 w-20">条件①</th>
+              <th className="text-right px-4 py-2 w-20">条件②</th>
+              <th className="px-4 py-2 w-40"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {roles.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-zinc-500">
+                  役割マスタがありません。右上の「＋ 新規役割」から追加してください。
+                </td>
+              </tr>
+            )}
+            {roles.map((r) => (
+              <tr key={r.id} className="hover:bg-zinc-50">
+                <td className="px-4 py-2">
+                  <span className={pillClassFor(r.id)}>{r.id}</span>
+                </td>
+                <td className="px-4 py-2 font-medium">{r.役割}</td>
+                <td className="px-4 py-2 text-zinc-600">{r.経験 || "—"}</td>
+                <td className="px-4 py-2">
+                  {r.未経験可 ? (
+                    <span className="text-emerald-700">はい</span>
+                  ) : (
+                    <span className="text-zinc-500">いいえ</span>
+                  )}
+                </td>
+                <td className="px-4 py-2 text-right tabular text-zinc-600">
+                  {r.条件1_基本人物像.length}
+                </td>
+                <td className="px-4 py-2 text-right tabular text-zinc-600">
+                  {r.条件2_未経験者必須.length}
+                </td>
+                <td className="px-4 py-2 text-right space-x-3">
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    onClick={() => beginEdit(r)}
+                    className="text-blue-600 h-auto p-0"
+                  >
+                    編集
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    onClick={() => remove(r)}
+                    className="text-red-600 h-auto p-0"
+                  >
+                    削除
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {editing && (
+          <div className="border rounded-lg p-4 bg-zinc-50 space-y-3">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-sm">
+                {editing._isNew ? "新規役割を追加" : `編集: ${editing._originalId}`}
+              </h3>
+              <div className="flex-1" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={cancel}
+                disabled={isPending}
+              >
+                キャンセル
+              </Button>
+              <Button
+                type="button"
+                onClick={save}
+                disabled={isPending}
+              >
+                保存
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-12 gap-3">
+              <label className="col-span-3 text-sm">
+                <div className="text-xs text-zinc-500 mb-1">ID（ファイル名）</div>
+                <Input
+                  value={editing.id}
+                  onChange={(e) => setEditing({ ...editing, id: e.target.value })}
+                  placeholder="NW / Server など"
+                  className="w-full bg-white"
+                />
+              </label>
+              <label className="col-span-6 text-sm">
+                <div className="text-xs text-zinc-500 mb-1">役割名</div>
+                <Input
+                  value={editing.役割}
+                  onChange={(e) => setEditing({ ...editing, 役割: e.target.value })}
+                  placeholder="NW（ネットワーク） など"
+                  className="w-full bg-white"
+                />
+              </label>
+              <label className="col-span-3 text-sm">
+                <div className="text-xs text-zinc-500 mb-1">経験</div>
+                <Input
+                  value={editing.経験}
+                  onChange={(e) => setEditing({ ...editing, 経験: e.target.value })}
+                  placeholder="3年以上 など"
+                  className="w-full bg-white"
+                />
+              </label>
+            </div>
+
+            <Label
+              htmlFor="role-mikeiken-ka"
+              className="inline-flex items-center gap-2 text-sm font-normal cursor-pointer"
+            >
+              <Checkbox
+                id="role-mikeiken-ka"
+                checked={editing.未経験可}
+                onCheckedChange={(v) => setEditing({ ...editing, 未経験可: v === true })}
+              />
+              未経験可（OFF のとき条件②は評価対象外）
+            </Label>
+
+            <div>
+              <div className="text-xs text-zinc-500 mb-1">
+                条件①: 基本人物像（常に評価）— 1 行 1 項目（先頭の「- 」は任意）
+              </div>
+              <Textarea
+                rows={8}
+                value={text1}
+                onChange={(e) => {
+                  const t = e.target.value;
+                  setText1(t);
+                  setEditing({ ...editing, 条件1_基本人物像: linesToArray(t) });
+                }}
+                className="w-full bg-white font-mono"
+              />
+              <div className="text-xs text-zinc-500 mt-1">
+                {editing.条件1_基本人物像.length} 項目
+              </div>
+            </div>
+
+            <div className={editing.未経験可 ? "" : "opacity-60"}>
+              <div className="text-xs text-zinc-500 mb-1">
+                条件②: 未経験者必須（未経験可=ON のときだけ評価対象）
+              </div>
+              <Textarea
+                rows={6}
+                value={text2}
+                onChange={(e) => {
+                  const t = e.target.value;
+                  setText2(t);
+                  setEditing({ ...editing, 条件2_未経験者必須: linesToArray(t) });
+                }}
+                className="w-full bg-white font-mono"
+              />
+              <div className="text-xs text-zinc-500 mt-1">
+                {editing.条件2_未経験者必須.length} 項目
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <ConfirmDialog />
+    </section>
+  );
+}

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>⑧評価プロンプト — A案（現行）vs B案（履歴書補助）比較</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI",
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Meiryo", sans-serif; }
+  body { font-size: 14px; line-height: 1.6; background: #f4f4f5; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; display: inline-block; font-weight: 500; }
+  .pill-pass { background: #dcfce7; color: #166534; }
+  .pill-edit { background: #e4e4e7; color: #3f3f46; }
+  .pill-warn { background: #fef3c7; color: #92400e; }
+  .prompt-block {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 12.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .diff-add { background: #fef9c3; border-left: 3px solid #eab308; padding: 8px 10px; }
+  .role-tag {
+    display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 3px;
+    font-weight: 600; margin-right: 6px; vertical-align: middle;
+  }
+  .role-sys { background: #ede9fe; color: #5b21b6; }
+  .role-usr { background: #dbeafe; color: #1e40af; }
+  .col-head {
+    background: linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
+    border-bottom: 1px solid #e5e7eb;
+  }
+</style>
+</head>
+<body class="text-zinc-900">
+
+<header class="bg-white border-b px-6 py-4 sticky top-0 z-20">
+  <div class="max-w-[1600px] mx-auto">
+    <h1 class="font-bold text-lg">⑧評価プロンプト — A案（現行）vs B案（履歴書補助）</h1>
+    <div class="text-xs text-zinc-500 mt-1">
+      <code>app/sessions/[id]/actions.ts:evaluateInterviewApiAction</code> および
+      <code>buildEvaluationPromptAction</code>（貼付モード）に渡すプロンプト本体。
+      <span class="pill pill-warn ml-1">黄色＝B案で追加・変更される箇所</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1600px] mx-auto p-6 space-y-6">
+
+  <!-- サンプルセッション情報 -->
+  <section class="bg-white border rounded-xl p-5">
+    <div class="flex items-center gap-2 mb-3">
+      <h2 class="font-bold">サンプルセッション</h2>
+      <span class="pill pill-edit">山田 太郎</span>
+      <span class="pill pill-edit">NW</span>
+      <span class="pill pill-edit">面談済</span>
+    </div>
+    <div class="grid grid-cols-3 gap-4 text-xs">
+      <div>
+        <div class="text-zinc-500 mb-1">② 履歴書要約（candidate.要約）</div>
+        <div class="border rounded p-2 bg-zinc-50 text-zinc-700">
+          ・経歴: NW運用5年（DC基幹/SD-WAN導入PJ）<br>
+          ・スキル: BGP/OSPF実務、Python自動化、CCNP取得<br>
+          ・強み: 自学習力、運用自動化で50%工数削減<br>
+          ・懸念: マルチクラウド未経験、要確認
+        </div>
+      </div>
+      <div>
+        <div class="text-zinc-500 mb-1">④ 凍結条件（snapshot.role / 評価軸）</div>
+        <div class="border rounded p-2 bg-zinc-50 text-zinc-700">
+          評価軸: 主体性 / 問題解決力 / 対人影響力 / 柔軟性<br>
+          スケール: 0〜5.0 / 0.5刻み<br>
+          合格ライン: 4.2 / 普通: 3.5<br>
+          未経験可: true（条件②も評価対象に含む）
+        </div>
+      </div>
+      <div>
+        <div class="text-zinc-500 mb-1">⑥ 議事録（minutes.text 抜粋）</div>
+        <div class="border rounded p-2 bg-zinc-50 text-zinc-700">
+          Q: 最近の障害対応で工夫したことは？<br>
+          A: BGP の経路フラップを Ansible で監視。<br>
+          Q: SD-WAN は経験ある？<br>
+          A: 設計レビュー参加のみ、設定は未経験。<br>
+          Q: チームでの役割は？<br>
+          A: 2人のジュニア指導、運用ドキュメント整備…
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- A vs B 並列 -->
+  <div class="grid grid-cols-2 gap-5">
+
+    <!-- =================== A 案 =================== -->
+    <section class="bg-white border rounded-xl overflow-hidden">
+      <div class="col-head px-5 py-3">
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold">A 案：現行（純 BARS）</h2>
+          <span class="pill pill-pass">現状</span>
+        </div>
+        <div class="text-xs text-zinc-500 mt-1">
+          入力 = <strong>④凍結条件 + ⑥議事録</strong>。履歴書は渡さない。
+          書類 halo を完全遮断する代わりに、議事録に出ない情報は採点不可。
+        </div>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- System -->
+        <div>
+          <div class="mb-1.5"><span class="role-tag role-sys">SYSTEM</span><span class="text-xs text-zinc-500">EVAL_SYSTEM_PROMPT</span></div>
+          <div class="prompt-block border rounded p-3 bg-zinc-50">あなたは採用評価の専門家です。BARS（行動基準評価）で厳正に採点し、説明文や前置きなしに、指定スキーマの JSON のみを出力してください。総合スコアは軸スコア × 軸重みの加重平均（重みが未指定なら単純平均）。合否は提示された評価条件の「合格ライン」以上=合格、「普通ライン」以上=普通、未満=不合格（数値はユーザーメッセージの評価条件 JSON から読み取り、自分で仮定しないこと）。</div>
+        </div>
+
+        <!-- User -->
+        <div>
+          <div class="mb-1.5"><span class="role-tag role-usr">USER</span><span class="text-xs text-zinc-500">user メッセージ本文</span></div>
+          <div class="prompt-block border rounded bg-white">
+<div class="px-3 pt-3"># 評価条件
+{
+  "role": "NW",
+  "評価軸": ["主体性", "問題解決力", "対人影響力", "柔軟性"],
+  "合格ライン": 4.2,
+  "普通ライン": 3.5,
+  "未経験可": true,
+  ...
+}</div>
+
+<div class="px-3 mt-3"># 面談議事録
+Q: 最近の障害対応で工夫したことは？
+A: BGP の経路フラップを Ansible で監視。
+Q: SD-WAN は経験ある？
+A: 設計レビュー参加のみ、設定は未経験。
+Q: チームでの役割は？
+A: 2人のジュニア指導、運用ドキュメント整備…</div>
+
+<div class="px-3 mt-3 pb-3"># 出力スキーマ（このキー構造で返す）
+{"軸評価":[{"軸":"","スコア":0,"根拠":""}],"自己解決レベル":0,"総合スコア":0,"合否":"","良い点":"","懸念点":""}</div>
+          </div>
+        </div>
+
+        <!-- 想定出力 -->
+        <div>
+          <div class="text-xs text-zinc-500 mb-1.5">想定出力（イメージ）</div>
+          <div class="prompt-block border rounded p-3 bg-zinc-50 text-zinc-700">「主体性 4.3 / 問題解決力 3.8 / 対人影響力 4.2 / 柔軟性 3.6」
+総合 3.98 → <span class="pill pill-warn">普通</span>
+※ 履歴書の CCNP・5年運用経験は議事録に出てない → 採点根拠に <strong>含まれない</strong>。
+※ Python 自動化の話は議事録の「Ansible で監視」で部分的に拾われる。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== B 案 =================== -->
+    <section class="bg-white border rounded-xl overflow-hidden">
+      <div class="col-head px-5 py-3">
+        <div class="flex items-center gap-2">
+          <h2 class="font-bold">B 案：履歴書を補助情報として渡す</h2>
+          <span class="pill pill-warn">提案</span>
+        </div>
+        <div class="text-xs text-zinc-500 mt-1">
+          入力 = <strong>④凍結条件 + ②履歴書要約（参考） + ⑥議事録</strong>。
+          system に「議事録優先・根拠は議事録引用」を追加して halo を抑止。
+        </div>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <!-- System -->
+        <div>
+          <div class="mb-1.5"><span class="role-tag role-sys">SYSTEM</span><span class="text-xs text-zinc-500">EVAL_SYSTEM_PROMPT（追記あり）</span></div>
+          <div class="prompt-block border rounded p-3 bg-zinc-50">あなたは採用評価の専門家です。BARS（行動基準評価）で厳正に採点し、説明文や前置きなしに、指定スキーマの JSON のみを出力してください。総合スコアは軸スコア × 軸重みの加重平均（重みが未指定なら単純平均）。合否は提示された評価条件の「合格ライン」以上=合格、「普通ライン」以上=普通、未満=不合格（数値はユーザーメッセージの評価条件 JSON から読み取り、自分で仮定しないこと）。
+
+<div class="diff-add inline-block w-full mt-2">採点の根拠は必ず「⑥ 面談議事録」からの引用を主とすること。「② 候補者背景」は議事録に直接表れない技術スキル・資格・年数などを補う参考情報であり、これ単独を根拠にしてはいけない（書類 halo を避ける）。背景情報と議事録が矛盾する場合は、議事録を優先する。</div></div>
+        </div>
+
+        <!-- User -->
+        <div>
+          <div class="mb-1.5"><span class="role-tag role-usr">USER</span><span class="text-xs text-zinc-500">user メッセージ本文</span></div>
+          <div class="prompt-block border rounded bg-white">
+<div class="px-3 pt-3"># 評価条件
+{
+  "role": "NW",
+  "評価軸": ["主体性", "問題解決力", "対人影響力", "柔軟性"],
+  "合格ライン": 4.2,
+  "普通ライン": 3.5,
+  "未経験可": true,
+  ...
+}</div>
+
+<div class="diff-add mx-3 mt-3"># 候補者背景（② 要約・参考情報、根拠は ⑥ 議事録から取ること）
+・経歴: NW運用5年（DC基幹/SD-WAN導入PJ）
+・スキル: BGP/OSPF実務、Python自動化、CCNP取得
+・強み: 自学習力、運用自動化で50%工数削減
+・懸念: マルチクラウド未経験、要確認</div>
+
+<div class="px-3 mt-3"># 面談議事録
+Q: 最近の障害対応で工夫したことは？
+A: BGP の経路フラップを Ansible で監視。
+Q: SD-WAN は経験ある？
+A: 設計レビュー参加のみ、設定は未経験。
+Q: チームでの役割は？
+A: 2人のジュニア指導、運用ドキュメント整備…</div>
+
+<div class="px-3 mt-3 pb-3"># 出力スキーマ（このキー構造で返す）
+{"軸評価":[{"軸":"","スコア":0,"根拠":""}],"自己解決レベル":0,"総合スコア":0,"合否":"","良い点":"","懸念点":""}</div>
+          </div>
+        </div>
+
+        <!-- 想定出力 -->
+        <div>
+          <div class="text-xs text-zinc-500 mb-1.5">想定出力（イメージ）</div>
+          <div class="prompt-block border rounded p-3 bg-zinc-50 text-zinc-700">「主体性 4.3 / 問題解決力 4.0 / 対人影響力 4.2 / 柔軟性 3.7」
+総合 4.05 → <span class="pill pill-warn">普通（ボーダー）</span>
+※ 問題解決力: 議事録の「Ansible 監視」を主根拠に、背景の「自動化で50%削減」が裏付けとして補強され +0.2
+※ 「未経験項目（SD-WAN, マルチクラウド）」は議事録/背景の整合で<strong>未確認</strong>として懸念点に。
+※ halo 抑止プロンプトにより、CCNP 取得や 5年経験そのものでは加点しない。</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 違いのサマリ -->
+  <section class="bg-white border rounded-xl p-5">
+    <h2 class="font-bold mb-3">A → B で変わるところまとめ</h2>
+    <div class="text-sm space-y-2 text-zinc-700">
+      <div>1. <strong>system</strong> に halo 抑止文を追加（議事録優先・背景単独で加点禁止・矛盾時は議事録優先）</div>
+      <div>2. <strong>user</strong> に「# 候補者背景（②要約・参考情報）」セクションを追加（履歴書要約があるときだけ）</div>
+      <div>3. <strong>コード変更箇所</strong>:
+        <code class="text-xs">app/sessions/[id]/actions.ts</code> の
+        <code class="text-xs">evaluateInterviewApiAction</code>（API）と
+        <code class="text-xs">buildEvaluationPromptAction</code>（貼付）の 2 関数のみ
+      </div>
+      <div>4. <strong>UI 変更なし</strong>。⑧評価セクションの見た目は変わらず、内部プロンプトだけが豊かになる</div>
+      <div>5. <strong>影響範囲</strong>: 既存セッションの評価結果は変わらない（再評価しない限り）。
+        新規 / 再評価のみ B 案プロンプトが使われる</div>
+    </div>
+  </section>
+
+  <!-- 期待効果 / リスク -->
+  <section class="grid grid-cols-2 gap-5">
+    <div class="bg-white border rounded-xl p-5">
+      <h3 class="font-bold mb-2 text-green-800">期待効果</h3>
+      <ul class="list-disc pl-5 space-y-1 text-sm text-zinc-700">
+        <li>「履歴書には書いてあるが議事録で深掘りされなかった」項目を「未確認」として明示できる</li>
+        <li>未経験可 = true 案件で「条件②（必須項目）」の充足判定が背景込みで判断できる</li>
+        <li>軸別根拠の質が上がる（背景と議事録の整合チェックが入る）</li>
+      </ul>
+    </div>
+    <div class="bg-white border rounded-xl p-5">
+      <h3 class="font-bold mb-2 text-amber-800">残るリスク</h3>
+      <ul class="list-disc pl-5 space-y-1 text-sm text-zinc-700">
+        <li>halo 抑止プロンプトが効かないモデル（弱いモデル）だと、書類で +0.3 〜 0.5 上振れする可能性</li>
+        <li>履歴書が長文だとトークン消費が増える（要約は800字想定なので軽微）</li>
+        <li>履歴書が未入力のセッションでは A 案と同じ挙動になる（フォールバック）</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>

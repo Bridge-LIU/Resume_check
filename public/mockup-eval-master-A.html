@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>評価条件マスタ 案A v2（採用版）</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:9999px; font-size:11px; }
+  .pill-role-nw { background:#d1fae5; color:#065f46; }
+  .pill-role-sv { background:#fed7aa; color:#9a3412; }
+  .pill-role-sp { background:#e9d5ff; color:#6b21b6; }
+  .pill-role-pm { background:#cffafe; color:#155e75; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .axis-input { width: 3rem; text-align:center; font-variant-numeric: tabular-nums; }
+  .line-input { width: 4rem; text-align:center; font-variant-numeric: tabular-nums; }
+  input[type=number] { border:1px solid #d4d4d8; border-radius:6px; padding:4px 6px; }
+  .placeholder-cell input::placeholder { color:#a1a1aa; }
+  details > summary { cursor:pointer; }
+</style>
+</head>
+<body class="bg-zinc-100 min-h-screen">
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+  <header>
+    <h1 class="text-xl font-bold">評価条件マスタ — 案A v2（採用版プレビュー）</h1>
+    <p class="text-xs text-zinc-500 mt-1">
+      ① 共通既定（軸重み=3 固定、合格/普通ラインは編集可）　② 役割別表（空欄なら共通既定にフォールバック）　③ Excel 入出力（同じルール）
+    </p>
+  </header>
+
+  <!-- ════════ 評価条件マスタカード ════════ -->
+  <section class="bg-white rounded-xl border shadow-sm">
+    <header class="px-6 py-3 border-b flex items-center gap-3">
+      <h2 class="font-bold text-sm">評価条件マスタ（BARS）</h2>
+      <span class="text-xs text-zinc-500">軸は全役割共通／重み・合格ラインは役割別</span>
+      <div class="flex-1"></div>
+      <span class="text-xs text-emerald-700">保存しました（10:42:18）</span>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium">保存</button>
+    </header>
+
+    <div class="p-6 space-y-5">
+
+      <!-- ─── ① 軸定義（pill 風） ─── -->
+      <div>
+        <div class="text-xs text-zinc-500 mb-2">評価軸（名前・並び順のみ。重みは下の役割別表で設定）</div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="pill bg-zinc-200 text-zinc-700 cursor-grab" draggable="true">⋮⋮ 主体性 <button class="ml-1 text-zinc-400 hover:text-red-600">×</button></span>
+          <span class="pill bg-zinc-200 text-zinc-700 cursor-grab" draggable="true">⋮⋮ 問題解決力 <button class="ml-1 text-zinc-400 hover:text-red-600">×</button></span>
+          <span class="pill bg-zinc-200 text-zinc-700 cursor-grab" draggable="true">⋮⋮ 対人影響力 <button class="ml-1 text-zinc-400 hover:text-red-600">×</button></span>
+          <span class="pill bg-zinc-200 text-zinc-700 cursor-grab" draggable="true">⋮⋮ 柔軟性 <button class="ml-1 text-zinc-400 hover:text-red-600">×</button></span>
+          <input class="text-xs border rounded px-2 py-1 w-32" placeholder="＋ 新しい軸" />
+        </div>
+      </div>
+
+      <!-- ─── ② 共通既定（コンパクト 1 行） ─── -->
+      <div class="border border-amber-200 bg-amber-50 rounded-lg px-3 py-2 flex items-center gap-4 text-sm">
+        <span class="text-amber-900 font-medium text-xs">共通既定</span>
+        <span class="text-zinc-700">
+          軸重み = <strong class="tabular text-amber-900">3</strong>
+          <span class="text-zinc-400 text-xs ml-1">（固定）</span>
+        </span>
+        <span class="text-zinc-300">｜</span>
+        <label class="text-zinc-700 flex items-center gap-1">
+          合格ライン <input class="line-input bg-white" type="number" step="0.1" value="4.2">
+        </label>
+        <label class="text-zinc-700 flex items-center gap-1">
+          普通ライン <input class="line-input bg-white" type="number" step="0.1" value="3.5">
+        </label>
+        <span class="text-zinc-400 text-xs ml-auto">下の役割行で空欄のセルはこの値を使用</span>
+      </div>
+
+      <!-- ─── ③ 役割別表 ─── -->
+      <div>
+        <div class="text-xs text-zinc-500 mb-2">役割別の重み・合格ライン
+          <span class="text-zinc-400 ml-2">※ 空欄 = 共通既定を使用（プレースホルダで予告表示）</span>
+        </div>
+        <table class="w-full text-sm border rounded-lg overflow-hidden">
+          <thead class="bg-zinc-50 text-zinc-600 text-xs">
+            <tr>
+              <th class="text-left px-3 py-2 w-44">役割</th>
+              <th class="text-center px-2 py-2">主体性</th>
+              <th class="text-center px-2 py-2">問題解決力</th>
+              <th class="text-center px-2 py-2">対人影響力</th>
+              <th class="text-center px-2 py-2">柔軟性</th>
+              <th class="text-center px-2 py-2 w-20">合格</th>
+              <th class="text-center px-2 py-2 w-20">普通</th>
+              <th class="w-10"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            <!-- NW -->
+            <tr>
+              <td class="px-3 py-2">
+                <div><span class="pill pill-role-nw">NW</span> <span class="font-medium ml-1">NW（ネットワーク）</span></div>
+              </td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="4"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" value="4.2"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" value="3.5"></td>
+              <td class="text-center"><button class="text-zinc-400 hover:text-red-600 text-xs" title="この役割の上書きをクリア">×</button></td>
+            </tr>
+            <!-- Server -->
+            <tr>
+              <td class="px-3 py-2">
+                <div><span class="pill pill-role-sv">Server</span> <span class="font-medium ml-1">開発（バックエンド/サーバ）</span></div>
+              </td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" value="4.0"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" value="3.4"></td>
+              <td class="text-center"><button class="text-zinc-400 hover:text-red-600 text-xs">×</button></td>
+            </tr>
+            <!-- Special -->
+            <tr>
+              <td class="px-3 py-2">
+                <div><span class="pill pill-role-sp">Special</span> <span class="font-medium ml-1">Special（AI / セキュリティ）</span></div>
+              </td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="4"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="4"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" value="4.3"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" value="3.6"></td>
+              <td class="text-center"><button class="text-zinc-400 hover:text-red-600 text-xs">×</button></td>
+            </tr>
+            <!-- PMO -->
+            <tr>
+              <td class="px-3 py-2">
+                <div><span class="pill pill-role-pm">PMO</span> <span class="font-medium ml-1">PMO（プロジェクトマネジメント）</span></div>
+              </td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="4"></td>
+              <td class="text-center"><input class="axis-input" type="number" value="4"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" value="3.8"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" value="3.2"></td>
+              <td class="text-center"><button class="text-zinc-400 hover:text-red-600 text-xs">×</button></td>
+            </tr>
+            <!-- 例: 部分的に空欄 = フォールバックする行（説明用に出している） -->
+            <tr class="placeholder-cell bg-zinc-50/60">
+              <td class="px-3 py-2">
+                <div><span class="pill bg-zinc-200 text-zinc-600">NewRole</span> <span class="font-medium ml-1 text-zinc-700">（例：新規追加・未設定）</span></div>
+                <div class="text-xs text-zinc-400 mt-0.5">← 空欄は共通既定にフォールバック</div>
+              </td>
+              <td class="text-center"><input class="axis-input" type="number" placeholder="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" placeholder="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" placeholder="3"></td>
+              <td class="text-center"><input class="axis-input" type="number" placeholder="3"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" placeholder="4.2"></td>
+              <td class="text-center"><input class="line-input" type="number" step="0.1" placeholder="3.5"></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ─── ④ スケール・自己解決レベルなどは折りたたみ ─── -->
+      <details class="text-sm">
+        <summary class="text-zinc-600 hover:text-zinc-900">スケール・自己解決レベル・出力項目（詳細）</summary>
+        <div class="mt-3 grid grid-cols-4 gap-3 max-w-2xl">
+          <label class="text-xs text-zinc-500">最小 <input class="line-input mt-1" type="number" value="0.3"></label>
+          <label class="text-xs text-zinc-500">最大 <input class="line-input mt-1" type="number" value="5"></label>
+          <label class="text-xs text-zinc-500">刻み <input class="line-input mt-1" type="number" value="0.5"></label>
+          <label class="text-xs text-zinc-500">段階数（自動） <input class="line-input mt-1 bg-zinc-100" readonly value="10"></label>
+        </div>
+        <div class="mt-3 text-xs text-zinc-500">自己解決レベル <input class="border rounded px-2 py-1 w-96 ml-2" value="0〜5の5段階で別途評価"></div>
+        <div class="mt-3 text-xs text-zinc-500">出力項目（固定）：軸ごとのスコアと根拠 ／ 総合スコア ／ 合否 ／ 良い点 ／ 懸念点</div>
+      </details>
+
+    </div>
+  </section>
+
+  <!-- ════════ Excel 入出力カード（Phase C 予告） ════════ -->
+  <section class="bg-white rounded-xl border shadow-sm">
+    <header class="px-6 py-3 border-b flex items-center gap-3">
+      <h2 class="font-bold text-sm">Excel 入出力（Phase C 予定）</h2>
+      <span class="text-xs text-zinc-500">マスタ管理画面の最上段に追加</span>
+      <div class="flex-1"></div>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">📤 Excel エクスポート</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">📥 Excel インポート</button>
+    </header>
+    <div class="p-6 space-y-4 text-sm">
+
+      <div class="text-xs text-zinc-500">エクスポート時のブック構成（4 シート）：</div>
+
+      <!-- excel sheet 1 -->
+      <div class="border rounded-lg overflow-hidden">
+        <div class="bg-emerald-50 text-emerald-900 text-xs px-3 py-1.5 border-b">シート 1：<strong>ロール</strong></div>
+        <table class="w-full text-xs">
+          <thead class="bg-zinc-50 text-zinc-600">
+            <tr><th class="text-left px-3 py-1 w-28">id</th><th class="text-left px-3 py-1">役割</th><th class="text-left px-3 py-1 w-24">経験</th><th class="text-left px-3 py-1 w-20">未経験可</th></tr>
+          </thead>
+          <tbody class="divide-y tabular">
+            <tr><td class="px-3 py-1">NW</td><td class="px-3 py-1">NW（ネットワーク）</td><td class="px-3 py-1">3年以上</td><td class="px-3 py-1">false</td></tr>
+            <tr><td class="px-3 py-1">Server</td><td class="px-3 py-1">開発（バックエンド/サーバ）</td><td class="px-3 py-1">3年以上</td><td class="px-3 py-1">false</td></tr>
+            <tr><td class="px-3 py-1">Special</td><td class="px-3 py-1">Special（AI / セキュリティ）</td><td class="px-3 py-1">3年以上</td><td class="px-3 py-1">false</td></tr>
+            <tr><td class="px-3 py-1">PMO</td><td class="px-3 py-1">PMO（プロジェクトマネジメント）</td><td class="px-3 py-1">5年以上</td><td class="px-3 py-1">false</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- excel sheet 2,3 -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="border rounded-lg overflow-hidden">
+          <div class="bg-emerald-50 text-emerald-900 text-xs px-3 py-1.5 border-b">シート 2：<strong>条件1_基本人物像</strong></div>
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-600"><tr><th class="text-left px-3 py-1 w-20">ロールID</th><th class="text-left px-3 py-1">項目</th></tr></thead>
+            <tbody class="divide-y">
+              <tr><td class="px-3 py-1 tabular">NW</td><td class="px-3 py-1">報連相ができる</td></tr>
+              <tr><td class="px-3 py-1 tabular">NW</td><td class="px-3 py-1">顧客視点で考えられる</td></tr>
+              <tr><td class="px-3 py-1 tabular">NW</td><td class="px-3 py-1">LAN配線ができる</td></tr>
+              <tr><td class="px-3 py-1 text-zinc-400">…</td><td class="px-3 py-1 text-zinc-400">…</td></tr>
+              <tr><td class="px-3 py-1 tabular">PMO</td><td class="px-3 py-1">WBS／スケジュール／コスト管理の経験がある</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="border rounded-lg overflow-hidden">
+          <div class="bg-emerald-50 text-emerald-900 text-xs px-3 py-1.5 border-b">シート 3：<strong>条件2_未経験者必須</strong></div>
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-600"><tr><th class="text-left px-3 py-1 w-20">ロールID</th><th class="text-left px-3 py-1">項目</th></tr></thead>
+            <tbody class="divide-y">
+              <tr><td class="px-3 py-1 tabular">NW</td><td class="px-3 py-1">PC基本操作(Word/Excel)</td></tr>
+              <tr><td class="px-3 py-1 tabular">NW</td><td class="px-3 py-1">普通自動車免許(AT可)</td></tr>
+              <tr><td class="px-3 py-1 text-zinc-400">…</td><td class="px-3 py-1 text-zinc-400">…</td></tr>
+              <tr><td class="px-3 py-1 tabular">PMO</td><td class="px-3 py-1">ビジネスマナーと文書作成の基礎</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- excel sheet 4: 評価条件 -->
+      <div class="border rounded-lg overflow-hidden">
+        <div class="bg-emerald-50 text-emerald-900 text-xs px-3 py-1.5 border-b flex items-center gap-2">
+          シート 4：<strong>評価条件</strong>
+          <span class="text-emerald-700 text-[10px] font-normal">★ 共通既定 + 役割別を 1 枚に統合</span>
+        </div>
+        <table class="w-full text-xs">
+          <thead class="bg-zinc-50 text-zinc-600">
+            <tr>
+              <th class="text-left px-3 py-1 w-32">ロールID</th>
+              <th class="text-center px-2 py-1">主体性</th>
+              <th class="text-center px-2 py-1">問題解決力</th>
+              <th class="text-center px-2 py-1">対人影響力</th>
+              <th class="text-center px-2 py-1">柔軟性</th>
+              <th class="text-center px-2 py-1 w-16">合格</th>
+              <th class="text-center px-2 py-1 w-16">普通</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y tabular">
+            <tr class="bg-amber-50">
+              <td class="px-3 py-1 text-amber-900 font-medium">__DEFAULT__</td>
+              <td class="text-center text-zinc-400">3</td>
+              <td class="text-center text-zinc-400">3</td>
+              <td class="text-center text-zinc-400">3</td>
+              <td class="text-center text-zinc-400">3</td>
+              <td class="text-center">4.2</td>
+              <td class="text-center">3.5</td>
+            </tr>
+            <tr><td class="px-3 py-1">NW</td><td class="text-center">3</td><td class="text-center">4</td><td class="text-center">3</td><td class="text-center">3</td><td class="text-center">4.2</td><td class="text-center">3.5</td></tr>
+            <tr><td class="px-3 py-1">Server</td><td class="text-center">3</td><td class="text-center">3</td><td class="text-center">3</td><td class="text-center">3</td><td class="text-center">4.0</td><td class="text-center">3.4</td></tr>
+            <tr><td class="px-3 py-1">Special</td><td class="text-center">3</td><td class="text-center">4</td><td class="text-center">3</td><td class="text-center">4</td><td class="text-center">4.3</td><td class="text-center">3.6</td></tr>
+            <tr><td class="px-3 py-1">PMO</td><td class="text-center">3</td><td class="text-center">3</td><td class="text-center">4</td><td class="text-center">4</td><td class="text-center">3.8</td><td class="text-center">3.2</td></tr>
+            <tr class="bg-zinc-50">
+              <td class="px-3 py-1 text-zinc-500">NewRole</td>
+              <td class="text-center text-zinc-300">（空）</td>
+              <td class="text-center text-zinc-300">（空）</td>
+              <td class="text-center text-zinc-300">（空）</td>
+              <td class="text-center text-zinc-300">（空）</td>
+              <td class="text-center text-zinc-300">（空）</td>
+              <td class="text-center text-zinc-300">（空）</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- インポートのフォールバック説明 -->
+      <div class="bg-blue-50 border border-blue-200 rounded p-3 text-xs space-y-1.5">
+        <div class="font-medium text-blue-900">インポート時の解決ルール</div>
+        <ol class="list-decimal list-inside space-y-0.5 text-blue-900/90">
+          <li><code class="bg-white px-1 rounded">__DEFAULT__</code> 行が共通既定を上書き。無ければ既存値を維持</li>
+          <li>役割行のセルが空 → <strong>共通既定にフォールバック</strong>（重み = 既定の 3、ライン = __DEFAULT__ 行の値）</li>
+          <li>役割行のセルに値あり → そのまま採用</li>
+          <li>役割行に「ロール」シートに存在しない ID があれば、その行はスキップして警告</li>
+          <li>同じロールID が複数行ある → エラーで止める（部分反映なし）</li>
+        </ol>
+        <div class="text-blue-900/80 mt-2">
+          例：上の NewRole 行は全て空欄 → 重み=3, 合格=4.2, 普通=3.5 で取り込まれる（= 共通既定が丸ごと効く）
+        </div>
+      </div>
+
+      <div class="text-xs text-zinc-500 bg-zinc-50 border rounded p-2">
+        <strong>エクスポート時</strong>：現在の JSON 状態をそのままシートに展開。役割が <code>ロール別</code> に未登録ならその役割行は全空欄で出力（= 共通既定使用と同義）。
+        <br><strong>JSON 入出力（既存）</strong>も並行して残す。Excel はビジネス担当者向け、JSON は開発・バックアップ向け。
+      </div>
+    </div>
+  </section>
+
+  <footer class="text-xs text-zinc-500">
+    確定したら本実装に反映します。気になる点があれば指摘してください（共通既定の合格/普通を画面で編集 ↔ シート 4 の __DEFAULT__ 行で編集、どちらが主か等）。
+  </footer>
+</div>
+</body>
+</html>

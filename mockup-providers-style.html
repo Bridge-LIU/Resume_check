@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI プロバイダ設定 UI — 3案比較</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", "Hiragino Sans", sans-serif; }
+    .pill { font-size:11px; padding:2px 8px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px; font-weight:500; }
+    .pill-claude { background:#fef3c7; color:#854d0e; }
+    .pill-openai { background:#dcfce7; color:#166534; }
+    .pill-gemini { background:#e0e7ff; color:#3730a3; }
+    .pill-default { background:#dbeafe; color:#1e3a8a; }
+    .pill-configured { background:#d1fae5; color:#065f46; }
+    .pill-unset { background:#f4f4f5; color:#71717a; }
+    .badge { font-size:10px; padding:1px 6px; border-radius:4px; display:inline-block; font-weight:500; }
+
+    /* simple switch */
+    .switch { width:36px; height:20px; background:#d4d4d8; border-radius:9999px; position:relative; cursor:pointer; transition:background .2s; }
+    .switch.on { background:#2563eb; }
+    .switch::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; background:white; border-radius:9999px; transition:left .2s; }
+    .switch.on::after { left:18px; }
+
+    .lock-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:6px; border:1px solid #e4e4e7; background:white; cursor:pointer; transition:all .15s; }
+    .lock-btn:hover { background:#f4f4f5; }
+    .lock-btn.unlocked { color:#2563eb; border-color:#bfdbfe; background:#eff6ff; }
+  </style>
+</head>
+<body class="bg-zinc-100 text-zinc-900">
+
+<div class="sticky top-0 z-50 bg-white border-b border-zinc-200 px-6 py-3 flex items-center gap-3 shadow-sm">
+  <div class="font-bold text-base">AI プロバイダ設定 <span class="text-xs text-zinc-400 font-normal">UI 3案比較</span></div>
+  <div class="flex-1"></div>
+  <a href="#opt-a" class="text-sm px-3 py-1 rounded bg-blue-100 text-blue-900 hover:bg-blue-200">A. 整列カード</a>
+  <a href="#opt-b" class="text-sm px-3 py-1 rounded bg-zinc-100 hover:bg-zinc-200">B. インライン折りたたみ</a>
+  <a href="#opt-c" class="text-sm px-3 py-1 rounded bg-zinc-100 hover:bg-zinc-200">C. ミニマル一覧</a>
+</div>
+
+<div class="max-w-3xl mx-auto p-6 space-y-12">
+
+  <div class="text-sm text-zinc-700 leading-relaxed bg-white rounded-xl border p-5">
+    <div class="font-bold mb-2">背景</div>
+    現状は1行に「入力欄 + スイッチ + ラベル + モデル select」を詰めて窮屈。色の主張も強い。
+    以下3案はすべて「ロック既定 + 確認ダイアログで編集解除 + 既定モデル選択」の機能を保ちつつ、見た目を整理。
+  </div>
+
+  <!-- ========== 案A. 整列カード ========== -->
+  <section id="opt-a" class="space-y-3">
+    <div class="flex items-center gap-3">
+      <h2 class="text-xl font-bold">案A. 整列カード（2行 + アイコンボタン）</h2>
+      <span class="text-sm text-zinc-500">— 行を分けて整列。鍵アイコン1つで切替</span>
+    </div>
+
+    <div class="bg-white rounded-xl border shadow-sm">
+      <div class="p-5 space-y-3">
+        <div class="font-medium text-sm">AI プロバイダ</div>
+        <div class="text-xs text-zinc-500">既定プロバイダの API キーが ②⑤⑧ 実行時に使われる。環境変数があれば優先。</div>
+
+        <!-- Anthropic -->
+        <div class="border rounded-lg overflow-hidden">
+          <div class="px-4 py-3 bg-amber-50/60 border-b border-amber-200/60 flex items-center gap-3">
+            <input type="radio" name="provA" checked class="accent-blue-600" />
+            <span class="pill pill-claude">🟠 Anthropic Claude</span>
+            <span class="badge pill-default">既定</span>
+            <div class="flex-1"></div>
+            <span class="badge pill-configured">✓ 設定済</span>
+          </div>
+          <div class="px-4 py-3 space-y-2.5 bg-white">
+            <div class="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
+              <label class="text-xs text-zinc-500">API キー</label>
+              <input type="password" placeholder="•••••••••••••••• （ロック中）"
+                disabled value="" class="border rounded px-2.5 py-1.5 text-xs font-mono bg-zinc-50 text-zinc-400 cursor-not-allowed w-full" />
+              <button type="button" class="lock-btn" title="編集する（確認あり）">🔒</button>
+            </div>
+            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <label class="text-xs text-zinc-500">既定モデル</label>
+              <select class="border rounded px-2.5 py-1.5 text-xs bg-white max-w-xs">
+                <option>Haiku 4.5 ⚡</option>
+                <option selected>Sonnet 4.6 ⚖</option>
+                <option>Opus 4.7 🎯</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- OpenAI -->
+        <div class="border rounded-lg overflow-hidden">
+          <div class="px-4 py-3 bg-emerald-50/60 border-b border-emerald-200/60 flex items-center gap-3">
+            <input type="radio" name="provA" class="accent-blue-600" />
+            <span class="pill pill-openai">🟢 OpenAI ChatGPT</span>
+            <div class="flex-1"></div>
+            <span class="badge pill-configured">✓ 設定済</span>
+          </div>
+          <div class="px-4 py-3 space-y-2.5 bg-white">
+            <div class="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
+              <label class="text-xs text-zinc-500">API キー</label>
+              <input type="password" placeholder="新しい API キー（空欄で現状維持）"
+                value="" class="border rounded px-2.5 py-1.5 text-xs font-mono w-full" />
+              <button type="button" class="lock-btn unlocked" title="ロックする">🔓</button>
+            </div>
+            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <label class="text-xs text-zinc-500">既定モデル</label>
+              <select class="border rounded px-2.5 py-1.5 text-xs bg-white max-w-xs">
+                <option>GPT-4o mini ⚡</option>
+                <option selected>GPT-4o ⚖</option>
+                <option>o1 🎯</option>
+              </select>
+            </div>
+            <label class="text-xs text-zinc-600 inline-flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" class="accent-blue-600" />
+              保存済キーを削除
+            </label>
+          </div>
+        </div>
+
+        <!-- Google (未設定) -->
+        <div class="border rounded-lg overflow-hidden opacity-70">
+          <div class="px-4 py-3 bg-indigo-50/60 border-b border-indigo-200/60 flex items-center gap-3">
+            <input type="radio" name="provA" disabled class="accent-blue-600" />
+            <span class="pill pill-gemini">🔵 Google Gemini</span>
+            <div class="flex-1"></div>
+            <span class="badge pill-unset">未設定</span>
+          </div>
+          <div class="px-4 py-3 space-y-2.5 bg-white">
+            <div class="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
+              <label class="text-xs text-zinc-500">API キー</label>
+              <input type="password" placeholder="Gemini の API キー" class="border rounded px-2.5 py-1.5 text-xs font-mono w-full" />
+              <button type="button" class="lock-btn unlocked" title="">🔓</button>
+            </div>
+            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <label class="text-xs text-zinc-500">既定モデル</label>
+              <select class="border rounded px-2.5 py-1.5 text-xs bg-white max-w-xs">
+                <option>Gemini 2.0 Flash ⚡</option>
+                <option selected>Gemini 2.0 Pro ⚖</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-sm">
+      <div class="font-bold text-emerald-900 mb-1">○ メリット</div>
+      <ul class="list-disc list-inside text-emerald-900 space-y-0.5">
+        <li>ヘッダ（プロバイダ識別）と本体（フォーム）が明確に分離されて視線が落ち着く</li>
+        <li>2行レイアウトで詰め込み感がない。鍵アイコンは32×32の単一ボタンで「スイッチ + 文字」より省スペース</li>
+        <li>未設定カードは opacity でフェード。情報量を削らずに区別</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========== 案B. インライン折りたたみ ========== -->
+  <section id="opt-b" class="space-y-3">
+    <div class="flex items-center gap-3">
+      <h2 class="text-xl font-bold">案B. インライン折りたたみ</h2>
+      <span class="text-sm text-zinc-500">— 通常は1行サマリ、編集時のみ展開</span>
+    </div>
+
+    <div class="bg-white rounded-xl border shadow-sm">
+      <div class="p-5 space-y-3">
+        <div class="font-medium text-sm">AI プロバイダ</div>
+
+        <!-- Anthropic (collapsed) -->
+        <details class="border rounded-lg group">
+          <summary class="px-4 py-3 cursor-pointer flex items-center gap-3 hover:bg-zinc-50 select-none">
+            <input type="radio" name="provB" checked class="accent-blue-600" onclick="event.stopPropagation()" />
+            <span class="pill pill-claude">🟠 Anthropic Claude</span>
+            <span class="badge pill-default">既定</span>
+            <span class="text-xs text-zinc-500 ml-2">Sonnet 4.6 ⚖</span>
+            <div class="flex-1"></div>
+            <span class="badge pill-configured">✓</span>
+            <span class="text-zinc-400 group-open:rotate-90 transition-transform">▶</span>
+          </summary>
+          <div class="px-4 py-3 border-t bg-zinc-50/50 space-y-3">
+            <div class="grid grid-cols-[80px_1fr_auto] gap-2 items-center">
+              <label class="text-xs text-zinc-500">API キー</label>
+              <input type="password" placeholder="•••••••••••••• （ロック中）"
+                disabled class="border rounded px-2.5 py-1.5 text-xs font-mono bg-white text-zinc-400 cursor-not-allowed w-full" />
+              <button type="button" class="text-xs px-2.5 py-1.5 border border-blue-200 bg-blue-50 text-blue-700 rounded hover:bg-blue-100">編集</button>
+            </div>
+            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <label class="text-xs text-zinc-500">モデル</label>
+              <select class="border rounded px-2.5 py-1.5 text-xs bg-white max-w-xs">
+                <option>Haiku 4.5 ⚡</option>
+                <option selected>Sonnet 4.6 ⚖</option>
+                <option>Opus 4.7 🎯</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <!-- OpenAI (collapsed) -->
+        <details class="border rounded-lg group">
+          <summary class="px-4 py-3 cursor-pointer flex items-center gap-3 hover:bg-zinc-50 select-none">
+            <input type="radio" name="provB" class="accent-blue-600" onclick="event.stopPropagation()" />
+            <span class="pill pill-openai">🟢 OpenAI ChatGPT</span>
+            <span class="text-xs text-zinc-500 ml-2">GPT-4o ⚖</span>
+            <div class="flex-1"></div>
+            <span class="badge pill-configured">✓</span>
+            <span class="text-zinc-400 group-open:rotate-90 transition-transform">▶</span>
+          </summary>
+        </details>
+
+        <!-- Google (expanded, unset) -->
+        <details class="border rounded-lg group" open>
+          <summary class="px-4 py-3 cursor-pointer flex items-center gap-3 hover:bg-zinc-50 select-none">
+            <input type="radio" name="provB" disabled class="accent-blue-600" onclick="event.stopPropagation()" />
+            <span class="pill pill-gemini">🔵 Google Gemini</span>
+            <span class="text-xs text-zinc-400 ml-2">キー未設定</span>
+            <div class="flex-1"></div>
+            <span class="badge pill-unset">未設定</span>
+            <span class="text-zinc-400 group-open:rotate-90 transition-transform">▶</span>
+          </summary>
+          <div class="px-4 py-3 border-t bg-zinc-50/50 space-y-3">
+            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <label class="text-xs text-zinc-500">API キー</label>
+              <input type="password" placeholder="AIza..." class="border rounded px-2.5 py-1.5 text-xs font-mono w-full" />
+            </div>
+            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <label class="text-xs text-zinc-500">モデル</label>
+              <select class="border rounded px-2.5 py-1.5 text-xs bg-white max-w-xs">
+                <option>Gemini 2.0 Flash ⚡</option>
+                <option selected>Gemini 2.0 Pro ⚖</option>
+              </select>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+      <div class="font-bold text-amber-900 mb-1">○ メリット</div>
+      <ul class="list-disc list-inside text-amber-900 space-y-0.5">
+        <li>通常時は3行で済む。情報密度が低くなって視覚的に静か</li>
+        <li>クリックで開く → 編集ボタン → 確認ダイアログという段階を経るので、誤操作リスクが小さい</li>
+        <li>「現在のモデル名」だけサマリに表示できて状況が一目でわかる</li>
+      </ul>
+      <div class="font-bold text-amber-900 mt-3 mb-1">× 注意</div>
+      <ul class="list-disc list-inside text-amber-900 space-y-0.5">
+        <li>1クリック必要。3社の状態を同時に俯瞰したいときは案A の方が良い</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========== 案C. ミニマル一覧 ========== -->
+  <section id="opt-c" class="space-y-3">
+    <div class="flex items-center gap-3">
+      <h2 class="text-xl font-bold">案C. ミニマル一覧（Linear / GitHub 風）</h2>
+      <span class="text-sm text-zinc-500">— カードレスの行レイアウト。境界線は薄め</span>
+    </div>
+
+    <div class="bg-white rounded-xl border shadow-sm">
+      <div class="px-5 py-4 border-b">
+        <div class="font-medium text-sm">AI プロバイダ</div>
+        <div class="text-xs text-zinc-500 mt-1">既定プロバイダの API キーが ②⑤⑧ 実行時に使われる。</div>
+      </div>
+
+      <div class="divide-y">
+        <!-- Anthropic row -->
+        <div class="px-5 py-4 flex items-center gap-4 hover:bg-zinc-50/60 transition-colors">
+          <input type="radio" name="provC" checked class="accent-blue-600 mt-0.5" />
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="pill pill-claude">🟠 Anthropic Claude</span>
+              <span class="badge pill-default">既定</span>
+              <span class="badge pill-configured">✓ 設定済</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-zinc-500">
+              <span>API キー：</span>
+              <code class="text-zinc-400">••••••••••••••</code>
+              <span class="text-zinc-300">·</span>
+              <span>モデル: Sonnet 4.6 ⚖</span>
+            </div>
+          </div>
+          <button type="button" class="text-xs px-3 py-1.5 border rounded hover:bg-white">編集</button>
+        </div>
+
+        <!-- OpenAI row (editing) -->
+        <div class="px-5 py-4 bg-blue-50/30 border-l-2 border-blue-400 space-y-3">
+          <div class="flex items-center gap-4">
+            <input type="radio" name="provC" class="accent-blue-600 mt-0.5" />
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="pill pill-openai">🟢 OpenAI ChatGPT</span>
+                <span class="badge pill-configured">✓ 設定済</span>
+                <span class="badge bg-blue-100 text-blue-900">編集中</span>
+              </div>
+            </div>
+            <button type="button" class="text-xs px-3 py-1.5 border rounded hover:bg-white">取消</button>
+          </div>
+          <div class="ml-7 space-y-2">
+            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <label class="text-xs text-zinc-500">新しいキー</label>
+              <input type="password" placeholder="空欄なら現状維持" class="border rounded px-2.5 py-1.5 text-xs font-mono" />
+            </div>
+            <div class="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <label class="text-xs text-zinc-500">モデル</label>
+              <select class="border rounded px-2.5 py-1.5 text-xs bg-white max-w-xs">
+                <option>GPT-4o mini ⚡</option>
+                <option selected>GPT-4o ⚖</option>
+                <option>o1 🎯</option>
+              </select>
+            </div>
+            <label class="text-xs text-zinc-600 inline-flex items-center gap-1.5 cursor-pointer ml-0">
+              <input type="checkbox" class="accent-blue-600" />
+              保存済キーを削除
+            </label>
+          </div>
+        </div>
+
+        <!-- Google row (未設定) -->
+        <div class="px-5 py-4 flex items-center gap-4 hover:bg-zinc-50/60 transition-colors">
+          <input type="radio" name="provC" disabled class="accent-blue-600 mt-0.5" />
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="pill pill-gemini">🔵 Google Gemini</span>
+              <span class="badge pill-unset">未設定</span>
+            </div>
+            <div class="text-xs text-zinc-400">API キーを設定すると有効化されます</div>
+          </div>
+          <button type="button" class="text-xs px-3 py-1.5 border rounded hover:bg-white text-blue-600 border-blue-200">＋ 設定</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-sm">
+      <div class="font-bold text-indigo-900 mb-1">○ メリット</div>
+      <ul class="list-disc list-inside text-indigo-900 space-y-0.5">
+        <li>カードを取り去って divide-y にすることで、視覚ノイズを最小化</li>
+        <li>1行にキーのプレビュー（•••）とモデル名を入れて、編集せずとも状態が読める</li>
+        <li>編集中はそのカードだけ左に青いボーダーで強調。状態のフィードバックが明快</li>
+        <li>GitHub Personal Access Tokens / Linear API Keys 系の見慣れたパターン</li>
+      </ul>
+      <div class="font-bold text-indigo-900 mt-3 mb-1">× 注意</div>
+      <ul class="list-disc list-inside text-indigo-900 space-y-0.5">
+        <li>背景色での識別が無いので、プロバイダ間の見分けは pill 色のみに依存。Anthropic / OpenAI / Google の3社なら問題ないが、増えると弱い</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ========== 比較 ========== -->
+  <section class="space-y-3">
+    <h2 class="text-xl font-bold">比較</h2>
+    <div class="bg-white rounded-xl border shadow-sm overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-zinc-50 text-zinc-600 text-xs">
+          <tr>
+            <th class="text-left px-4 py-2 font-medium">観点</th>
+            <th class="text-left px-4 py-2 font-medium">A. 整列カード</th>
+            <th class="text-left px-4 py-2 font-medium">B. 折りたたみ</th>
+            <th class="text-left px-4 py-2 font-medium">C. ミニマル</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          <tr><td class="px-4 py-2 font-medium">3社を同時に見渡せる</td><td class="px-4 py-2">○</td><td class="px-4 py-2">△（折りたたみ時）</td><td class="px-4 py-2">○</td></tr>
+          <tr><td class="px-4 py-2 font-medium">画面の縦幅</td><td class="px-4 py-2">中</td><td class="px-4 py-2">小（コンパクト）</td><td class="px-4 py-2">中</td></tr>
+          <tr><td class="px-4 py-2 font-medium">編集までのクリック数</td><td class="px-4 py-2">1（🔒 → 確認）</td><td class="px-4 py-2">2（開く → 編集）</td><td class="px-4 py-2">1（編集 → 確認）</td></tr>
+          <tr><td class="px-4 py-2 font-medium">プロバイダ識別の強さ</td><td class="px-4 py-2">強（背景色）</td><td class="px-4 py-2">中（pill のみ）</td><td class="px-4 py-2">中（pill のみ）</td></tr>
+          <tr><td class="px-4 py-2 font-medium">将来プロバイダ追加</td><td class="px-4 py-2">○</td><td class="px-4 py-2">◎（折りたためる）</td><td class="px-4 py-2">◎（行追加だけ）</td></tr>
+          <tr class="bg-emerald-50/50"><td class="px-4 py-2 font-medium">向き</td><td class="px-4 py-2">情報を出しておきたい</td><td class="px-4 py-2">普段は隠したい</td><td class="px-4 py-2">SaaS 風の落ち着き</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="text-sm text-zinc-700 bg-white border rounded-xl p-5 leading-relaxed">
+      <div class="font-bold mb-2">個人的おすすめ：A or C</div>
+      ・3社を常に見渡したいなら <strong>A</strong>（プロバイダごとに色違いカード、2行整列）<br/>
+      ・できるだけ静かに見せたいなら <strong>C</strong>（カードを取り去って divide-y のリスト）<br/>
+      <strong>B</strong> は将来5プロバイダ以上に拡張するなら一番効くが、3社だと折りたたみのありがたみが薄い。
+    </div>
+  </section>
+
+</div>
+
+<script>
+  // demo only: switch toggle
+  document.querySelectorAll('.switch').forEach(s => {
+    s.addEventListener('click', () => s.classList.toggle('on'));
+  });
+</script>
+</body>
+</html>

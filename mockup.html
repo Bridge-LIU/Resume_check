@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>面談AI評価ツール — UIプレビュー (Phase 1〜4 実装反映版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", "Hiragino Sans", sans-serif; }
+    .screen-card { border:1px solid #e5e7eb; border-radius:14px; overflow:hidden; background:white; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
+    .label-tag { font-size:11px; padding:2px 6px; border-radius:4px; display:inline-block; }
+  </style>
+</head>
+<body class="bg-zinc-100 text-zinc-900">
+
+<!-- 上部のスクリーン切替バー -->
+<div class="sticky top-0 z-50 bg-white border-b border-zinc-200 px-6 py-3 flex items-center gap-3 shadow-sm">
+  <div class="font-bold text-base">面談AI評価ツール <span class="text-xs text-zinc-400 font-normal">UIプレビュー</span></div>
+  <div class="flex-1"></div>
+  <div class="text-xs text-zinc-500">クリックで該当画面までスクロール →</div>
+  <a href="#s-list"     class="text-sm px-3 py-1 rounded bg-zinc-100 hover:bg-zinc-200">① 一覧</a>
+  <a href="#s-new"      class="text-sm px-3 py-1 rounded bg-zinc-100 hover:bg-zinc-200">② 新規</a>
+  <a href="#s-session"  class="text-sm px-3 py-1 rounded bg-blue-100 text-blue-900 hover:bg-blue-200">③ セッション</a>
+  <a href="#s-master"   class="text-sm px-3 py-1 rounded bg-zinc-100 hover:bg-zinc-200">④ マスタ</a>
+  <a href="#s-settings" class="text-sm px-3 py-1 rounded bg-zinc-100 hover:bg-zinc-200">⑤ 設定</a>
+  <a href="#s-trash"    class="text-sm px-3 py-1 rounded bg-zinc-100 hover:bg-zinc-200">⑥ ゴミ箱</a>
+</div>
+
+<!-- =================== グローバルヘッダー サンプル =================== -->
+<div class="max-w-6xl mx-auto p-6 space-y-12">
+
+  <div class="text-sm text-zinc-500 leading-relaxed">
+    これは <strong>静的モックアップ</strong>です。Phase 1（貼付）〜Phase 4（保存期間・ゴミ箱）まで実装に反映済の主要6画面を縦に並べています。<br/>
+    実装スタック: Next.js 16 (App Router) + TypeScript + Tailwind v4 / 想定ポート 3939。<br/>
+    色は zinc / slate / 強調青。情報密度は意図的にやや高め。<br/>
+    <span class="text-zinc-400">※ kankan（Kanban）ビューは <code class="bg-zinc-100 px-1 rounded">mockup-newsets.html</code> 案D に別途格納。機能完成後の着せ替え先候補。</span>
+  </div>
+
+  <!-- =================== ① 一覧 =================== -->
+  <section id="s-list" class="screen-card">
+    <div class="bg-zinc-50 px-5 py-2 border-b text-xs text-zinc-500">localhost:3939/ — 面談一覧</div>
+
+    <header class="px-6 py-3 border-b flex items-center gap-6">
+      <div class="font-bold">面談AI評価ツール</div>
+      <nav class="flex gap-1 text-sm">
+        <a class="px-3 py-1.5 rounded bg-blue-50 text-blue-900 font-medium">一覧</a>
+        <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">マスタ</a>
+        <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">設定</a>
+      </nav>
+      <div class="flex-1"></div>
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium">＋ 新規面談</button>
+    </header>
+
+    <div class="p-6 space-y-4">
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <div class="flex items-center gap-2"><span class="text-zinc-500">状態</span>
+          <select class="border rounded px-2 py-1 text-sm"><option>すべて</option><option>編集中</option><option>面談済</option><option>評価済</option></select></div>
+        <div class="flex items-center gap-2"><span class="text-zinc-500">役割</span>
+          <select class="border rounded px-2 py-1 text-sm"><option>すべて</option><option>NW</option><option>Server</option></select></div>
+        <div class="flex items-center gap-2"><span class="text-zinc-500">合否</span>
+          <select class="border rounded px-2 py-1 text-sm"><option>すべて</option><option>合格</option><option>不合格</option></select></div>
+        <input class="border rounded px-3 py-1 text-sm flex-1 min-w-[180px]" placeholder="氏名・キーワード検索"/>
+      </div>
+
+      <div class="border rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-zinc-50 text-zinc-600 text-xs">
+            <tr>
+              <th class="text-left px-4 py-2 font-medium">日時</th>
+              <th class="text-left px-4 py-2 font-medium">氏名</th>
+              <th class="text-left px-4 py-2 font-medium">役割</th>
+              <th class="text-left px-4 py-2 font-medium">状態</th>
+              <th class="text-right px-4 py-2 font-medium">総合スコア</th>
+              <th class="text-left px-4 py-2 font-medium">合否</th>
+              <th class="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            <tr class="hover:bg-zinc-50">
+              <td class="px-4 py-2">2026-06-17 14:30</td>
+              <td class="px-4 py-2 font-medium">山田 太郎</td>
+              <td class="px-4 py-2"><span class="label-tag bg-emerald-100 text-emerald-800">NW中途</span></td>
+              <td class="px-4 py-2"><span class="label-tag bg-blue-100 text-blue-800">評価済</span></td>
+              <td class="px-4 py-2 text-right tabular-nums font-medium">4.3</td>
+              <td class="px-4 py-2"><span class="label-tag bg-green-100 text-green-800">合格</span></td>
+              <td class="px-4 py-2 text-right"><button class="text-blue-600 hover:underline">開く</button></td>
+            </tr>
+            <tr class="hover:bg-zinc-50">
+              <td class="px-4 py-2">2026-06-15 10:00</td>
+              <td class="px-4 py-2 font-medium">佐藤 花子</td>
+              <td class="px-4 py-2"><span class="label-tag bg-amber-100 text-amber-800">Server</span></td>
+              <td class="px-4 py-2"><span class="label-tag bg-violet-100 text-violet-800">面談済</span></td>
+              <td class="px-4 py-2 text-right tabular-nums text-zinc-400">―</td>
+              <td class="px-4 py-2 text-zinc-400">―</td>
+              <td class="px-4 py-2 text-right"><button class="text-blue-600 hover:underline">開く</button></td>
+            </tr>
+            <tr class="hover:bg-zinc-50">
+              <td class="px-4 py-2">2026-06-12 13:00</td>
+              <td class="px-4 py-2 font-medium">鈴木 一郎</td>
+              <td class="px-4 py-2"><span class="label-tag bg-emerald-100 text-emerald-800">NW新卒</span></td>
+              <td class="px-4 py-2"><span class="label-tag bg-zinc-200 text-zinc-700">編集中</span></td>
+              <td class="px-4 py-2 text-right tabular-nums text-zinc-400">―</td>
+              <td class="px-4 py-2 text-zinc-400">―</td>
+              <td class="px-4 py-2 text-right"><button class="text-blue-600 hover:underline">開く</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="text-xs text-zinc-500">3件 / 全3件</div>
+    </div>
+  </section>
+
+  <!-- =================== ② 新規面談 =================== -->
+  <section id="s-new" class="screen-card">
+    <div class="bg-zinc-50 px-5 py-2 border-b text-xs text-zinc-500">localhost:3939/new — 新規面談</div>
+
+    <div class="p-6 space-y-6">
+      <div class="text-sm text-zinc-500"><a class="hover:underline text-blue-600">← 一覧に戻る</a></div>
+      <h2 class="text-xl font-bold">＋ 新規面談を作成</h2>
+
+      <div class="space-y-4 max-w-lg">
+        <div>
+          <label class="block text-sm text-zinc-600 mb-1">役割 <span class="text-red-500">*</span></label>
+          <select class="w-full border rounded px-3 py-2">
+            <option disabled selected>— 選択してください —</option>
+            <option>NW（経験: 3年以上 / 未経験可: いいえ）</option>
+            <option>Server（経験: 2年以上 / 未経験可: はい）</option>
+          </select>
+          <div class="text-xs text-zinc-500 mt-1">役割を選ぶと ④ にマスタが読み込まれ、確定後に凍結されます。</div>
+        </div>
+        <div>
+          <label class="block text-sm text-zinc-600 mb-1">氏名 <span class="text-red-500">*</span></label>
+          <input class="w-full border rounded px-3 py-2" placeholder="例: 山田 太郎"/>
+          <div class="text-xs text-zinc-500 mt-1">フォルダ名と一覧表示に使われます。</div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-4 border-t">
+        <button class="px-4 py-2 rounded border hover:bg-zinc-50 text-sm">キャンセル</button>
+        <button class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">作成して開く →</button>
+      </div>
+      <div class="text-xs text-zinc-500">作成 → <code class="bg-zinc-100 px-1 rounded">data/sessions/&lt;日時&gt;_&lt;氏名&gt;_&lt;役割&gt;/</code> 生成 → セッション画面へ</div>
+    </div>
+  </section>
+
+  <!-- =================== ③ セッション =================== -->
+  <section id="s-session" class="screen-card">
+    <div class="bg-zinc-50 px-5 py-2 border-b text-xs text-zinc-500">localhost:3939/sessions/[id] — セッション編集</div>
+
+    <header class="px-6 py-3 border-b flex items-center gap-4">
+      <a class="text-sm text-blue-600 hover:underline">← 一覧</a>
+      <div class="font-medium">山田 太郎</div>
+      <span class="label-tag bg-emerald-100 text-emerald-800">NW</span>
+      <span class="label-tag bg-blue-100 text-blue-800">評価済</span>
+      <div class="flex-1"></div>
+      <label class="flex items-center gap-1 text-xs text-emerald-700 font-medium select-none">
+        <input type="checkbox" checked /> 🔒 保持
+      </label>
+      <div class="flex items-center gap-1 text-xs">
+        <span class="text-zinc-500">判定:</span>
+        <select class="border rounded px-2 py-0.5 text-xs">
+          <option>未確定</option><option selected>採用</option><option>不採用</option>
+        </select>
+      </div>
+      <button class="text-sm text-zinc-500 hover:text-zinc-800">複製</button>
+    </header>
+
+    <div class="flex">
+      <!-- ステップナビ -->
+      <aside class="w-56 border-r bg-zinc-50 p-3 text-sm space-y-1">
+        <div class="px-3 py-2 rounded hover:bg-white cursor-pointer flex justify-between"><span>② 面談者情報</span><span class="text-emerald-600">✓</span></div>
+        <div class="px-3 py-2 rounded bg-white border border-blue-300 cursor-pointer flex justify-between font-medium"><span>④ 求める人材条件</span><span class="text-emerald-600">✓</span></div>
+        <div class="px-3 py-2 rounded hover:bg-white cursor-pointer flex justify-between"><span>⑤ 質問リスト</span><span class="text-emerald-600">✓</span></div>
+        <div class="px-3 py-2 rounded hover:bg-white cursor-pointer flex justify-between"><span>⑥ 議事録</span><span class="text-emerald-600">✓</span></div>
+        <div class="px-3 py-2 rounded hover:bg-white cursor-pointer flex justify-between"><span>⑧ 評価結果</span><span class="text-emerald-600">✓</span></div>
+      </aside>
+
+      <!-- メイン領域: 各セクションを縦に並べて見せる -->
+      <main class="flex-1 p-6 space-y-8">
+
+        <!-- ② 面談者情報 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold">② 面談者情報</h3>
+            <div class="text-xs flex items-center gap-2">
+              <span class="text-zinc-500">要約モード:</span>
+              <span class="label-tag bg-blue-100 text-blue-800">● 貼付</span>
+              <span class="label-tag bg-white border text-zinc-600">○ API自動要約</span>
+            </div>
+          </div>
+          <div class="text-xs text-zinc-500 mb-1">要約テキスト（保存対象）</div>
+          <textarea class="w-full border rounded p-3 text-sm" rows="6" placeholder="候補者の経歴要約を貼り付け"></textarea>
+          <div class="flex items-center gap-3 mt-2">
+            <button class="text-sm px-4 py-1.5 rounded bg-blue-600 text-white font-medium">保存</button>
+            <span class="text-xs text-zinc-500">最終保存: 2026-06-17 14:35</span>
+          </div>
+          <details class="mt-2 text-xs text-zinc-500">
+            <summary class="cursor-pointer">API モードの内訳（Phase 2 実装済）</summary>
+            <div class="border rounded-lg p-3 mt-2 bg-zinc-50 space-y-2">
+              <div>📄 履歴書PDFアップ＋テキスト貼付の両対応。Haiku 4.5 で経歴・スキル・強み・懸念点を要約 → 下のテキスト欄に反映＆自動保存。</div>
+              <div class="text-zinc-400">※ PII 取扱注意：PDF は document ブロックで送信される。情報を外に出したくない案件は貼付モードを維持。</div>
+            </div>
+          </details>
+        </div>
+
+        <!-- ④ 求める人材条件（凍結後・読取専用） -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold">④ 求める人材条件 <span class="text-xs text-emerald-700 ml-2">凍結済 ✓</span></h3>
+            <span class="text-xs text-zinc-400">凍結: 2026-06-17 14:38</span>
+          </div>
+          <div class="border rounded p-4 space-y-3 text-sm bg-zinc-50">
+            <div class="flex flex-wrap gap-x-6 gap-y-1 text-zinc-700">
+              <div>役割: NW</div>
+              <div>経験: 3年以上</div>
+              <div>未経験可: <strong class="text-red-600">いいえ</strong></div>
+            </div>
+            <div>
+              <div class="font-medium text-zinc-700 mb-1">条件①: 基本人物像（常に評価）</div>
+              <ul class="list-disc list-inside text-zinc-700 text-xs grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                <li>報連相ができる</li>
+                <li>顧客視点で考えられる</li>
+                <li>責任感がある</li>
+                <li>タスクを細分化し日程を組める</li>
+                <li>NW構築ができる</li>
+                <li>夜間作業に耐える体力</li>
+                <li>学習意欲がある</li>
+                <li>初動が速い／納期を厳守できる</li>
+              </ul>
+            </div>
+            <div class="text-xs text-zinc-500 pt-1">条件②: 未経験者必須（未経験可=false のため評価対象外）</div>
+          </div>
+          <div class="text-xs text-zinc-500 mt-2">※ 凍結後はマスタを変更しても、この面談には影響しません（再現性の担保）。</div>
+        </div>
+
+        <!-- ⑤ 質問リスト -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold">⑤ 質問リスト</h3>
+            <div class="text-xs flex items-center gap-2">
+              <span class="text-zinc-500">作り方:</span>
+              <span class="label-tag bg-blue-100 text-blue-800">● 貼付</span>
+              <span class="label-tag bg-white border text-zinc-600">○ API生成</span>
+            </div>
+          </div>
+          <textarea class="w-full border rounded p-3 text-sm font-mono" rows="10" placeholder="例:
+⭐ Q1. 障害切り分けで苦労した経験を教えてください
+  狙い: 問題解決力
+  解答例: ping → traceroute と段階的に...
+
+Q2. 夜間作業で印象に残っている案件は？
+  狙い: 体力・責任感
+  解答例: 銀行系メンテで朝5時まで...">⭐ Q1. これまでに障害切り分けで苦労した経験を教えてください
+  狙い: 問題解決力
+  解答例: 切り分け手順を ping → traceroute と段階的に...
+
+Q2. 夜間作業で印象に残っている案件は？
+  狙い: 体力・責任感
+  解答例: 銀行系のメンテで朝5時まで...</textarea>
+          <div class="flex items-center gap-3 mt-2">
+            <button class="text-sm px-4 py-1.5 rounded bg-blue-600 text-white font-medium">保存</button>
+            <span class="text-xs text-zinc-500">最終保存: 2026-06-17 14:42</span>
+            <div class="flex-1"></div>
+            <button class="text-sm px-3 py-1 rounded border hover:bg-zinc-50">破棄</button>
+            <button class="text-sm px-3 py-1 rounded border hover:bg-zinc-50" title="狙い/解答例の行を除いてコピー">本文コピー</button>
+            <button class="text-sm px-3 py-1 rounded border hover:bg-zinc-50">全文コピー</button>
+          </div>
+          <div class="text-xs text-zinc-500 mt-2">※ ⭐/狙い/解答例の構造化パースは後続フェーズ予定。現状は生テキスト保存。</div>
+        </div>
+
+        <!-- ⑥ 議事録 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold">⑥ 面談・議事録 <span class="text-xs text-zinc-500 ml-2">(Teamsからコピペ)</span></h3>
+          </div>
+          <textarea class="w-full border rounded p-3 text-sm font-mono" rows="4" placeholder="Teamsの議事録・要約を貼り付け"></textarea>
+          <div class="flex justify-end gap-2 mt-2">
+            <button class="text-sm px-3 py-1 rounded border hover:bg-zinc-50">破棄</button>
+            <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white">保存</button>
+          </div>
+        </div>
+
+        <!-- ⑧ 評価結果 -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-bold">⑧ 評価・合否判定</h3>
+            <div class="text-xs flex items-center gap-2">
+              <span class="text-zinc-500">やり方:</span>
+              <span class="label-tag bg-blue-100 text-blue-800">● 貼付</span>
+              <span class="label-tag bg-white border text-zinc-600">○ API評価</span>
+            </div>
+          </div>
+
+          <div class="border rounded-lg p-3 mb-3 bg-zinc-50 space-y-2">
+            <div class="text-xs text-zinc-600">④ 凍結条件 + ⑥ 議事録 を入力に、Claude が BARS で採点。既定は <strong>Sonnet 4.6</strong>、厳格モードで <strong>Opus 4.7</strong>。</div>
+            <div class="flex items-center gap-3 flex-wrap">
+              <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium">評価する（API）</button>
+              <label class="inline-flex items-center gap-2 text-sm text-zinc-700 select-none">
+                <input type="checkbox"> 厳格モード（Opus 4.7）
+              </label>
+              <span class="text-xs text-zinc-500">※ 結果は自動保存されます。</span>
+            </div>
+          </div>
+
+          <!-- 保存済み評価のプレビュー -->
+          <div class="border rounded mt-3 p-4 space-y-3 bg-gradient-to-br from-emerald-50 to-blue-50">
+            <div class="flex items-baseline gap-4">
+              <div><span class="text-xs text-zinc-500">総合スコア</span>
+                <div class="text-3xl font-bold tabular-nums">4.3</div></div>
+              <div><span class="text-xs text-zinc-500">合否</span>
+                <div class="text-xl font-bold text-emerald-700">合格 ✓</div></div>
+              <div><span class="text-xs text-zinc-500">自己解決レベル</span>
+                <div class="text-xl font-bold tabular-nums">4 <span class="text-sm text-zinc-400">/ 5</span></div></div>
+            </div>
+
+            <div class="space-y-1.5">
+              <!-- 軸ごとのバー -->
+              <div class="grid grid-cols-[120px_1fr_50px] items-center gap-2 text-sm">
+                <div>主体性</div>
+                <div class="h-2 bg-zinc-200 rounded"><div class="h-2 bg-emerald-500 rounded" style="width:90%"></div></div>
+                <div class="tabular-nums text-right">4.5</div>
+              </div>
+              <div class="grid grid-cols-[120px_1fr_50px] items-center gap-2 text-sm">
+                <div>問題解決力</div>
+                <div class="h-2 bg-zinc-200 rounded"><div class="h-2 bg-amber-500 rounded" style="width:70%"></div></div>
+                <div class="tabular-nums text-right">3.5</div>
+              </div>
+              <div class="grid grid-cols-[120px_1fr_50px] items-center gap-2 text-sm">
+                <div>対人影響力</div>
+                <div class="h-2 bg-zinc-200 rounded"><div class="h-2 bg-emerald-500 rounded" style="width:84%"></div></div>
+                <div class="tabular-nums text-right">4.2</div>
+              </div>
+              <div class="grid grid-cols-[120px_1fr_50px] items-center gap-2 text-sm">
+                <div>柔軟性</div>
+                <div class="h-2 bg-zinc-200 rounded"><div class="h-2 bg-emerald-500 rounded" style="width:88%"></div></div>
+                <div class="tabular-nums text-right">4.4</div>
+              </div>
+            </div>
+
+            <div class="text-sm space-y-1">
+              <div><span class="text-zinc-500">良い点:</span> 学習意欲と初動の速さが具体例で確認できた</div>
+              <div><span class="text-zinc-500">懸念点:</span> 夜間作業の体力面の確証が不足（要確認）</div>
+            </div>
+          </div>
+
+          <details class="border rounded mt-3">
+            <summary class="cursor-pointer px-3 py-2 text-sm bg-zinc-50 hover:bg-zinc-100">▸ 貼り直す（JSON）</summary>
+            <textarea class="w-full border-t p-3 text-xs font-mono" rows="6" placeholder='{"軸評価":[{"軸":"主体性","スコア":4.5,"根拠":"..."}], "総合スコア":4.3, "合否":"合格", ...}'></textarea>
+            <div class="flex items-center gap-2 p-2 border-t">
+              <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white">JSON を保存</button>
+              <button class="text-sm px-3 py-1 rounded border hover:bg-zinc-50">サンプルを入れる</button>
+              <span class="text-xs text-zinc-500 ml-auto">期待スキーマ: 軸評価[] / 自己解決レベル / 総合スコア / 合否 / 良い点 / 懸念点</span>
+            </div>
+          </details>
+        </div>
+
+      </main>
+    </div>
+  </section>
+
+  <!-- =================== ④ マスタ管理 =================== -->
+  <section id="s-master" class="screen-card">
+    <div class="bg-zinc-50 px-5 py-2 border-b text-xs text-zinc-500">localhost:3939/master — マスタ管理</div>
+
+    <div class="p-6 space-y-6">
+      <h2 class="text-xl font-bold">マスタ管理</h2>
+
+      <!-- 役割別の人材条件 -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-bold">求める人材条件（役割別）</h3>
+          <button class="text-sm px-3 py-1 rounded border hover:bg-zinc-50">＋ 新規役割</button>
+        </div>
+        <div class="border rounded divide-y text-sm">
+          <div class="px-4 py-2 flex items-center justify-between hover:bg-zinc-50">
+            <div><span class="font-medium">NW</span> <span class="text-zinc-500">（ネットワーク）</span></div>
+            <div class="space-x-2"><button class="text-blue-600 hover:underline">編集</button><button class="text-red-600 hover:underline">削除</button></div>
+          </div>
+          <div class="px-4 py-2 flex items-center justify-between hover:bg-zinc-50">
+            <div><span class="font-medium">Server</span></div>
+            <div class="space-x-2"><button class="text-blue-600 hover:underline">編集</button><button class="text-red-600 hover:underline">削除</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 評価・合否条件 -->
+      <div>
+        <h3 class="font-bold mb-2">評価・合否判定条件</h3>
+        <div class="border rounded p-4 space-y-3 text-sm bg-zinc-50">
+          <div><span class="text-zinc-500">方式:</span> BARS（行動基準評価）</div>
+          <div>
+            <span class="text-zinc-500">評価軸:</span>
+            <span class="label-tag bg-white border ml-1">主体性 ✕</span>
+            <span class="label-tag bg-white border ml-1">問題解決力 ✕</span>
+            <span class="label-tag bg-white border ml-1">対人影響力 ✕</span>
+            <span class="label-tag bg-white border ml-1">柔軟性 ✕</span>
+            <button class="ml-1 text-xs px-2 py-0.5 rounded border hover:bg-white">＋</button>
+          </div>
+          <div class="flex gap-6">
+            <div><span class="text-zinc-500">スケール:</span> 0.0〜5.0 / 0.5刻み / 11段階</div>
+            <div><span class="text-zinc-500">合格ライン:</span> 4.2</div>
+            <div><span class="text-zinc-500">普通ライン:</span> 3.5</div>
+          </div>
+          <div><span class="text-zinc-500">自己解決レベル:</span> 0〜5 の5段階で別途評価</div>
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+          <button class="text-sm px-3 py-1 rounded border hover:bg-zinc-50">編集</button>
+          <button class="text-sm px-3 py-1 rounded bg-blue-600 text-white">保存</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== ⑤ 設定 =================== -->
+  <section id="s-settings" class="screen-card">
+    <div class="bg-zinc-50 px-5 py-2 border-b text-xs text-zinc-500">localhost:3939/settings — 設定</div>
+
+    <div class="p-6 space-y-6 max-w-2xl">
+      <h2 class="text-xl font-bold">設定</h2>
+
+      <div class="space-y-2 text-sm">
+        <div class="font-medium">データ保存先</div>
+        <label class="flex items-start gap-2"><input type="radio" name="root" class="mt-1" checked>
+          <div><div>プロジェクト内 <code class="bg-zinc-100 px-1 rounded">./data/</code></div>
+          <div class="text-xs text-zinc-500">アプリと一緒に保存。お試し・1人運用向け。</div></div></label>
+        <label class="flex items-start gap-2"><input type="radio" name="root" class="mt-1">
+          <div class="flex-1"><div>カスタム</div>
+          <div class="flex gap-2 mt-1"><input class="border rounded px-2 py-1 text-sm flex-1" value="C:\Users\admin\面談AI評価ツール"/><button class="text-sm px-3 py-1 rounded border">参照</button></div></div></label>
+      </div>
+
+      <div class="space-y-2 text-sm">
+        <div class="font-medium">既定モード（表示のみ）</div>
+        <div class="text-xs text-zinc-500 mb-1">各セッション内のセクション上部「モード」で都度切り替え可能。API モードには API キーが必要です。</div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="border rounded p-3"><div class="text-xs text-zinc-500 mb-1">② 要約</div><div>● 貼付 / ○ API</div></div>
+          <div class="border rounded p-3"><div class="text-xs text-zinc-500 mb-1">⑤ 質問</div><div>● 貼付 / ○ API</div></div>
+          <div class="border rounded p-3"><div class="text-xs text-zinc-500 mb-1">⑧ 評価</div><div>● 貼付 / ○ API</div></div>
+        </div>
+      </div>
+
+      <div class="space-y-2 text-sm">
+        <div class="font-medium">Claude API</div>
+        <div class="text-xs text-zinc-500">②要約・⑤質問生成・⑧評価の「API モード」で使用。キーは <a class="text-blue-600 hover:underline" href="https://console.anthropic.com/">console.anthropic.com</a> から取得（前払いの残高が必要）。環境変数 <code class="bg-zinc-100 px-1 rounded">ANTHROPIC_API_KEY</code> があればそちらが優先。</div>
+        <div><label class="block text-xs text-zinc-500 mb-1">API キー</label>
+          <input class="w-full border rounded px-3 py-2 text-sm font-mono" type="password" placeholder="sk-ant-..."/></div>
+        <div><label class="block text-xs text-zinc-500 mb-1">既定モデル</label>
+          <select class="border rounded px-3 py-1 text-sm">
+            <option>claude-sonnet-4-6</option>
+            <option>claude-opus-4-7</option>
+            <option>claude-haiku-4-5</option>
+          </select></div>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <div class="font-medium">保存期間（§7.5）</div>
+        <div class="text-xs text-zinc-500">判定確定日（closedAt）からの自動削除。0 = 自動削除しない。下のカードで手動スイープ実行。</div>
+        <label class="flex items-center gap-2"><input type="checkbox" checked> 自動削除を有効化</label>
+        <div class="grid grid-cols-3 gap-3">
+          <div><label class="block text-xs text-zinc-500 mb-1">採用</label>
+            <input type="number" value="0" class="w-full border rounded px-2 py-1 text-sm"/>
+            <div class="text-[10px] text-zinc-400 mt-1">日数（0=削除しない）</div></div>
+          <div><label class="block text-xs text-zinc-500 mb-1">不採用</label>
+            <input type="number" value="180" class="w-full border rounded px-2 py-1 text-sm"/>
+            <div class="text-[10px] text-zinc-400 mt-1">日数</div></div>
+          <div><label class="block text-xs text-zinc-500 mb-1">未確定</label>
+            <input type="number" value="0" class="w-full border rounded px-2 py-1 text-sm"/>
+            <div class="text-[10px] text-zinc-400 mt-1">通常 0 推奨</div></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs text-zinc-500 mb-1">ゴミ箱の猶予日数</label>
+            <input type="number" value="14" class="w-full border rounded px-2 py-1 text-sm"/>
+            <div class="text-[10px] text-zinc-400 mt-1">ソフト削除後この日数で完全削除</div></div>
+          <div class="flex items-end">
+            <label class="flex items-center gap-2"><input type="checkbox" checked> 匿名サマリを analytics/ に残す</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-4 border-t">
+        <button class="text-sm px-4 py-1.5 rounded bg-blue-600 text-white font-medium">保存</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== ⑤b 保存期間スイープカード =================== -->
+  <section class="screen-card">
+    <div class="bg-zinc-50 px-5 py-2 border-b text-xs text-zinc-500">localhost:3939/settings — 保存期間スイープ（操作カード）</div>
+    <div class="p-6 space-y-3">
+      <div class="flex items-center gap-3">
+        <h3 class="font-bold">保存期間スイープ</h3>
+        <span class="label-tag bg-green-100 text-green-800">有効</span>
+      </div>
+      <div class="text-xs text-zinc-500">
+        設計書 §7.5 の二段階削除（sessions/ → _trash/ → 完全削除）。実行前に必ず「次に消える面談を確認」してください。
+        ゴミ箱の中身は <a class="text-blue-600 hover:underline" href="#s-trash">/trash</a> で復元できます。
+      </div>
+      <div class="border rounded p-3 bg-zinc-50 text-sm space-y-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button class="text-sm px-3 py-1 rounded border hover:bg-white">次に消える面談を確認（プレビュー）</button>
+          <button class="text-sm px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white">スイープ実行</button>
+          <span class="text-xs text-zinc-500">直近実行: 2026-06-15 09:00（ソフト 3件 / 完全 1件）</span>
+        </div>
+        <div class="text-xs text-zinc-500">ログ: <code class="bg-zinc-100 px-1 rounded">logs/deletion.log</code>（IDのみ・PIIは含まない）</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================== ⑥ ゴミ箱 =================== -->
+  <section id="s-trash" class="screen-card">
+    <div class="bg-zinc-50 px-5 py-2 border-b text-xs text-zinc-500">localhost:3939/trash — ゴミ箱（復元可能）</div>
+
+    <header class="px-6 py-3 border-b flex items-center gap-6">
+      <div class="font-bold">面談AI評価ツール</div>
+      <nav class="flex gap-1 text-sm">
+        <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">一覧</a>
+        <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">マスタ</a>
+        <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">設定</a>
+        <a class="px-3 py-1.5 rounded bg-blue-50 text-blue-900 font-medium">ゴミ箱</a>
+      </nav>
+    </header>
+
+    <div class="p-6 space-y-4">
+      <div class="text-sm text-zinc-500">猶予日数を過ぎたものは保存期間スイープで <strong>完全削除</strong>されます。復元するとアクティブな <code class="bg-zinc-100 px-1 rounded">sessions/</code> に戻ります。</div>
+
+      <div class="border rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-zinc-50 text-zinc-600 text-xs">
+            <tr>
+              <th class="text-left px-4 py-2 font-medium">削除日時</th>
+              <th class="text-left px-4 py-2 font-medium">氏名</th>
+              <th class="text-left px-4 py-2 font-medium">役割</th>
+              <th class="text-left px-4 py-2 font-medium">合否</th>
+              <th class="text-right px-4 py-2 font-medium">残り猶予</th>
+              <th class="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            <tr class="hover:bg-zinc-50">
+              <td class="px-4 py-2">2026-06-10 11:00</td>
+              <td class="px-4 py-2 font-medium">高橋 二郎</td>
+              <td class="px-4 py-2"><span class="label-tag bg-amber-100 text-amber-800">Server</span></td>
+              <td class="px-4 py-2"><span class="label-tag bg-red-100 text-red-800">不合格</span></td>
+              <td class="px-4 py-2 text-right tabular-nums">6 日</td>
+              <td class="px-4 py-2 text-right space-x-3">
+                <button class="text-blue-600 hover:underline">復元</button>
+                <button class="text-red-600 hover:underline">完全削除</button>
+              </td>
+            </tr>
+            <tr class="hover:bg-zinc-50">
+              <td class="px-4 py-2">2026-06-05 16:20</td>
+              <td class="px-4 py-2 font-medium">渡辺 三郎</td>
+              <td class="px-4 py-2"><span class="label-tag bg-emerald-100 text-emerald-800">NW</span></td>
+              <td class="px-4 py-2 text-zinc-400">未確定</td>
+              <td class="px-4 py-2 text-right tabular-nums text-red-600">1 日</td>
+              <td class="px-4 py-2 text-right space-x-3">
+                <button class="text-blue-600 hover:underline">復元</button>
+                <button class="text-red-600 hover:underline">完全削除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="text-xs text-zinc-500">2件 / 保存期間スイープで自動完全削除されます（§7.5）</div>
+    </div>
+  </section>
+
+  <div class="text-xs text-zinc-400 text-center pt-4 pb-12">
+    UIプレビュー v0.2 — 設計書 v1.2 ベース（Phase 1〜4 実装反映）
+  </div>
+</div>
+
+</body>
+</html>

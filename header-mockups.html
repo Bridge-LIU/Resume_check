@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>セッション詳細ヘッダ 4案プレビュー</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#f4f4f5;color:#18181b;
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI","Segoe UI",system-ui,sans-serif;
+    font-size:14px;line-height:1.6;padding:32px 24px 80px}
+  .wrap{max-width:1152px;margin:0 auto}
+  .title{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lead{color:#71717a;font-size:13px;margin:0 0 28px}
+
+  .case{margin:32px 0 44px}
+  .case-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .case-tag{background:#18181b;color:#fff;font-size:11px;font-weight:600;
+    padding:3px 8px;border-radius:6px;letter-spacing:.04em}
+  .case-name{font-weight:700;font-size:15px}
+  .case-note{color:#71717a;font-size:12px}
+
+  /* === Card (the white container that wraps both header + body) === */
+  .card{background:#fff;border:1px solid #e4e4e7;border-radius:12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden}
+
+  /* generic */
+  .row{display:flex;align-items:center;gap:14px;padding:12px 20px}
+  .border-b{border-bottom:1px solid #e4e4e7}
+  .spacer{flex:1}
+  .muted{color:#71717a}
+  .xs{font-size:12px}
+  .gap-2{gap:8px} .gap-3{gap:12px}
+
+  /* back link */
+  .back{color:#2563eb;text-decoration:none;font-size:13px;white-space:nowrap}
+  .back:hover{text-decoration:underline}
+
+  .name{font-weight:700;color:#18181b;white-space:nowrap}
+
+  /* pills (status / role) */
+  .pill{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;
+    font-size:11px;font-weight:600;line-height:1.6;white-space:nowrap}
+  .pill-nw{background:#d1fae5;color:#065f46}
+  .pill-eval{background:#fde68a;color:#854d0e}
+
+  .id{font-family:ui-monospace,Menlo,Consolas,monospace;color:#a1a1aa;font-size:11px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* checkbox + label */
+  .cb{display:inline-flex;align-items:center;gap:6px;font-size:13px;
+    color:#3f3f46;white-space:nowrap}
+  .cb input{width:14px;height:14px;accent-color:#2563eb}
+
+  /* judgement select wrapper */
+  .judge{display:inline-flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap}
+  .judge label{color:#71717a;font-size:12px}
+  .judge select{height:28px;border:1px solid #e4e4e7;border-radius:6px;
+    padding:0 26px 0 10px;font-size:12px;background:#fff;cursor:pointer;
+    appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  /* icon-only buttons */
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;
+    width:30px;height:28px;border:1px solid #e4e4e7;border-radius:6px;
+    background:#fff;cursor:pointer;color:#3f3f46;font-size:13px;
+    transition:background .15s}
+  .icon-btn:hover{background:#fafafa}
+  .icon-btn.danger{color:#dc2626;border-color:#fecaca}
+  .icon-btn.danger:hover{background:#fef2f2}
+
+  /* labeled buttons */
+  .lbl-btn{display:inline-flex;align-items:center;gap:6px;
+    height:28px;padding:0 10px;border:1px solid #e4e4e7;border-radius:6px;
+    background:#fff;cursor:pointer;color:#3f3f46;font-size:12px;white-space:nowrap}
+  .lbl-btn:hover{background:#fafafa}
+  .lbl-btn.danger{color:#dc2626;border-color:#fecaca}
+  .lbl-btn.danger:hover{background:#fef2f2}
+
+  /* gray sub-bar (Option C) */
+  .subbar{background:#fafafa;border-bottom:1px solid #e4e4e7;
+    padding:8px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+
+  /* big title (Option C) */
+  .h-big{font-size:18px;font-weight:700;margin:0 0 2px}
+
+  /* dropdown menu (Option D popup) */
+  .menu-pop{position:absolute;top:42px;right:20px;
+    background:#fff;border:1px solid #e4e4e7;border-radius:8px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);padding:6px;min-width:200px;
+    font-size:13px;z-index:5}
+  .menu-pop .item{display:flex;align-items:center;gap:8px;padding:8px 10px;
+    border-radius:6px;cursor:pointer;color:#3f3f46}
+  .menu-pop .item:hover{background:#fafafa}
+  .menu-pop .item.danger{color:#dc2626}
+  .menu-pop .sep{height:1px;background:#e4e4e7;margin:4px 0}
+  .menu-pop .meta{padding:6px 10px;color:#a1a1aa;font-size:11px}
+  .pop-anchor{position:relative}
+
+  /* body preview (so the white card looks like the real session page) */
+  .body{padding:16px 20px;color:#71717a;font-size:13px;background:#fff;
+    border-top:1px solid #f4f4f5}
+  .body .h{font-weight:700;color:#18181b;margin:0 0 4px}
+
+  /* mock sidebar item */
+  .body-row{display:flex;gap:16px;min-height:48px}
+  .body-side{width:160px;background:#fafafa;border-right:1px solid #e4e4e7;
+    padding:10px;font-size:12px}
+  .body-side .nav{padding:6px 8px;border-radius:6px}
+  .body-side .nav.active{background:#fff;border:1px solid #e4e4e7;font-weight:600}
+  .body-main{flex:1;padding:14px 16px}
+
+  /* helper labels */
+  .legend{margin-top:6px;font-size:11px;color:#a1a1aa}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 class="title">セッション詳細ヘッダ 4 案プレビュー</h1>
+  <p class="lead">どの案にするか選んでください。同じデータ（LIUJIAN / NW / 評価済 / 未確定 / 2026-06-18）で揃えています。白枠は全ページ統一済み（前回修正済）。</p>
+
+  <!-- ============================================ -->
+  <!-- 案 A : 2行に分割（情報 + 操作）              -->
+  <!-- ============================================ -->
+  <div class="case">
+    <div class="case-head">
+      <span class="case-tag">A</span>
+      <span class="case-name">2 行分割（情報 / 操作）</span>
+      <span class="case-note">— 上段はアイデンティティ、下段は操作。全部見える定番パターン。</span>
+    </div>
+
+    <div class="card">
+      <div class="row border-b">
+        <a href="#" class="back">← 一覧</a>
+        <div class="name">LIUJIAN</div>
+        <span class="pill pill-nw">NW</span>
+        <span class="pill pill-eval">評価済</span>
+        <div class="id">20260618_1658_LIUJIAN_NW</div>
+        <div class="spacer"></div>
+        <span class="xs muted">作成 2026/6/18 16:58</span>
+      </div>
+
+      <div class="row" style="background:#fafafa">
+        <label class="cb"><input type="checkbox" checked> 自動削除しない</label>
+        <div class="judge">
+          <label>判定</label>
+          <select><option>未確定</option><option>採用</option><option>不採用</option></select>
+        </div>
+        <div class="spacer"></div>
+        <button class="lbl-btn">⧉ 複製</button>
+        <button class="lbl-btn danger">🗑 削除</button>
+      </div>
+
+      <div class="body-row">
+        <div class="body-side">
+          <div class="nav active">② 面談者情報 ✓</div>
+          <div class="nav">④ 求める人材条件</div>
+          <div class="nav">⑤ 質問リスト</div>
+        </div>
+        <div class="body-main">
+          <div class="h">② 面談者情報</div>
+          <div>モード: ● 貼付 / ○ API 自動要約</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- 案 B : 1行 + アイコン化（推奨）              -->
+  <!-- ============================================ -->
+  <div class="case">
+    <div class="case-head">
+      <span class="case-tag">B</span>
+      <span class="case-name">1 行 + アイコン化</span>
+      <span class="case-note">— ラベルをアイコン＋tooltipに、(ネットワーク)を省略、日時を短縮。すっきり 1 行に収まる。</span>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <a href="#" class="back">←</a>
+        <div class="name">LIUJIAN</div>
+        <span class="pill pill-nw">NW</span>
+        <span class="pill pill-eval">評価済</span>
+        <div class="spacer"></div>
+        <button class="icon-btn" title="自動削除しない" style="background:#dbeafe;border-color:#bfdbfe;color:#1d4ed8">🔒</button>
+        <div class="judge">
+          <select title="判定"><option>未確定</option><option>採用</option><option>不採用</option></select>
+        </div>
+        <button class="icon-btn" title="複製">⧉</button>
+        <button class="icon-btn danger" title="削除">🗑</button>
+        <span class="xs muted">6/18</span>
+      </div>
+
+      <div class="body-row">
+        <div class="body-side">
+          <div class="nav active">② 面談者情報 ✓</div>
+          <div class="nav">④ 求める人材条件</div>
+          <div class="nav">⑤ 質問リスト</div>
+        </div>
+        <div class="body-main">
+          <div class="h">② 面談者情報</div>
+          <div>モード: ● 貼付 / ○ API 自動要約</div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">🔒 = 自動削除フラグ ON ／ ⧉ = 複製 ／ 🗑 = 削除（hover でラベル表示）</div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- 案 C : タイトルバー + ツールバー              -->
+  <!-- ============================================ -->
+  <div class="case">
+    <div class="case-head">
+      <span class="case-tag">C</span>
+      <span class="case-name">タイトルバー + ツールバー</span>
+      <span class="case-note">— 上段は氏名を大きく、下段グレー帯に操作。情報密度が低く読みやすい。縦には少し背が高い。</span>
+    </div>
+
+    <div class="card">
+      <div style="padding:14px 20px 12px;border-bottom:1px solid #e4e4e7">
+        <a href="#" class="back" style="font-size:12px">← 一覧</a>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <div class="h-big">LIUJIAN</div>
+          <span class="pill pill-nw">NW</span>
+          <span class="pill pill-eval">評価済</span>
+          <div class="spacer"></div>
+          <span class="xs muted">作成 2026/6/18 16:58</span>
+        </div>
+      </div>
+
+      <div class="subbar">
+        <label class="cb"><input type="checkbox" checked> 自動削除しない</label>
+        <div class="judge">
+          <label>判定</label>
+          <select><option>未確定</option><option>採用</option><option>不採用</option></select>
+        </div>
+        <div class="spacer"></div>
+        <button class="lbl-btn">⧉ 複製</button>
+        <button class="lbl-btn danger">🗑 削除</button>
+      </div>
+
+      <div class="body-row">
+        <div class="body-side">
+          <div class="nav active">② 面談者情報 ✓</div>
+          <div class="nav">④ 求める人材条件</div>
+          <div class="nav">⑤ 質問リスト</div>
+        </div>
+        <div class="body-main">
+          <div class="h">② 面談者情報</div>
+          <div>モード: ● 貼付 / ○ API 自動要約</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- 案 D : 1行 + ⋯メニュー（最ミニマル）         -->
+  <!-- ============================================ -->
+  <div class="case">
+    <div class="case-head">
+      <span class="case-tag">D</span>
+      <span class="case-name">1 行 + ⋯ オーバーフローメニュー</span>
+      <span class="case-note">— 主操作（判定）のみ表示、残り全部「⋯」に隠す。最もすっきり。ただし副操作がワンクリック増える。</span>
+    </div>
+
+    <div class="card pop-anchor">
+      <div class="row">
+        <a href="#" class="back">← 一覧</a>
+        <div class="name">LIUJIAN</div>
+        <span class="pill pill-nw">NW</span>
+        <span class="pill pill-eval">評価済</span>
+        <div class="spacer"></div>
+        <div class="judge">
+          <label>判定</label>
+          <select><option>未確定</option><option>採用</option><option>不採用</option></select>
+        </div>
+        <button class="icon-btn" title="その他">⋯</button>
+      </div>
+
+      <!-- 説明用に menu を開いた状態で表示 -->
+      <div class="menu-pop">
+        <div class="item"><input type="checkbox" checked style="accent-color:#2563eb"> 自動削除しない</div>
+        <div class="sep"></div>
+        <div class="item">⧉ 複製</div>
+        <div class="item danger">🗑 削除</div>
+        <div class="sep"></div>
+        <div class="meta">作成 2026/6/18 16:58<br>ID 20260618_1658_LIUJIAN_NW</div>
+      </div>
+
+      <div class="body-row">
+        <div class="body-side">
+          <div class="nav active">② 面談者情報 ✓</div>
+          <div class="nav">④ 求める人材条件</div>
+          <div class="nav">⑤ 質問リスト</div>
+        </div>
+        <div class="body-main">
+          <div class="h">② 面談者情報</div>
+          <div>モード: ● 貼付 / ○ API 自動要約</div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">⋯ クリックで右上にメニューが出るイメージ（プレビューでは開いた状態を表示）</div>
+  </div>
+
+  <p style="margin-top:48px;padding-top:24px;border-top:1px dashed #d4d4d8;color:#71717a;font-size:12px">
+    気に入った案の記号（A / B / C / D）を教えてください。<br>
+    細部の調整（例: 「B にしてアイコンは Lucide を使う」「C だけど日時は消す」など）も歓迎です。
+  </p>
+
+</div>
+</body>
+</html>

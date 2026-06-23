@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>サイドバーナビ — レイアウト案</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI",
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Meiryo", sans-serif; }
+  body { font-size: 14px; line-height: 1.6; background: #f4f4f5; }
+  .tab-btn { padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid transparent; color: #52525b; }
+  .tab-btn:hover { background: #fff; }
+  .tab-btn.active { background: #fff; border-color: #e5e7eb; color: #18181b; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+</style>
+</head>
+<body class="text-zinc-900">
+
+<header class="bg-white border-b px-6 py-4 sticky top-0 z-20">
+  <div class="max-w-[1400px] mx-auto">
+    <h1 class="font-bold text-lg">サイドバーナビ — レイアウト案</h1>
+    <p class="text-xs text-zinc-500 mt-1">セッション詳細ページ <code>/sessions/[id]</code> 左の §ジャンプメニュー。現行版+4案を並べた比較。</p>
+    <nav class="flex gap-1 mt-3 flex-wrap" id="tabs">
+      <button class="tab-btn active" data-tab="current">現行</button>
+      <button class="tab-btn" data-tab="a">A. Stepper</button>
+      <button class="tab-btn" data-tab="b">B. アクセントバー</button>
+      <button class="tab-btn" data-tab="c">C. カード+バッジ</button>
+      <button class="tab-btn" data-tab="d">D. 進捗トラッカー</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-[1400px] mx-auto p-6">
+  <p class="text-xs text-zinc-500 mb-4">左に sidebar、右に「ページ中身ダミー」を並べた状態のプレビュー。Active = ⑤質問リスト、状態は ②④⑤⑥=完了、⑧=未着。</p>
+
+  <!-- 現行 -->
+  <div class="panel active" data-panel="current">
+    <h2 class="text-sm font-semibold text-zinc-700 mb-1">現行（今のコード）</h2>
+    <p class="text-xs text-zinc-500 mb-3">フラット。Active 行だけ枠あり、他は何もない状態。</p>
+    <div class="flex bg-white rounded-xl border shadow-sm overflow-hidden">
+      <aside class="w-48 border-r bg-zinc-50 p-2 text-sm flex flex-col gap-1">
+        <button class="px-3 py-2 rounded flex justify-between items-center text-left hover:bg-white"><span>② 面談者情報</span><span class="text-emerald-600">✓</span></button>
+        <button class="px-3 py-2 rounded flex justify-between items-center text-left hover:bg-white"><span>④ 求める人材条件</span><span class="text-emerald-600">✓</span></button>
+        <button class="px-3 py-2 rounded flex justify-between items-center text-left bg-white border border-blue-300 font-medium"><span>⑤ 質問リスト</span><span class="text-emerald-600">✓</span></button>
+        <button class="px-3 py-2 rounded flex justify-between items-center text-left hover:bg-white"><span>⑥ 議事録</span><span class="text-emerald-600">✓</span></button>
+        <button class="px-3 py-2 rounded flex justify-between items-center text-left hover:bg-white"><span>⑧ 評価結果</span><span class="text-zinc-300">○</span></button>
+      </aside>
+      <section class="flex-1 p-6 text-sm text-zinc-400">— ページ中身ダミー —</section>
+    </div>
+  </div>
+
+  <!-- A. Stepper -->
+  <div class="panel" data-panel="a">
+    <h2 class="text-sm font-semibold text-zinc-700 mb-1">A. Vertical Stepper（縦ステッパー）</h2>
+    <p class="text-xs text-zinc-500 mb-3">番号サークル + 縦の接続線で「面談の流れ」を視覚化。完了は塗り、未着は枠だけ。Active は青リング。</p>
+    <div class="flex bg-white rounded-xl border shadow-sm overflow-hidden">
+      <aside class="w-56 border-r bg-zinc-50 p-3 text-sm">
+        <ol class="relative space-y-0">
+          <!-- 接続線（背景） -->
+          <div class="absolute left-[14px] top-3 bottom-3 w-px bg-zinc-300"></div>
+
+          <li class="relative pl-9 py-2 cursor-pointer hover:bg-white rounded">
+            <span class="absolute left-0 top-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold ring-4 ring-zinc-50">✓</span>
+            <div class="text-zinc-700">② 面談者情報</div>
+            <div class="text-[11px] text-emerald-700">完了</div>
+          </li>
+          <li class="relative pl-9 py-2 cursor-pointer hover:bg-white rounded">
+            <span class="absolute left-0 top-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold ring-4 ring-zinc-50">✓</span>
+            <div class="text-zinc-700">④ 求める人材条件</div>
+            <div class="text-[11px] text-emerald-700">完了</div>
+          </li>
+          <li class="relative pl-9 py-2 bg-blue-50 rounded ring-1 ring-blue-200">
+            <span class="absolute left-0 top-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold ring-4 ring-blue-50">⑤</span>
+            <div class="font-semibold text-blue-900">⑤ 質問リスト</div>
+            <div class="text-[11px] text-blue-700">現在地</div>
+          </li>
+          <li class="relative pl-9 py-2 cursor-pointer hover:bg-white rounded">
+            <span class="absolute left-0 top-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-bold ring-4 ring-zinc-50">✓</span>
+            <div class="text-zinc-700">⑥ 議事録</div>
+            <div class="text-[11px] text-emerald-700">完了</div>
+          </li>
+          <li class="relative pl-9 py-2 cursor-pointer hover:bg-white rounded">
+            <span class="absolute left-0 top-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-white border-2 border-zinc-300 text-zinc-400 text-xs font-bold ring-4 ring-zinc-50">⑧</span>
+            <div class="text-zinc-500">⑧ 評価結果</div>
+            <div class="text-[11px] text-zinc-400">未着</div>
+          </li>
+        </ol>
+      </aside>
+      <section class="flex-1 p-6 text-sm text-zinc-400">— ページ中身ダミー —</section>
+    </div>
+    <p class="text-xs text-zinc-500 mt-3">⚙ <strong>向き</strong>：ワークフローの順序が大事なツールに最適。/sessions/[id] は面談の進行と一致するのでハマる。<br/>⚠ 縦に少しスペース取る（既存より +30px くらい）。</p>
+  </div>
+
+  <!-- B. アクセントバー -->
+  <div class="panel" data-panel="b">
+    <h2 class="text-sm font-semibold text-zinc-700 mb-1">B. アクセントバー（Vercel docs 風）</h2>
+    <p class="text-xs text-zinc-500 mb-3">Active 行の左端に 3px 青バー。フラットだが「いま見ている所」が明確。状態は右の小ドット。</p>
+    <div class="flex bg-white rounded-xl border shadow-sm overflow-hidden">
+      <aside class="w-48 border-r bg-white p-2 text-sm flex flex-col gap-px">
+        <button class="relative pl-4 pr-3 py-2 rounded flex justify-between items-center text-left hover:bg-zinc-50 text-zinc-700">
+          <span>② 面談者情報</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        </button>
+        <button class="relative pl-4 pr-3 py-2 rounded flex justify-between items-center text-left hover:bg-zinc-50 text-zinc-700">
+          <span>④ 求める人材条件</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        </button>
+        <button class="relative pl-4 pr-3 py-2 rounded flex justify-between items-center text-left bg-blue-50 text-blue-900 font-semibold">
+          <span class="absolute left-0 top-1 bottom-1 w-[3px] rounded-full bg-blue-600"></span>
+          <span>⑤ 質問リスト</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        </button>
+        <button class="relative pl-4 pr-3 py-2 rounded flex justify-between items-center text-left hover:bg-zinc-50 text-zinc-700">
+          <span>⑥ 議事録</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        </button>
+        <button class="relative pl-4 pr-3 py-2 rounded flex justify-between items-center text-left hover:bg-zinc-50 text-zinc-500">
+          <span>⑧ 評価結果</span>
+          <span class="w-1.5 h-1.5 rounded-full border border-zinc-300"></span>
+        </button>
+      </aside>
+      <section class="flex-1 p-6 text-sm text-zinc-400">— ページ中身ダミー —</section>
+    </div>
+    <p class="text-xs text-zinc-500 mt-3">⚙ <strong>向き</strong>：いちばん控えめ。情報密度を保ちながら active がはっきり。現行の延長で違和感最小。<br/>✓ 既存コードからの変更も最少。</p>
+  </div>
+
+  <!-- C. カード+バッジ -->
+  <div class="panel" data-panel="c">
+    <h2 class="text-sm font-semibold text-zinc-700 mb-1">C. カード型 + 状態バッジ（Notion 風）</h2>
+    <p class="text-xs text-zinc-500 mb-3">各項目を独立カード扱い。状態を「完了」「未着」のテキストバッジで明示。情報密度高い。</p>
+    <div class="flex bg-white rounded-xl border shadow-sm overflow-hidden">
+      <aside class="w-56 border-r bg-zinc-50/50 p-2 text-sm flex flex-col gap-1.5">
+        <button class="px-3 py-2 rounded-md border border-zinc-200 bg-white flex justify-between items-center text-left hover:border-zinc-300">
+          <span class="text-zinc-700">② 面談者情報</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">完了</span>
+        </button>
+        <button class="px-3 py-2 rounded-md border border-zinc-200 bg-white flex justify-between items-center text-left hover:border-zinc-300">
+          <span class="text-zinc-700">④ 求める人材条件</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">完了</span>
+        </button>
+        <button class="px-3 py-2 rounded-md border-2 border-blue-500 bg-blue-50 flex justify-between items-center text-left">
+          <span class="text-blue-900 font-semibold">⑤ 質問リスト</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">完了</span>
+        </button>
+        <button class="px-3 py-2 rounded-md border border-zinc-200 bg-white flex justify-between items-center text-left hover:border-zinc-300">
+          <span class="text-zinc-700">⑥ 議事録</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">完了</span>
+        </button>
+        <button class="px-3 py-2 rounded-md border border-zinc-200 bg-white flex justify-between items-center text-left hover:border-zinc-300">
+          <span class="text-zinc-500">⑧ 評価結果</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500 font-medium">未着</span>
+        </button>
+      </aside>
+      <section class="flex-1 p-6 text-sm text-zinc-400">— ページ中身ダミー —</section>
+    </div>
+    <p class="text-xs text-zinc-500 mt-3">⚙ <strong>向き</strong>：状態の言葉を残したい場合。一覧表に近いノリでカチッとしてる。<br/>⚠ 縦スペースは A より +20px。56px 幅推奨。</p>
+  </div>
+
+  <!-- D. 進捗トラッカー -->
+  <div class="panel" data-panel="d">
+    <h2 class="text-sm font-semibold text-zinc-700 mb-1">D. 進捗トラッカー（ダッシュボード風）</h2>
+    <p class="text-xs text-zinc-500 mb-3">上部に「全体進捗 4/5」を出してから項目リスト。番号バッジ + アイコン化された状態。</p>
+    <div class="flex bg-white rounded-xl border shadow-sm overflow-hidden">
+      <aside class="w-56 border-r bg-zinc-50 p-3 text-sm flex flex-col">
+        <div class="mb-3 px-1">
+          <div class="flex justify-between items-baseline mb-1">
+            <span class="text-xs text-zinc-500">進捗</span>
+            <span class="text-xs font-semibold text-zinc-700 tabular-nums">4 / 5</span>
+          </div>
+          <div class="h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+            <div class="h-full bg-emerald-500" style="width:80%"></div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button class="px-2 py-1.5 rounded flex items-center gap-2 text-left hover:bg-white">
+            <span class="w-6 h-6 rounded-md bg-emerald-500 text-white text-xs font-bold inline-flex items-center justify-center shrink-0">✓</span>
+            <span class="text-zinc-700 flex-1">② 面談者情報</span>
+          </button>
+          <button class="px-2 py-1.5 rounded flex items-center gap-2 text-left hover:bg-white">
+            <span class="w-6 h-6 rounded-md bg-emerald-500 text-white text-xs font-bold inline-flex items-center justify-center shrink-0">✓</span>
+            <span class="text-zinc-700 flex-1">④ 求める人材条件</span>
+          </button>
+          <button class="px-2 py-1.5 rounded flex items-center gap-2 text-left bg-blue-50 ring-1 ring-blue-200">
+            <span class="w-6 h-6 rounded-md bg-blue-600 text-white text-xs font-bold inline-flex items-center justify-center shrink-0">⑤</span>
+            <span class="text-blue-900 font-semibold flex-1">⑤ 質問リスト</span>
+            <span class="text-[10px] text-blue-700">●</span>
+          </button>
+          <button class="px-2 py-1.5 rounded flex items-center gap-2 text-left hover:bg-white">
+            <span class="w-6 h-6 rounded-md bg-emerald-500 text-white text-xs font-bold inline-flex items-center justify-center shrink-0">✓</span>
+            <span class="text-zinc-700 flex-1">⑥ 議事録</span>
+          </button>
+          <button class="px-2 py-1.5 rounded flex items-center gap-2 text-left hover:bg-white">
+            <span class="w-6 h-6 rounded-md bg-white border-2 border-zinc-300 text-zinc-400 text-xs font-bold inline-flex items-center justify-center shrink-0">⑧</span>
+            <span class="text-zinc-500 flex-1">⑧ 評価結果</span>
+          </button>
+        </div>
+      </aside>
+      <section class="flex-1 p-6 text-sm text-zinc-400">— ページ中身ダミー —</section>
+    </div>
+    <p class="text-xs text-zinc-500 mt-3">⚙ <strong>向き</strong>：「あとひと工程」みたいなモチベ要素を入れたいとき。番号がアイコン化されて読みやすい。<br/>⚠ A・C より色とアイコンが強い。落ち着いた業務 UI から少し外れる。</p>
+  </div>
+
+  <hr class="my-8 border-zinc-200" />
+  <h2 class="text-sm font-semibold text-zinc-700 mb-2">推奨</h2>
+  <ul class="text-xs text-zinc-600 space-y-1.5 list-disc pl-5">
+    <li><strong>B（アクセントバー）</strong>：いちばん控えめで、現行コードからの差分が小さい。業務 UI を崩さない。</li>
+    <li><strong>A（Stepper）</strong>：面談ツールという文脈にいちばん意味的に合う。「②→④→⑤→⑥→⑧ の流れ」を視覚化できる。</li>
+    <li><strong>D（進捗トラッカー）</strong>：ホーム画面のセッション一覧で「進捗 N/5」を出している場合、視覚言語が揃う。</li>
+    <li>C は「悪くないが Notion すぎる」感じ。表中心の本ツールには情報密度が過剰かも。</li>
+  </ul>
+</main>
+
+<script>
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector(`.panel[data-panel="${btn.dataset.tab}"]`).classList.add('active');
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>候補者一覧 — 行と列を入れ替え（転置）案</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI",
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Meiryo", sans-serif; }
+  body { font-size: 13px; line-height: 1.55; background: #f4f4f5; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; display: inline-block; font-weight: 500; }
+  .pill-pass { background: #dcfce7; color: #166534; }
+  .pill-fail { background: #fee2e2; color: #991b1b; }
+  .pill-edit { background: #e4e4e7; color: #3f3f46; }
+  .pill-role-nw { background: #d1fae5; color: #065f46; }
+  .pill-role-sv { background: #fed7aa; color: #9a3412; }
+  .pill-role-dev { background: #bfdbfe; color: #1e3a8a; }
+  .pill-role-sp { background: #f5d0fe; color: #701a75; }
+  .pill-role-it { background: #fef08a; color: #713f12; }
+  .tab-btn { padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid transparent; color: #52525b; }
+  .tab-btn:hover { background: #fff; }
+  .tab-btn.active { background: #fff; border-color: #e5e7eb; color: #18181b; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  /* Excel風テーブル */
+  table.xls { border-collapse: collapse; width: max-content; min-width: 100%; background: #fff; font-size: 12px; }
+  table.xls th, table.xls td { border: 1px solid #e5e7eb; padding: 8px 10px; vertical-align: top; }
+  table.xls thead th { background: #f1f5f9; color: #334155; font-weight: 600; font-size: 12px; text-align: center; white-space: nowrap; }
+  table.xls .label-col { background: #fafafa; color: #475569; font-weight: 600; white-space: nowrap; position: sticky; left: 0; z-index: 5; }
+  table.xls .label-col-head { background: #e2e8f0; position: sticky; left: 0; z-index: 6; }
+  table.xls .num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.xls .center { text-align: center; }
+  table.xls .muted { color: #71717a; font-size: 11px; }
+  table.xls .wrap { white-space: pre-wrap; word-break: break-word; min-width: 240px; max-width: 320px; }
+  .mk { display: inline-block; font-weight: 700; font-size: 14px; line-height: 1; }
+  .mk-good { color: #15803d; } .mk-ok { color: #1d4ed8; }
+  .mk-mid  { color: #b45309; } .mk-bad { color: #b91c1c; }
+  .axis-block { padding: 6px 0; border-bottom: 1px dashed #e5e7eb; }
+  .axis-block:last-child { border-bottom: 0; }
+  .axis-head { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-weight: 600; color: #18181b; }
+  .axis-body { font-size: 11px; color: #475569; line-height: 1.5; white-space: pre-wrap; }
+  /* T-C カード */
+  .cand-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .cand-card h3 { font-weight: 700; font-size: 15px; }
+  .field-label { font-size: 10.5px; color: #71717a; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field-value { font-size: 12px; color: #18181b; white-space: pre-wrap; word-break: break-word; }
+  .axis-row { display: grid; grid-template-columns: 80px 28px 36px 1fr; gap: 6px; align-items: start; padding: 4px 0; border-bottom: 1px dashed #f4f4f5; }
+  .axis-row:last-child { border-bottom: 0; }
+  .axis-row .ar-name { font-weight: 600; color: #334155; font-size: 11px; }
+  .axis-row .ar-mark { text-align: center; }
+  .axis-row .ar-score { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 11px; color: #18181b; }
+  .axis-row .ar-text { font-size: 10.5px; color: #52525b; line-height: 1.45; }
+  /* T-B */
+  table.xls .axis-cell { min-width: 220px; max-width: 280px; }
+</style>
+</head>
+<body class="text-zinc-900">
+
+<header class="bg-white border-b px-6 py-4 sticky top-0 z-20">
+  <div class="max-w-[1500px] mx-auto flex items-center gap-6 flex-wrap">
+    <div>
+      <h1 class="font-bold text-lg">候補者一覧 — 行と列を入れ替え（転置）案</h1>
+      <div class="text-xs text-zinc-500 mt-0.5">現状（行=候補者）を「列=候補者」に転置。3 つの見せ方を比較</div>
+    </div>
+    <div class="flex-1"></div>
+    <div id="tabs" class="flex gap-1 bg-zinc-100 p-1 rounded-xl">
+      <button class="tab-btn active" data-tab="ta">案 T-A 完全転置</button>
+      <button class="tab-btn" data-tab="tb">案 T-B 軸を行展開</button>
+      <button class="tab-btn" data-tab="tc">案 T-C カードグリッド</button>
+      <button class="tab-btn" data-tab="ref">参考：案B（現実装）</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1500px] mx-auto p-6 space-y-6">
+
+<!-- ====================================================== -->
+<!-- 案 T-A 完全転置 -->
+<!-- ====================================================== -->
+<section data-panel="ta">
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b">
+      <div class="flex items-start gap-4 flex-wrap">
+        <div class="flex-1 min-w-[300px]">
+          <div class="font-bold text-base">案 T-A: 完全転置（最も素直）</div>
+          <div class="text-xs text-zinc-500 mt-1">
+            項目を行・候補者を列に。1人 = 1列 (~240px)、軸別評価は 1セル内に縦ブロック。
+            5人で ~1,400px、10人で ~2,600px。横スクロールが基本。
+          </div>
+        </div>
+        <div class="text-xs grid grid-cols-2 gap-3 max-w-[420px]">
+          <div class="border rounded-lg p-2 bg-emerald-50/40">
+            <div class="font-semibold text-emerald-800 mb-1">Pros</div>
+            <ul class="space-y-0.5 text-zinc-700 list-disc list-inside">
+              <li>1人を縦に最後まで読める（読み比べ向き）</li>
+              <li>項目名が左 1 列に固定で見失わない</li>
+              <li>長文（経歴・軸別評価）の高さが各候補者で揃う</li>
+            </ul>
+          </div>
+          <div class="border rounded-lg p-2 bg-amber-50/40">
+            <div class="font-semibold text-amber-800 mb-1">Cons</div>
+            <ul class="space-y-0.5 text-zinc-700 list-disc list-inside">
+              <li>Excel の autoFilter は列にかけるもの → 機能しない</li>
+              <li>候補者が増えるたびに列が増える（10人で 2,600px）</li>
+              <li>1セルあたりの高さが全候補者の最大に引っ張られる</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="xls" id="tbl-ta">
+        <thead><tr id="tbl-ta-head"></tr></thead>
+        <tbody id="tbl-ta-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- 案 T-B 軸を行展開 -->
+<!-- ====================================================== -->
+<section data-panel="tb" class="hidden">
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b">
+      <div class="flex items-start gap-4 flex-wrap">
+        <div class="flex-1 min-w-[300px]">
+          <div class="font-bold text-base">案 T-B: 軸を 4 行に展開（行 = 1 項目 1 軸）</div>
+          <div class="text-xs text-zinc-500 mt-1">
+            軸別評価を 1 セルにまとめずに、4 軸を 4 行に展開。
+            候補者列の中で「主体性 ◎4.5 / 根拠...」が 1行 1軸で並ぶ。横ソートで強み弱みが一目。
+          </div>
+        </div>
+        <div class="text-xs grid grid-cols-2 gap-3 max-w-[420px]">
+          <div class="border rounded-lg p-2 bg-emerald-50/40">
+            <div class="font-semibold text-emerald-800 mb-1">Pros</div>
+            <ul class="space-y-0.5 text-zinc-700 list-disc list-inside">
+              <li>同じ軸を横に並べて読める（軸ごとに横スキャン）</li>
+              <li>軸スコアの行高さが揃い、視線が安定</li>
+              <li>Excel で「主体性の行」を選んで色分けがしやすい</li>
+            </ul>
+          </div>
+          <div class="border rounded-lg p-2 bg-amber-50/40">
+            <div class="font-semibold text-amber-800 mb-1">Cons</div>
+            <ul class="space-y-0.5 text-zinc-700 list-disc list-inside">
+              <li>行数が T-A より 3 行増える（合計 17 行 + ヘッダ）</li>
+              <li>軸の根拠を全部出すと縦に長い</li>
+              <li>1人を縦に通して読む時は T-A より散漫</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="xls" id="tbl-tb">
+        <thead><tr id="tbl-tb-head"></tr></thead>
+        <tbody id="tbl-tb-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- 案 T-C カードグリッド -->
+<!-- ====================================================== -->
+<section data-panel="tc" class="hidden">
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b">
+      <div class="flex items-start gap-4 flex-wrap">
+        <div class="flex-1 min-w-[300px]">
+          <div class="font-bold text-base">案 T-C: カードグリッド（1人 = 1カード）</div>
+          <div class="text-xs text-zinc-500 mt-1">
+            完全に表をやめてカード型に。画面幅で 2〜3 列に折返し、印刷でも 1人 1ページが綺麗。
+            ※ Excel では再現できないため、これは Web 一覧 (`/`) 側用のレイアウト案。
+          </div>
+        </div>
+        <div class="text-xs grid grid-cols-2 gap-3 max-w-[420px]">
+          <div class="border rounded-lg p-2 bg-emerald-50/40">
+            <div class="font-semibold text-emerald-800 mb-1">Pros</div>
+            <ul class="space-y-0.5 text-zinc-700 list-disc list-inside">
+              <li>視認性が一番高い（1人 1領域）</li>
+              <li>レスポンシブで 2〜3 列に折返す</li>
+              <li>印刷時 1ページ 1人で配布資料化しやすい</li>
+            </ul>
+          </div>
+          <div class="border rounded-lg p-2 bg-amber-50/40">
+            <div class="font-semibold text-amber-800 mb-1">Cons</div>
+            <ul class="space-y-0.5 text-zinc-700 list-disc list-inside">
+              <li>Excel 出力には適さない（カード=セルにならない）</li>
+              <li>軸スコアの横比較がしづらい</li>
+              <li>多人数（20人〜）でスクロール量が大</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="p-6">
+      <div id="tc-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== -->
+<!-- 参考: 案B（現実装、転置していない） -->
+<!-- ====================================================== -->
+<section data-panel="ref" class="hidden">
+  <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b">
+      <div class="font-bold text-base">参考: 案 B（現実装・行=候補者）</div>
+      <div class="text-xs text-zinc-500 mt-1">
+        lib/excelMirror.ts:buildSessionsXlsx で実装済みの 14 列版。1 行 1 候補者。
+        転置案と比較して、autoFilter / ソートが効く分こちらが「Excel として素直」。
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="xls" id="tbl-ref">
+        <thead>
+          <tr>
+            <th>候補者</th><th>役割</th><th>経歴サマリ</th><th>軸別評価</th>
+            <th>良い点</th><th>懸念点</th><th>使用AI</th><th>自己解決</th>
+            <th>総合スコア</th><th>合否</th><th>面談日</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-ref-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// ========================================================
+// サンプルデータ（前回モックと整合）
+// ========================================================
+const CANDIDATES = [
+  {
+    name: "IY", role: "ITSupport", roleCls: "pill-role-it",
+    self: 4, summary: "ITインフラ運用経験から、ヘルプデスク中心。Cisco/CUCM/Jabber、Windows Server。CCNA 取得済み。",
+    grounds: [
+      { axis: "主体性", mark: "△", score: 3.5, text: "今後は突発的な現場でも臨機応変に動ける素地は十分。" },
+      { axis: "問題解決力", mark: "○", score: 4.0, text: "本来業務でリンク冗長性、問題分析ができる。" },
+      { axis: "対人影響力", mark: "△", score: 3.5, text: "ヘルプデスクで対顧客折衝が長く、柔らかい接し方。" },
+      { axis: "柔軟性", mark: "△", score: 3.5, text: "サーバ／ネットワーク機器・PC 中心と業務範囲が広い。" },
+    ],
+    good: "AD/Office/Exchange 等の運用一通り。Excel でドキュメント整備。",
+    concern: "近年は手順遂行型業務が連続している。コードを書く現場経験は弱め。",
+    ai: "貼付", total: 3.65, pass: "合格", date: "2026-06-23", result: "採用", state: "評価済", purge: 14,
+  },
+  {
+    name: "Y.F", role: "Dev", roleCls: "pill-role-dev",
+    self: 3, summary: "SE→PL→PM、2008 年〜大手通信。汎用機 PMO 経験長く、近年は AWS/Azure クラウド設計まで対応。",
+    grounds: [
+      { axis: "主体性", mark: "○", score: 4.0, text: "19 年のキャリアで証券系を含む内部統制対応。" },
+      { axis: "問題解決力", mark: "△", score: 3.5, text: "RDB/SQL チューニング (T3) で別件含めて DBA に近い動き。" },
+      { axis: "対人影響力", mark: "△", score: 3.5, text: "Spring Boot/Rails 等の現代 Web フレームワーク経験は浅い。" },
+      { axis: "柔軟性", mark: "×", score: 3.0, text: "IT インフラ運用経験で SE→PL/PM 経験を経て、現場マネジメントが厚い。" },
+    ],
+    good: "上流工程・PMO 経験豊富。クラウド設計の業務理解も対応可。",
+    concern: "今の業務中心の Dev ポジションに対し、Java/Python 等の言語経験・Web フレームワーク経験頻度がやや低い。",
+    ai: "貼付", total: 3.53, pass: "普通", date: "2026-06-22", result: "採用", state: "評価済", purge: 14,
+  },
+  {
+    name: "ENG617687", role: "Special", roleCls: "pill-role-sp",
+    self: 4, summary: "TP（技術者コードENG…）／1998 年新卒同期。情報セキュリティ、ハンズオン経験豊富。",
+    grounds: [
+      { axis: "主体性", mark: "○", score: 4.0, text: "NTT でリスクアセスメントを経部展開まで、大規模インシデント対応。" },
+      { axis: "問題解決力", mark: "○", score: 4.0, text: "GDPR/SCC の越境移転監査でロ社等の対応経験。" },
+      { axis: "対人影響力", mark: "○", score: 4.0, text: "リスクを略語英訳まで、自身のハンズオン 2013 年以降中心。" },
+      { axis: "柔軟性", mark: "△", score: 3.5, text: "情報セキュリティ→リスク管理→海外ライバシー対応中心。" },
+    ],
+    good: "ハンズオンの調査・運用実績が 2013 年以降中心で、客先にも入る Special としてのスキル経験あり。",
+    concern: "PC/OA 機器・ネットワークの実務トラブル対応経験はなく、検索対応能力は別途。",
+    ai: "貼付", total: 3.85, pass: "普通", date: "2026-06-22", result: "採用", state: "評価済", purge: 14,
+  },
+  {
+    name: "JD", role: "NW", roleCls: "pill-role-nw",
+    self: 5, summary: "ネットワークエンジニア 12 年。Cisco/Juniper、BGP/OSPF 設計運用、大規模 DC ネットワーク刷新案件をリード。",
+    grounds: [
+      { axis: "主体性", mark: "◎", score: 4.7, text: "DC 移行プロジェクトで設計から運用まで主導。社内合意形成も自身で。" },
+      { axis: "問題解決力", mark: "◎", score: 4.6, text: "障害切分のロジックが体系化されている。BGP ルートリーク等の経験豊富。" },
+      { axis: "対人影響力", mark: "○", score: 4.0, text: "ベンダ折衝、社内説明、いずれも経験あり。" },
+      { axis: "柔軟性", mark: "○", score: 4.2, text: "クラウド系（AWS Direct Connect 等）にも踏み込み。" },
+    ],
+    good: "DC ネットワーク刷新の経験はそのまま自社案件に活かせる。BGP の理解が深い。",
+    concern: "セキュリティ製品（FW/IDS）は限定的。",
+    ai: "Claude", total: 4.38, pass: "合格", date: "2026-06-21", result: "採用", state: "評価済", purge: 14,
+  },
+  {
+    name: "KT", role: "Server", roleCls: "pill-role-sv",
+    self: 3, summary: "Linux サーバ運用 8 年、近年は Ansible/Terraform で IaC 化を推進。RHEL/CentOS 中心。",
+    grounds: [
+      { axis: "主体性", mark: "○", score: 4.0, text: "IaC 推進を自発的に提案、社内勉強会も開催。" },
+      { axis: "問題解決力", mark: "○", score: 4.1, text: "障害時のログ解析力あり。strace/tcpdump も使う。" },
+      { axis: "対人影響力", mark: "△", score: 3.4, text: "技術寄りでメンバ折衝はやや弱め。" },
+      { axis: "柔軟性", mark: "○", score: 4.0, text: "Kubernetes も触れる、コンテナ基盤の構築実績あり。" },
+    ],
+    good: "IaC スキルが現場で即戦力。学習意欲が高い。",
+    concern: "顧客対応の経験が浅く、対面調整は要サポート。",
+    ai: "Claude", total: 3.88, pass: "合格", date: "2026-06-20", result: "採用", state: "評価済", purge: 14,
+  },
+];
+
+function markCls(m) {
+  return m === "◎" ? "mk-good" : m === "○" ? "mk-ok" : m === "△" ? "mk-mid" : "mk-bad";
+}
+function passPill(p) {
+  if (p === "合格") return `<span class="pill pill-pass">合格</span>`;
+  if (p === "不合格") return `<span class="pill pill-fail">不合格</span>`;
+  return `<span class="pill pill-edit">普通</span>`;
+}
+function rolePill(c) {
+  return `<span class="pill ${c.roleCls}">${c.role}</span>`;
+}
+function totalColor(score) {
+  if (score >= 4.2) return "text-emerald-700 font-bold";
+  if (score >= 3.5) return "text-amber-700 font-bold";
+  return "text-red-700 font-bold";
+}
+
+// ========================================================
+// 案 T-A: 完全転置
+// 行：項目（候補者氏名/役割/経歴/軸別評価/良い点/懸念点/使用AI/自己解決/総合スコア/合否/面談日）
+// 列：候補者
+// ========================================================
+(function renderTA() {
+  const head = document.getElementById("tbl-ta-head");
+  head.innerHTML =
+    `<th class="label-col-head">項目</th>` +
+    CANDIDATES.map(c => `<th style="min-width:240px;max-width:280px"><div class="font-bold">${c.name}</div><div class="mt-1">${rolePill(c)}</div></th>`).join("");
+
+  const body = document.getElementById("tbl-ta-body");
+  const rows = [
+    { label: "経歴サマリ", render: c => `<div class="wrap">${c.summary}</div>` },
+    {
+      label: "軸別評価", render: c => `
+        <div class="wrap">
+          ${c.grounds.map(g => `
+            <div class="axis-block">
+              <div class="axis-head">
+                <span>${g.axis}</span>
+                <span class="mk ${markCls(g.mark)}">${g.mark}</span>
+                <span class="tabular text-zinc-700">${g.score.toFixed(1)}</span>
+              </div>
+              <div class="axis-body">${g.text}</div>
+            </div>
+          `).join("")}
+        </div>`
+    },
+    { label: "良い点", render: c => `<div class="wrap text-emerald-800">${c.good}</div>` },
+    { label: "懸念点", render: c => `<div class="wrap text-red-800">${c.concern}</div>` },
+    { label: "使用AI", render: c => `<div class="center muted">${c.ai}</div>` },
+    { label: "自己解決", render: c => `<div class="center num">${c.self}</div>` },
+    { label: "総合スコア", render: c => `<div class="center"><span class="${totalColor(c.total)}">${c.total.toFixed(2)}</span></div>` },
+    { label: "合否", render: c => `<div class="center">${passPill(c.pass)}</div>` },
+    { label: "面談日", render: c => `<div class="center muted">${c.date}</div>` },
+    { label: "結果", render: c => `<div class="center">${c.result}</div>` },
+    { label: "状態", render: c => `<div class="center">${c.state}</div>` },
+    { label: "自動削除", render: c => `<div class="center muted">${c.purge}日</div>` },
+  ];
+  body.innerHTML = rows.map(r =>
+    `<tr><td class="label-col">${r.label}</td>${CANDIDATES.map(r.render).join("")}</tr>`
+  ).join("");
+})();
+
+// ========================================================
+// 案 T-B: 軸を行展開（軸別評価セクションを 4 軸 → 4 行に展開）
+// ========================================================
+(function renderTB() {
+  const head = document.getElementById("tbl-tb-head");
+  head.innerHTML =
+    `<th class="label-col-head">項目</th>` +
+    CANDIDATES.map(c => `<th style="min-width:220px;max-width:260px"><div class="font-bold">${c.name}</div><div class="mt-1">${rolePill(c)}</div></th>`).join("");
+
+  const body = document.getElementById("tbl-tb-body");
+  const axisNames = ["主体性", "問題解決力", "対人影響力", "柔軟性"];
+  const rows = [
+    { label: "経歴サマリ", render: c => `<div class="wrap">${c.summary}</div>` },
+    // 軸を 4 行に展開
+    ...axisNames.map(an => ({
+      label: an,
+      render: c => {
+        const g = c.grounds.find(g => g.axis === an);
+        if (!g) return `<div class="center text-zinc-400">―</div>`;
+        return `
+          <div class="axis-cell">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="mk ${markCls(g.mark)}">${g.mark}</span>
+              <span class="tabular font-semibold">${g.score.toFixed(1)}</span>
+            </div>
+            <div class="text-[11px] text-zinc-600 leading-snug">${g.text}</div>
+          </div>`;
+      }
+    })),
+    { label: "良い点", render: c => `<div class="wrap text-emerald-800">${c.good}</div>` },
+    { label: "懸念点", render: c => `<div class="wrap text-red-800">${c.concern}</div>` },
+    { label: "使用AI", render: c => `<div class="center muted">${c.ai}</div>` },
+    { label: "自己解決", render: c => `<div class="center num">${c.self}</div>` },
+    { label: "総合スコア", render: c => `<div class="center"><span class="${totalColor(c.total)}">${c.total.toFixed(2)}</span></div>` },
+    { label: "合否", render: c => `<div class="center">${passPill(c.pass)}</div>` },
+    { label: "面談日", render: c => `<div class="center muted">${c.date}</div>` },
+  ];
+  body.innerHTML = rows.map(r => {
+    const isAxis = axisNames.includes(r.label);
+    return `<tr><td class="label-col ${isAxis ? 'text-blue-700' : ''}">${r.label}</td>${CANDIDATES.map(r.render).join("")}</tr>`;
+  }).join("");
+})();
+
+// ========================================================
+// 案 T-C: カードグリッド
+// ========================================================
+(function renderTC() {
+  const grid = document.getElementById("tc-grid");
+  grid.innerHTML = CANDIDATES.map(c => `
+    <div class="cand-card">
+      <div class="flex items-start gap-2">
+        <div class="flex-1">
+          <h3>${c.name}</h3>
+          <div class="mt-1 flex gap-2 items-center">
+            ${rolePill(c)}
+            ${passPill(c.pass)}
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="${totalColor(c.total)} text-2xl">${c.total.toFixed(2)}</div>
+          <div class="muted text-[10px]">総合 / 自己 ${c.self}</div>
+        </div>
+      </div>
+      <div>
+        <div class="field-label mb-1">経歴サマリ</div>
+        <div class="field-value">${c.summary}</div>
+      </div>
+      <div>
+        <div class="field-label mb-1">軸別評価</div>
+        <div>
+          ${c.grounds.map(g => `
+            <div class="axis-row">
+              <span class="ar-name">${g.axis}</span>
+              <span class="ar-mark mk ${markCls(g.mark)}">${g.mark}</span>
+              <span class="ar-score">${g.score.toFixed(1)}</span>
+              <span class="ar-text">${g.text}</span>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <div class="field-label mb-1">良い点</div>
+          <div class="field-value text-emerald-800">${c.good}</div>
+        </div>
+        <div>
+          <div class="field-label mb-1">懸念点</div>
+          <div class="field-value text-red-800">${c.concern}</div>
+        </div>
+      </div>
+      <div class="flex items-center justify-between pt-2 border-t text-[11px] text-zinc-500">
+        <span>${c.date} ・ ${c.ai}</span>
+        <span>${c.state} / 自動削除 ${c.purge}日</span>
+      </div>
+    </div>
+  `).join("");
+})();
+
+// ========================================================
+// 参考: 案B（現実装、軸別評価 1 列）
+// ========================================================
+(function renderRef() {
+  const body = document.getElementById("tbl-ref-body");
+  body.innerHTML = CANDIDATES.map(c => `
+    <tr>
+      <td><div class="font-semibold">${c.name}</div></td>
+      <td class="center">${rolePill(c)}</td>
+      <td class="wrap">${c.summary}</td>
+      <td style="min-width:280px;max-width:340px">
+        ${c.grounds.map(g => `
+          <div class="axis-block">
+            <div class="axis-head">
+              <span>${g.axis}</span>
+              <span class="mk ${markCls(g.mark)}">${g.mark}</span>
+              <span class="tabular text-zinc-700">${g.score.toFixed(1)}</span>
+            </div>
+            <div class="axis-body">${g.text}</div>
+          </div>
+        `).join("")}
+      </td>
+      <td class="wrap text-emerald-800">${c.good}</td>
+      <td class="wrap text-red-800">${c.concern}</td>
+      <td class="center muted">${c.ai}</td>
+      <td class="center num">${c.self}</td>
+      <td class="center"><span class="${totalColor(c.total)}">${c.total.toFixed(2)}</span></td>
+      <td class="center">${passPill(c.pass)}</td>
+      <td class="center muted">${c.date}</td>
+    </tr>
+  `).join("");
+})();
+
+// ========================================================
+// タブ切替
+// ========================================================
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll("section[data-panel]").forEach(s => {
+      s.classList.toggle("hidden", s.dataset.panel !== tab);
+    });
+  });
+});
+</script>
+
+</body>
+</html>

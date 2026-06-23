@@ -1,0 +1,19 @@
+{
+  "_comment": "コピーして config/settings.json を作る。実キーはここに直接書かず、環境変数 ANTHROPIC_API_KEY を優先するのが推奨。",
+  "dataRoot": "./data",
+  "api": {
+    "key": "",
+    "defaultModel": "claude-opus-4-7"
+  },
+  "retention": {
+    "enabled": true,
+    "anchor": "closedAt",
+    "days": {
+      "採用": 0,
+      "不採用": 180,
+      "未確定": 0
+    },
+    "softDeleteGraceDays": 14,
+    "keepAnonymizedEval": true
+  }
+}

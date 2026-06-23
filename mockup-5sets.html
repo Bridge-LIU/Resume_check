@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>面談AI評価ツール — 設計書準拠 5案</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    html { font-family: 'Inter', 'Noto Sans JP', -apple-system, sans-serif; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .variant { display: none; }
+    .variant.active { display: block; }
+    .pad-disabled { opacity: 0.45; pointer-events: none; }
+    /* utility for bars in evaluation */
+    .bar-bg { background:#e5e7eb; border-radius:999px; height:6px; }
+    .bar-fg { height:6px; border-radius:999px; }
+    /* shared: status pills */
+    .pill { font-size:11px; padding:2px 8px; border-radius:999px; display:inline-block; }
+    .pill-edit { background:#e4e4e7; color:#3f3f46; }
+    .pill-qpub { background:#fef3c7; color:#92400e; }
+    .pill-itv  { background:#ede9fe; color:#5b21b6; }
+    .pill-eval { background:#dbeafe; color:#1e40af; }
+    .pill-pass { background:#dcfce7; color:#166534; }
+    .pill-fail { background:#fee2e2; color:#991b1b; }
+    .pill-role-nw { background:#d1fae5; color:#065f46; }
+    .pill-role-sv { background:#fed7aa; color:#9a3412; }
+  </style>
+</head>
+<body class="bg-zinc-100 text-zinc-900">
+
+<!-- ============ 案切替バー ============ -->
+<div class="sticky top-0 z-50 bg-white border-b border-zinc-200 px-6 py-3 flex items-center gap-3 shadow-sm">
+  <div class="font-bold text-base">設計書準拠 5案</div>
+  <div class="text-xs text-zinc-500">全案ともに ②④⑤⑥⑧ + マスタ + 設定を網羅 / Phase 1 = 貼付固定</div>
+  <div class="flex-1"></div>
+  <button data-tab="1" class="tab-btn active px-3 py-1.5 rounded text-sm">1. 業務標準</button>
+  <button data-tab="2" class="tab-btn px-3 py-1.5 rounded text-sm">2. Notion風</button>
+  <button data-tab="3" class="tab-btn px-3 py-1.5 rounded text-sm">3. 横断比較</button>
+  <button data-tab="4" class="tab-btn px-3 py-1.5 rounded text-sm">4. ウィザード</button>
+  <button data-tab="5" class="tab-btn px-3 py-1.5 rounded text-sm">5. ダッシュボード</button>
+</div>
+
+<!-- =============================================================== -->
+<!-- ============ 案1. 業務標準（表中心・Cleanな企業ツール） ======== -->
+<!-- =============================================================== -->
+<div id="tab-1" class="variant active">
+  <div class="max-w-6xl mx-auto p-6 space-y-4">
+    <div class="text-sm text-zinc-500"><strong>案1. 業務標準</strong> — 表中心の堅実な企業内ツール。zinc + 青。情報密度高め、迷いなく扱える。</div>
+
+    <!-- 一覧 -->
+    <div class="bg-white rounded-xl border shadow-sm">
+      <header class="px-6 py-3 border-b flex items-center gap-6">
+        <div class="font-bold">面談AI評価ツール</div>
+        <nav class="flex gap-1 text-sm">
+          <a class="px-3 py-1.5 rounded bg-blue-50 text-blue-900 font-medium">一覧</a>
+          <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">マスタ</a>
+          <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">設定</a>
+        </nav>
+        <div class="flex-1"></div>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium">＋ 新規面談</button>
+      </header>
+      <div class="p-6 space-y-4">
+        <div class="flex flex-wrap items-center gap-3 text-sm">
+          <span class="text-zinc-500">状態</span>
+          <select class="border rounded px-2 py-1 text-sm"><option>すべて</option></select>
+          <span class="text-zinc-500">役割</span>
+          <select class="border rounded px-2 py-1 text-sm"><option>すべて</option></select>
+          <span class="text-zinc-500">合否</span>
+          <select class="border rounded px-2 py-1 text-sm"><option>すべて</option></select>
+          <input class="border rounded px-3 py-1 text-sm flex-1 min-w-[180px]" placeholder="氏名・キーワード検索"/>
+        </div>
+        <table class="w-full text-sm border rounded-lg overflow-hidden">
+          <thead class="bg-zinc-50 text-zinc-600 text-xs">
+            <tr><th class="text-left px-4 py-2">日時</th><th class="text-left px-4 py-2">氏名</th><th class="text-left px-4 py-2">役割</th><th class="text-left px-4 py-2">状態</th><th class="text-right px-4 py-2">総合スコア</th><th class="text-left px-4 py-2">合否</th><th class="px-4 py-2"></th></tr>
+          </thead>
+          <tbody class="divide-y">
+            <tr class="hover:bg-zinc-50 cursor-pointer"><td class="px-4 py-2">2026-06-17 14:30</td><td class="px-4 py-2 font-medium">山田 太郎</td><td class="px-4 py-2"><span class="pill pill-role-nw">NW中途</span></td><td class="px-4 py-2"><span class="pill pill-eval">評価済</span></td><td class="px-4 py-2 text-right tabular font-medium">4.3</td><td class="px-4 py-2"><span class="pill pill-pass">合格</span></td><td class="px-4 py-2 text-right"><button class="text-blue-600 hover:underline">開く</button></td></tr>
+            <tr class="hover:bg-zinc-50 cursor-pointer"><td class="px-4 py-2">2026-06-15 10:00</td><td class="px-4 py-2 font-medium">佐藤 花子</td><td class="px-4 py-2"><span class="pill pill-role-sv">Server</span></td><td class="px-4 py-2"><span class="pill pill-itv">面談済</span></td><td class="px-4 py-2 text-right tabular text-zinc-400">―</td><td class="px-4 py-2 text-zinc-400">―</td><td class="px-4 py-2 text-right"><button class="text-blue-600 hover:underline">開く</button></td></tr>
+            <tr class="hover:bg-zinc-50 cursor-pointer"><td class="px-4 py-2">2026-06-12 13:00</td><td class="px-4 py-2 font-medium">鈴木 一郎</td><td class="px-4 py-2"><span class="pill pill-role-nw">NW新卒</span></td><td class="px-4 py-2"><span class="pill pill-edit">編集中</span></td><td class="px-4 py-2 text-right tabular text-zinc-400">―</td><td class="px-4 py-2 text-zinc-400">―</td><td class="px-4 py-2 text-right"><button class="text-blue-600 hover:underline">開く</button></td></tr>
+          </tbody>
+        </table>
+        <div class="text-xs text-zinc-500">3件 / 全3件</div>
+      </div>
+    </div>
+
+    <!-- セッションページ（②④⑤⑥⑧ 縦並び + 左サイドナビ） -->
+    <div class="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <header class="px-6 py-3 border-b flex items-center gap-4 text-sm">
+        <a class="text-blue-600">← 一覧</a>
+        <div class="font-bold">山田 太郎</div>
+        <span class="pill pill-role-nw">NW中途</span>
+        <span class="pill pill-eval">評価済</span>
+        <div class="flex-1"></div>
+        <button class="text-zinc-500 hover:text-zinc-800">複製</button>
+        <button class="text-red-600">削除</button>
+      </header>
+      <div class="flex">
+        <aside class="w-48 border-r bg-zinc-50 p-2 text-sm space-y-1">
+          <div class="px-3 py-2 rounded hover:bg-white flex justify-between"><span>② 面談者情報</span><span class="text-emerald-600">✓</span></div>
+          <div class="px-3 py-2 rounded bg-white border border-blue-300 flex justify-between font-medium"><span>④ 求める人材条件</span><span class="text-emerald-600">✓</span></div>
+          <div class="px-3 py-2 rounded hover:bg-white flex justify-between"><span>⑤ 質問リスト</span><span class="text-emerald-600">✓</span></div>
+          <div class="px-3 py-2 rounded hover:bg-white flex justify-between"><span>⑥ 議事録</span><span class="text-emerald-600">✓</span></div>
+          <div class="px-3 py-2 rounded hover:bg-white flex justify-between"><span>⑧ 評価結果</span><span class="text-emerald-600">✓</span></div>
+        </aside>
+        <main class="flex-1 p-6 space-y-6">
+          <!-- ② -->
+          <div>
+            <div class="flex items-center justify-between mb-2"><h3 class="font-bold">② 面談者情報</h3>
+              <div class="text-xs"><span class="text-zinc-500">モード:</span>
+                <span class="pill pill-eval ml-1">● 貼付</span>
+                <span class="pill bg-zinc-200 text-zinc-500 ml-1 pad-disabled">○ API自動要約</span></div></div>
+            <textarea class="w-full border rounded p-3 text-sm" rows="3" placeholder="候補者の経歴要約を貼り付け"></textarea>
+          </div>
+          <!-- ④ -->
+          <div>
+            <div class="flex items-center justify-between mb-2"><h3 class="font-bold">④ 求める人材条件 <span class="text-xs text-emerald-700 ml-2">凍結済 ✓</span></h3>
+              <button class="text-xs text-blue-600">マスタ再読込</button></div>
+            <div class="border rounded p-4 text-sm bg-zinc-50 space-y-2">
+              <div class="flex gap-4 text-zinc-700"><span>役割: NW中途</span><span>経験: 3年以上</span><span>未経験可: <strong class="text-red-600">いいえ</strong></span></div>
+              <div><div class="font-medium mt-2">条件①: 基本人物像（常に評価）</div>
+                <ul class="list-disc list-inside text-zinc-700 text-xs grid grid-cols-2 gap-x-4">
+                  <li>報連相ができる</li><li>顧客視点で考えられる</li><li>責任感がある</li>
+                  <li>タスクを細分化し日程を組める</li><li>LAN配線ができる</li><li>NW構築ができる</li>
+                  <li>夜間作業に耐える体力</li><li>学習意欲がある</li><li>初動が速い／納期厳守</li></ul></div>
+              <div class="text-xs text-zinc-500 pt-1">条件②: 未経験者必須（未経験可=false のため除外）</div>
+            </div>
+          </div>
+          <!-- ⑤ -->
+          <div>
+            <div class="flex items-center justify-between mb-2"><h3 class="font-bold">⑤ 質問リスト</h3>
+              <div class="text-xs"><span class="text-zinc-500">作り方:</span>
+                <span class="pill pill-eval ml-1">● 貼付</span>
+                <span class="pill bg-zinc-200 text-zinc-500 ml-1 pad-disabled">○ API生成</span></div></div>
+            <div class="border rounded p-3 text-sm bg-zinc-50 max-h-44 overflow-auto space-y-2">
+              <div><div>⭐ Q1. 障害切り分けで苦労した経験を教えてください</div><div class="text-xs text-zinc-500 pl-4">狙い: 問題解決力 / 解答例: ping → traceroute と段階的に...</div></div>
+              <div><div>Q2. 夜間作業で印象に残っている案件は？</div><div class="text-xs text-zinc-500 pl-4">狙い: 体力・責任感 / 解答例: 銀行系メンテで朝5時まで...</div></div>
+            </div>
+            <div class="flex justify-end gap-2 mt-2 text-sm"><button class="px-3 py-1 rounded border">全文コピー</button><button class="px-3 py-1 rounded border">本文コピー</button></div>
+          </div>
+          <!-- ⑥ -->
+          <div>
+            <h3 class="font-bold mb-2">⑥ 面談・議事録 <span class="text-xs text-zinc-500 ml-2">(Teamsからコピペ)</span></h3>
+            <textarea class="w-full border rounded p-3 text-sm" rows="3" placeholder="議事録テキストを貼り付け"></textarea>
+          </div>
+          <!-- ⑧ -->
+          <div>
+            <div class="flex items-center justify-between mb-2"><h3 class="font-bold">⑧ 評価・合否判定</h3>
+              <div class="text-xs"><span class="text-zinc-500">やり方:</span>
+                <span class="pill pill-eval ml-1">● 貼付</span>
+                <span class="pill bg-zinc-200 text-zinc-500 ml-1 pad-disabled">○ API評価</span></div></div>
+            <div class="border rounded p-4 bg-gradient-to-br from-emerald-50 to-blue-50 space-y-3">
+              <div class="flex items-baseline gap-6">
+                <div><span class="text-xs text-zinc-500">総合</span><div class="text-3xl font-bold tabular">4.3</div></div>
+                <div><span class="text-xs text-zinc-500">合否</span><div class="text-xl font-bold text-emerald-700">合格 ✓</div></div>
+                <div><span class="text-xs text-zinc-500">自己解決</span><div class="text-xl font-bold tabular">4<span class="text-sm text-zinc-400">/5</span></div></div>
+              </div>
+              <div class="space-y-1">
+                <div class="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-sm"><div>主体性</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:90%"></div></div><div class="text-right tabular">4.5</div></div>
+                <div class="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-sm"><div>問題解決力</div><div class="bar-bg"><div class="bar-fg bg-amber-500" style="width:70%"></div></div><div class="text-right tabular">3.5</div></div>
+                <div class="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-sm"><div>対人影響力</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:84%"></div></div><div class="text-right tabular">4.2</div></div>
+                <div class="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-sm"><div>柔軟性</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:88%"></div></div><div class="text-right tabular">4.4</div></div>
+              </div>
+              <div class="text-sm space-y-1 pt-2 border-t border-emerald-100">
+                <div><span class="text-zinc-500">良い点:</span> 学習意欲と初動の速さが具体例で確認できた</div>
+                <div><span class="text-zinc-500">懸念点:</span> 夜間作業の体力面の確証が不足 <span class="text-amber-700">(要確認)</span></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================== -->
+<!-- ============ 案2. Notion風（カード基調・ソフト） ============== -->
+<!-- =============================================================== -->
+<div id="tab-2" class="variant" style="background:#fbfbfa;">
+  <div class="max-w-5xl mx-auto p-10 space-y-8">
+    <div class="text-sm text-zinc-500"><strong>案2. Notion風</strong> — 罫線最小、白基調、カードリスト、書き物感。セッション=ドキュメント。</div>
+
+    <header class="flex items-center gap-4 border-b pb-3" style="border-color:#ececea;">
+      <span class="text-2xl">📋</span><h1 class="text-2xl font-bold">面談AI評価ツール</h1>
+      <div class="flex-1"></div>
+      <nav class="flex gap-4 text-sm text-zinc-500"><a class="text-zinc-900 font-medium">一覧</a><a>マスタ</a><a>設定</a></nav>
+    </header>
+
+    <div class="flex items-center gap-3">
+      <input class="flex-1 px-3 py-2 text-sm rounded bg-zinc-100 border-0" placeholder="🔍 検索...">
+      <button class="text-sm px-3 py-2 rounded hover:bg-zinc-100">⌃ フィルタ</button>
+      <button class="text-sm px-4 py-2 rounded bg-zinc-900 text-white font-medium">＋ 新規面談</button>
+    </div>
+
+    <div class="space-y-2">
+      <div class="text-xs uppercase tracking-wider text-zinc-400 px-2">最近の面談</div>
+      <a class="block bg-white rounded-lg p-4 hover:shadow-md transition cursor-pointer" style="box-shadow:0 1px 2px rgba(15,15,15,.05);">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">山</div>
+          <div class="flex-1"><div class="flex items-baseline gap-3"><div class="font-medium">山田 太郎</div><span class="text-xs text-zinc-500">NW中途</span><span class="text-xs text-zinc-400">2026-06-17 14:30</span></div><div class="text-sm text-zinc-500 mt-0.5">学習意欲と初動の速さが具体例で確認できた</div></div>
+          <div class="text-right"><div class="text-2xl font-bold tabular text-emerald-700">4.3</div><div class="text-xs text-emerald-700">合格 ✓</div></div>
+        </div>
+      </a>
+      <a class="block bg-white rounded-lg p-4 hover:shadow-md transition cursor-pointer" style="box-shadow:0 1px 2px rgba(15,15,15,.05);">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold">佐</div>
+          <div class="flex-1"><div class="flex items-baseline gap-3"><div class="font-medium">佐藤 花子</div><span class="text-xs text-zinc-500">Server</span><span class="text-xs text-zinc-400">2026-06-15 10:00</span></div><div class="text-sm text-zinc-500 mt-0.5">議事録登録済 / 評価未実施</div></div>
+          <span class="pill pill-itv">面談済</span>
+        </div>
+      </a>
+      <a class="block bg-white rounded-lg p-4 hover:shadow-md transition cursor-pointer" style="box-shadow:0 1px 2px rgba(15,15,15,.05);">
+        <div class="flex items-center gap-4">
+          <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">鈴</div>
+          <div class="flex-1"><div class="flex items-baseline gap-3"><div class="font-medium">鈴木 一郎</div><span class="text-xs text-zinc-500">NW新卒</span><span class="text-xs text-zinc-400">2026-06-12 13:00</span></div><div class="text-sm text-zinc-400 mt-0.5">下書き中…</div></div>
+          <span class="pill pill-edit">編集中</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- セッションをドキュメント風に -->
+    <div class="bg-white rounded-xl p-8" style="box-shadow:0 1px 2px rgba(15,15,15,.05);">
+      <div class="border-b pb-4 mb-6"><div class="text-xs text-zinc-400">2026-06-17 14:30 · NW中途 · 評価済</div><h1 class="text-3xl font-bold mt-1">山田 太郎</h1></div>
+      <div class="space-y-8">
+        <div><div class="text-xs uppercase tracking-wider text-zinc-400 mb-2">② 面談者情報 <span class="pill pill-eval ml-2">貼付</span></div>
+          <div class="text-sm text-zinc-700 leading-relaxed">5年のNW運用経験。CCNAあり。前職では大規模BGPルータの更改リーダー...</div></div>
+        <div><div class="text-xs uppercase tracking-wider text-zinc-400 mb-2">④ 求める人材条件 <span class="pill pill-eval ml-2">凍結済 ✓</span></div>
+          <div class="text-sm text-zinc-700">役割: NW中途 / 経験 3年以上 / 未経験可: いいえ</div>
+          <ul class="list-disc list-inside text-sm text-zinc-700 mt-1">
+            <li>報連相ができる</li><li>顧客視点で考えられる</li><li>NW構築ができる</li><li>夜間作業に耐える体力 …</li></ul></div>
+        <div><div class="text-xs uppercase tracking-wider text-zinc-400 mb-2">⑤ 質問リスト <span class="pill pill-eval ml-2">貼付</span></div>
+          <div class="text-sm text-zinc-700 space-y-2">
+            <div>⭐ <strong>Q1. 障害切り分けで苦労した経験</strong><div class="text-zinc-500 text-xs ml-5">狙い: 問題解決力 / 解答例: ping → traceroute …</div></div>
+            <div>Q2. 夜間作業で印象に残っている案件は？<div class="text-zinc-500 text-xs ml-5">狙い: 体力・責任感 / 解答例: 銀行系メンテ …</div></div></div></div>
+        <div><div class="text-xs uppercase tracking-wider text-zinc-400 mb-2">⑥ 議事録</div>
+          <div class="text-sm text-zinc-700 leading-relaxed">候補者は冒頭で前職の運用体制について簡潔に説明...</div></div>
+        <div><div class="text-xs uppercase tracking-wider text-zinc-400 mb-2">⑧ 評価・合否判定 <span class="pill pill-eval ml-2">貼付</span></div>
+          <div class="flex items-baseline gap-8 mb-3">
+            <div><div class="text-xs text-zinc-400">総合</div><div class="text-4xl font-bold tabular">4.3</div></div>
+            <div><div class="text-xs text-zinc-400">合否</div><div class="text-xl font-medium text-emerald-700">合格</div></div>
+            <div><div class="text-xs text-zinc-400">自己解決</div><div class="text-xl font-medium tabular">4/5</div></div>
+          </div>
+          <div class="space-y-1 max-w-md">
+            <div class="grid grid-cols-[100px_1fr_40px] items-center gap-2 text-sm"><div class="text-zinc-500">主体性</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:90%"></div></div><div class="text-right tabular text-zinc-600">4.5</div></div>
+            <div class="grid grid-cols-[100px_1fr_40px] items-center gap-2 text-sm"><div class="text-zinc-500">問題解決力</div><div class="bar-bg"><div class="bar-fg bg-amber-500" style="width:70%"></div></div><div class="text-right tabular text-zinc-600">3.5</div></div>
+            <div class="grid grid-cols-[100px_1fr_40px] items-center gap-2 text-sm"><div class="text-zinc-500">対人影響力</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:84%"></div></div><div class="text-right tabular text-zinc-600">4.2</div></div>
+            <div class="grid grid-cols-[100px_1fr_40px] items-center gap-2 text-sm"><div class="text-zinc-500">柔軟性</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:88%"></div></div><div class="text-right tabular text-zinc-600">4.4</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================== -->
+<!-- ============ 案3. 横断比較スプレッドシート型 ================== -->
+<!-- =============================================================== -->
+<div id="tab-3" class="variant">
+  <div class="max-w-7xl mx-auto p-6 space-y-4">
+    <div class="text-sm text-zinc-500"><strong>案3. 横断比較</strong> — §4 の「横断比較ビュー」を主役化。スプレッドシート風で軸別スコアまで横展開、ソート・ピン可能。</div>
+
+    <div class="bg-white rounded-xl border shadow-sm">
+      <header class="px-6 py-3 border-b flex items-center gap-6">
+        <div class="font-bold">面談AI評価ツール</div>
+        <nav class="flex gap-1 text-sm">
+          <a class="px-3 py-1.5 rounded bg-blue-50 text-blue-900 font-medium">横断比較</a>
+          <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">マスタ</a>
+          <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">設定</a>
+        </nav>
+        <div class="flex-1"></div>
+        <button class="text-sm px-3 py-1.5 rounded border hover:bg-zinc-50">列を選択</button>
+        <button class="bg-blue-600 text-white text-sm px-4 py-1.5 rounded font-medium">＋ 新規面談</button>
+      </header>
+      <div class="p-4 space-y-3">
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <span class="text-zinc-500">グループ:</span>
+          <span class="pill bg-blue-50 text-blue-800">役割</span>
+          <span class="text-zinc-500 ml-2">ソート:</span>
+          <span class="pill bg-blue-50 text-blue-800">総合 ↓</span>
+          <span class="text-zinc-500 ml-2">フィルタ:</span>
+          <span class="pill bg-zinc-100">合否 = 全て</span>
+        </div>
+        <div class="overflow-x-auto border rounded-lg">
+          <table class="w-full text-xs">
+            <thead class="bg-zinc-50 text-zinc-600">
+              <tr>
+                <th class="sticky left-0 bg-zinc-50 text-left px-3 py-2 border-r">📌 氏名</th>
+                <th class="text-left px-3 py-2">日時</th>
+                <th class="text-left px-3 py-2">役割</th>
+                <th class="text-left px-3 py-2">状態</th>
+                <th class="text-right px-3 py-2">総合</th>
+                <th class="text-right px-3 py-2">主体性</th>
+                <th class="text-right px-3 py-2">問題解決</th>
+                <th class="text-right px-3 py-2">対人</th>
+                <th class="text-right px-3 py-2">柔軟性</th>
+                <th class="text-right px-3 py-2">自己解決</th>
+                <th class="text-left px-3 py-2">合否</th>
+                <th class="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              <tr class="bg-zinc-100 text-xs font-medium"><td class="px-3 py-1 sticky left-0 bg-zinc-100" colspan="12">▼ NW中途 (2件)</td></tr>
+              <tr class="hover:bg-zinc-50"><td class="sticky left-0 bg-white px-3 py-2 border-r font-medium">山田 太郎</td><td class="px-3 py-2 tabular">06-17 14:30</td><td class="px-3 py-2"><span class="pill pill-role-nw">NW中途</span></td><td class="px-3 py-2"><span class="pill pill-eval">評価済</span></td><td class="px-3 py-2 text-right tabular font-bold text-emerald-700">4.3</td><td class="px-3 py-2 text-right tabular">4.5</td><td class="px-3 py-2 text-right tabular text-amber-700">3.5</td><td class="px-3 py-2 text-right tabular">4.2</td><td class="px-3 py-2 text-right tabular">4.4</td><td class="px-3 py-2 text-right tabular">4/5</td><td class="px-3 py-2"><span class="pill pill-pass">合格</span></td><td class="px-3 py-2"><button class="text-blue-600">開く</button></td></tr>
+              <tr class="hover:bg-zinc-50"><td class="sticky left-0 bg-white px-3 py-2 border-r font-medium">伊藤 学</td><td class="px-3 py-2 tabular">06-05 11:00</td><td class="px-3 py-2"><span class="pill pill-role-nw">NW中途</span></td><td class="px-3 py-2"><span class="pill pill-eval">評価済</span></td><td class="px-3 py-2 text-right tabular font-bold text-amber-700">3.6</td><td class="px-3 py-2 text-right tabular">3.5</td><td class="px-3 py-2 text-right tabular">3.5</td><td class="px-3 py-2 text-right tabular">3.8</td><td class="px-3 py-2 text-right tabular">3.6</td><td class="px-3 py-2 text-right tabular">3/5</td><td class="px-3 py-2"><span class="pill pill-fail">不合格</span></td><td class="px-3 py-2"><button class="text-blue-600">開く</button></td></tr>
+              <tr class="bg-zinc-100 text-xs font-medium"><td class="px-3 py-1 sticky left-0 bg-zinc-100" colspan="12">▼ NW新卒 (1件)</td></tr>
+              <tr class="hover:bg-zinc-50"><td class="sticky left-0 bg-white px-3 py-2 border-r font-medium">鈴木 一郎</td><td class="px-3 py-2 tabular">06-12 13:00</td><td class="px-3 py-2"><span class="pill pill-role-nw">NW新卒</span></td><td class="px-3 py-2"><span class="pill pill-edit">編集中</span></td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-zinc-300">—</td><td class="px-3 py-2"><button class="text-blue-600">開く</button></td></tr>
+              <tr class="bg-zinc-100 text-xs font-medium"><td class="px-3 py-1 sticky left-0 bg-zinc-100" colspan="12">▼ Server (1件)</td></tr>
+              <tr class="hover:bg-zinc-50"><td class="sticky left-0 bg-white px-3 py-2 border-r font-medium">佐藤 花子</td><td class="px-3 py-2 tabular">06-15 10:00</td><td class="px-3 py-2"><span class="pill pill-role-sv">Server</span></td><td class="px-3 py-2"><span class="pill pill-itv">面談済</span></td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-right tabular text-zinc-300">—</td><td class="px-3 py-2 text-zinc-300">—</td><td class="px-3 py-2"><button class="text-blue-600">開く</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="text-xs text-zinc-500 flex gap-4">
+          <div>4件 / 全4件</div><div>役割でグループ表示</div><div>📌 列を左固定 / 列をドラッグで並べ替え</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- セッションは控えめにヘッダだけ示す -->
+    <div class="bg-white rounded-xl border shadow-sm p-4 text-sm text-zinc-500">
+      ※ 行をクリック → 個別セッション編集（②④⑤⑥⑧ の縦並びは案1と同じ）
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================== -->
+<!-- ============ 案4. ステップウィザード型 ======================== -->
+<!-- =============================================================== -->
+<div id="tab-4" class="variant">
+  <div class="max-w-4xl mx-auto p-6 space-y-4">
+    <div class="text-sm text-zinc-500"><strong>案4. ウィザード</strong> — ①②④⑤⑥⑧ を順に誘導。上部にステッパー、本文は1セクションのみ集中。迷い最小。</div>
+
+    <div class="bg-white rounded-xl border shadow-sm">
+      <header class="px-6 py-3 border-b flex items-center gap-6">
+        <a class="text-blue-600 text-sm">← 一覧</a>
+        <div class="font-bold">山田 太郎 / NW中途</div>
+        <div class="flex-1"></div>
+        <div class="text-xs text-zinc-500">セッション ID: 20260617_1430_山田太郎_NW中途</div>
+      </header>
+
+      <!-- ステッパー -->
+      <div class="px-6 py-4 border-b bg-zinc-50">
+        <div class="flex items-center gap-2 text-sm">
+          <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">✓</div><div>① 作成</div></div>
+          <div class="flex-1 h-0.5 bg-emerald-500"></div>
+          <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold">✓</div><div>② 情報</div></div>
+          <div class="flex-1 h-0.5 bg-emerald-500"></div>
+          <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">④</div><div class="font-bold">④ 条件</div></div>
+          <div class="flex-1 h-0.5 bg-zinc-300"></div>
+          <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-zinc-300 text-zinc-600 flex items-center justify-center text-xs font-bold">⑤</div><div class="text-zinc-500">⑤ 質問</div></div>
+          <div class="flex-1 h-0.5 bg-zinc-300"></div>
+          <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-zinc-300 text-zinc-600 flex items-center justify-center text-xs font-bold">⑥</div><div class="text-zinc-500">⑥ 議事録</div></div>
+          <div class="flex-1 h-0.5 bg-zinc-300"></div>
+          <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-zinc-300 text-zinc-600 flex items-center justify-center text-xs font-bold">⑧</div><div class="text-zinc-500">⑧ 評価</div></div>
+        </div>
+      </div>
+
+      <!-- アクティブステップ -->
+      <div class="p-6 space-y-5">
+        <div class="text-xs text-zinc-500">ステップ 3 / 6</div>
+        <h2 class="text-xl font-bold">④ 求める人材条件を確定する</h2>
+        <p class="text-sm text-zinc-600">役割「NW中途」のマスタを読み込みました。必要なら微修正し、「確定」を押すとこの面談に凍結されます。後でマスタを変更しても、この面談には影響しません。</p>
+
+        <div class="border rounded p-4 space-y-3 bg-zinc-50 text-sm">
+          <div class="flex flex-wrap gap-x-6 gap-y-1 text-zinc-700">
+            <div><span class="text-zinc-500">役割:</span> NW中途</div>
+            <div><span class="text-zinc-500">経験:</span> 3年以上</div>
+            <div><span class="text-zinc-500">未経験可:</span> <label class="inline-flex items-center gap-1 ml-1"><input type="checkbox" class="rounded"> はい</label></div>
+          </div>
+          <div>
+            <div class="font-medium mb-1">条件①: 基本人物像（常に評価）</div>
+            <textarea class="w-full border rounded p-2 text-sm bg-white" rows="4">- 報連相ができる
+- 顧客視点で考えられる
+- 責任感がある
+- タスクを細分化し日程を組める
+- LAN配線ができる
+- NW構築ができる
+- 夜間作業に耐える体力
+- 学習意欲がある
+- 初動が速い／こまめにアウトプット／納期を厳守できる</textarea>
+          </div>
+          <div class="pad-disabled">
+            <div class="font-medium mb-1">条件②: 未経験者必須（未経験可=false のため除外）</div>
+            <textarea class="w-full border rounded p-2 text-sm bg-zinc-100" rows="2">未経験可がOFFのため、評価対象外</textarea>
+          </div>
+        </div>
+
+        <div class="flex justify-between border-t pt-4">
+          <button class="text-sm px-4 py-2 rounded border hover:bg-zinc-50">← 戻る (② 面談者情報)</button>
+          <div class="flex gap-2">
+            <button class="text-sm px-4 py-2 rounded border hover:bg-zinc-50">下書き保存</button>
+            <button class="text-sm px-5 py-2 rounded bg-blue-600 text-white font-medium">確定して次へ →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 一覧（ウィザードでも一覧は要る、コンパクト版） -->
+    <div class="bg-white rounded-xl border shadow-sm p-5">
+      <div class="font-bold mb-2 text-sm">セッション一覧</div>
+      <div class="space-y-2 text-sm">
+        <div class="flex items-center gap-3 px-3 py-2 rounded hover:bg-zinc-50 cursor-pointer border"><span class="pill pill-eval">評価済</span><span class="flex-1">山田 太郎 (NW中途)</span><span class="font-bold tabular text-emerald-700">4.3</span><span class="pill pill-pass">合格</span></div>
+        <div class="flex items-center gap-3 px-3 py-2 rounded hover:bg-zinc-50 cursor-pointer border"><span class="pill pill-itv">面談済</span><span class="flex-1">佐藤 花子 (Server)</span><span class="text-zinc-400">—</span></div>
+        <div class="flex items-center gap-3 px-3 py-2 rounded hover:bg-zinc-50 cursor-pointer border"><span class="pill pill-edit">編集中</span><span class="flex-1">鈴木 一郎 (NW新卒)</span><span class="text-zinc-400">—</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =============================================================== -->
+<!-- ============ 案5. ダッシュボード/ベント型 ===================== -->
+<!-- =============================================================== -->
+<div id="tab-5" class="variant">
+  <div class="max-w-7xl mx-auto p-6 space-y-4">
+    <div class="text-sm text-zinc-500"><strong>案5. ダッシュボード</strong> — 一画面で全体把握。統計カード + 直近一覧 + 評価ハイライト + 待ち件数。経営/マネージャ視点。</div>
+
+    <div class="bg-white rounded-xl border shadow-sm">
+      <header class="px-6 py-3 border-b flex items-center gap-6">
+        <div class="font-bold">面談AI評価ツール</div>
+        <nav class="flex gap-1 text-sm">
+          <a class="px-3 py-1.5 rounded bg-blue-50 text-blue-900 font-medium">ダッシュボード</a>
+          <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">一覧</a>
+          <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">マスタ</a>
+          <a class="px-3 py-1.5 rounded hover:bg-zinc-100 text-zinc-600">設定</a>
+        </nav>
+        <div class="flex-1"></div>
+        <button class="bg-blue-600 text-white text-sm px-4 py-1.5 rounded font-medium">＋ 新規面談</button>
+      </header>
+    </div>
+
+    <!-- 統計カード -->
+    <div class="grid grid-cols-4 gap-4">
+      <div class="bg-white rounded-xl border shadow-sm p-4"><div class="text-xs text-zinc-500">今月の面談</div><div class="text-3xl font-bold tabular mt-1">14</div><div class="text-xs text-emerald-600 mt-1">↑ 先月比 +3</div></div>
+      <div class="bg-white rounded-xl border shadow-sm p-4"><div class="text-xs text-zinc-500">合格率</div><div class="text-3xl font-bold tabular mt-1">36<span class="text-lg">%</span></div><div class="text-xs text-zinc-500 mt-1">5 / 14 件</div></div>
+      <div class="bg-white rounded-xl border shadow-sm p-4"><div class="text-xs text-zinc-500">平均スコア</div><div class="text-3xl font-bold tabular mt-1">3.8</div><div class="text-xs text-zinc-500 mt-1">/ 5.0</div></div>
+      <div class="bg-white rounded-xl border shadow-sm p-4"><div class="text-xs text-zinc-500">評価待ち</div><div class="text-3xl font-bold tabular mt-1">3</div><div class="text-xs text-amber-600 mt-1">⏰ 確認推奨</div></div>
+    </div>
+
+    <!-- ベント: 2/3 リスト + 1/3 ハイライト -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-white rounded-xl border shadow-sm p-5 col-span-2">
+        <div class="flex items-center justify-between mb-3"><div class="font-bold">最近の面談</div><a class="text-xs text-blue-600">→ 全件を見る</a></div>
+        <table class="w-full text-sm">
+          <thead class="text-xs text-zinc-500 border-b"><tr><th class="text-left py-2">氏名 / 役割</th><th class="text-left py-2">状態</th><th class="text-right py-2">スコア</th><th class="text-left py-2 pl-2">合否</th></tr></thead>
+          <tbody class="divide-y">
+            <tr class="hover:bg-zinc-50 cursor-pointer"><td class="py-2"><span class="font-medium">山田 太郎</span> <span class="text-xs text-zinc-500">/ NW中途</span></td><td><span class="pill pill-eval">評価済</span></td><td class="text-right tabular font-medium">4.3</td><td class="pl-2"><span class="pill pill-pass">合格</span></td></tr>
+            <tr class="hover:bg-zinc-50 cursor-pointer"><td class="py-2"><span class="font-medium">佐藤 花子</span> <span class="text-xs text-zinc-500">/ Server</span></td><td><span class="pill pill-itv">面談済</span></td><td class="text-right tabular text-zinc-400">—</td><td class="pl-2 text-zinc-400">—</td></tr>
+            <tr class="hover:bg-zinc-50 cursor-pointer"><td class="py-2"><span class="font-medium">鈴木 一郎</span> <span class="text-xs text-zinc-500">/ NW新卒</span></td><td><span class="pill pill-edit">編集中</span></td><td class="text-right tabular text-zinc-400">—</td><td class="pl-2 text-zinc-400">—</td></tr>
+            <tr class="hover:bg-zinc-50 cursor-pointer"><td class="py-2"><span class="font-medium">高橋 美咲</span> <span class="text-xs text-zinc-500">/ Server</span></td><td><span class="pill pill-eval">評価済</span></td><td class="text-right tabular font-medium text-amber-700">3.7</td><td class="pl-2"><span class="pill pill-fail">不合格</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="bg-white rounded-xl border shadow-sm p-5">
+        <div class="text-xs text-zinc-500 mb-1">最新評価</div>
+        <div class="font-medium mb-3">山田 太郎 <span class="text-xs text-zinc-500">/ NW中途</span></div>
+        <div class="flex items-baseline gap-4 pb-3 border-b">
+          <div><div class="text-xs text-zinc-500">総合</div><div class="text-5xl font-bold tabular bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">4.3</div></div>
+          <div><div class="text-xs text-zinc-500">合否</div><div class="text-base font-bold text-emerald-700">合格 ✓</div><div class="text-xs text-zinc-500 mt-1">自己解決 4/5</div></div>
+        </div>
+        <div class="space-y-1.5 mt-3 text-xs">
+          <div class="grid grid-cols-[78px_1fr_30px] items-center gap-2"><div>主体性</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:90%"></div></div><div class="text-right tabular">4.5</div></div>
+          <div class="grid grid-cols-[78px_1fr_30px] items-center gap-2"><div>問題解決</div><div class="bar-bg"><div class="bar-fg bg-amber-500" style="width:70%"></div></div><div class="text-right tabular">3.5</div></div>
+          <div class="grid grid-cols-[78px_1fr_30px] items-center gap-2"><div>対人</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:84%"></div></div><div class="text-right tabular">4.2</div></div>
+          <div class="grid grid-cols-[78px_1fr_30px] items-center gap-2"><div>柔軟性</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:88%"></div></div><div class="text-right tabular">4.4</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 下段: アラート/タスク -->
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl border shadow-sm p-5">
+        <div class="font-bold text-sm mb-2">📋 やることリスト</div>
+        <ul class="text-sm space-y-1.5">
+          <li class="flex items-center gap-2"><span class="pill pill-itv">面談済</span> 佐藤 花子 — ⑧評価を貼付</li>
+          <li class="flex items-center gap-2"><span class="pill pill-edit">編集中</span> 鈴木 一郎 — ④条件を凍結</li>
+          <li class="flex items-center gap-2"><span class="pill pill-qpub">質問公開</span> 田中 隆 — ⑥議事録を貼付</li>
+        </ul>
+      </div>
+      <div class="bg-white rounded-xl border shadow-sm p-5">
+        <div class="font-bold text-sm mb-2">役割別の合格傾向</div>
+        <div class="space-y-1.5 text-sm">
+          <div class="grid grid-cols-[80px_1fr_60px] items-center gap-2"><div>NW中途</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:50%"></div></div><div class="text-right tabular">2/4</div></div>
+          <div class="grid grid-cols-[80px_1fr_60px] items-center gap-2"><div>NW新卒</div><div class="bar-bg"><div class="bar-fg bg-emerald-500" style="width:67%"></div></div><div class="text-right tabular">2/3</div></div>
+          <div class="grid grid-cols-[80px_1fr_60px] items-center gap-2"><div>Server</div><div class="bar-bg"><div class="bar-fg bg-amber-500" style="width:14%"></div></div><div class="text-right tabular">1/7</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function applyActive() {
+    document.querySelectorAll('.tab-btn').forEach(x => {
+      if (x.classList.contains('active')) { x.classList.add('bg-blue-600','text-white'); x.classList.remove('bg-zinc-100'); }
+      else { x.classList.add('bg-zinc-100'); x.classList.remove('bg-blue-600','text-white'); }
+    });
+  }
+  applyActive();
+  document.querySelectorAll('.tab-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    applyActive();
+    document.querySelectorAll('.variant').forEach(v => v.classList.remove('active'));
+    document.getElementById('tab-' + b.dataset.tab).classList.add('active');
+    window.scrollTo({top:0});
+  }));
+</script>
+
+</body>
+</html>

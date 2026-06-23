@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>⑤質問リスト レイアウト案 4 種</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", "Hiragino Sans", sans-serif; }
+    body { background: #f4f4f5; }
+    .case-card { background: white; border: 1px solid #e4e4e7; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-bottom: 28px; }
+    .case-head { background: #fafafa; padding: 12px 24px; border-bottom: 1px solid #e4e4e7; font-weight: 600; }
+    .nav-btn { padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; background: #e4e4e7; color: #3f3f46; }
+    .nav-btn.active { background: #18181b; color: white; }
+  </style>
+</head>
+<body class="text-zinc-900">
+
+<div class="sticky top-0 z-50 bg-white border-b border-zinc-200 px-6 py-3 flex items-center gap-3 shadow-sm flex-wrap">
+  <div class="font-bold">⑤ 質問リスト レイアウト 4 案</div>
+  <div class="text-xs text-zinc-500">スクロールで比較</div>
+  <div class="flex-1"></div>
+  <a href="#A" class="nav-btn">A. 平行 2 カラム</a>
+  <a href="#B" class="nav-btn">B. タブ切替</a>
+  <a href="#C" class="nav-btn">C. 上下積み</a>
+  <a href="#D" class="nav-btn">D. A + カウンター</a>
+</div>
+
+<div class="max-w-6xl mx-auto p-6 space-y-6">
+
+<!-- ================================================================= -->
+<!-- 案 A: 平行 2 カラム                                                -->
+<!-- ================================================================= -->
+<section id="A" class="case-card">
+  <div class="case-head">案 A：平行 2 カラム（8 対 8 平り）</div>
+  <div class="p-6">
+
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="font-bold">⑤ 質問リスト</h3>
+      <div class="text-xs flex items-center gap-2">
+        <span class="text-zinc-500">モード:</span>
+        <span class="label-tag bg-blue-100 text-blue-800 text-[11px] px-2 py-0.5 rounded">● 貼付</span>
+        <span class="label-tag bg-white border text-zinc-600 text-[11px] px-2 py-0.5 rounded">○ API生成</span>
+      </div>
+    </div>
+
+    <div class="border border-dashed rounded p-2 mb-2 bg-zinc-50 flex items-center gap-3 text-xs">
+      <span class="text-zinc-600 flex-1">Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力を下のテキスト欄にペースト → 保存。</span>
+      <button class="border bg-white hover:bg-zinc-100 text-xs px-3 py-1 rounded">📋 コピー</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <!-- 左: 非技術 -->
+      <div>
+        <div class="text-xs font-medium text-emerald-800 mb-1 flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded bg-emerald-100">非技術</span>
+          <span class="text-zinc-500">7 問</span>
+        </div>
+        <textarea class="w-full border rounded p-3 text-sm font-mono bg-emerald-50" rows="14">⭐ Q1. 採用面談を受けようと思った経緯と、当社を選んだ理由を教えてください
+  狙い: 主体性 / 入社動機の整合性
+  解答例: キャリアの方向性と自社の事業領域が一致する点を具体的に語れるか
+
+Q2. 直近で「自分で工夫して仕事のやり方を変えた」エピソードを教えてください
+  狙い: 主体性 / 改善志向
+  解答例: 業務改善の小さな実例。自発的な動きと結果まで語れるか
+
+Q3. チームでフィードバックをもらった経験で、印象に残っているものは
+  狙い: 柔軟性 / 自己客観視
+  解答例: 受け入れ方と行動変化の有無
+
+… (4〜7 問)</textarea>
+      </div>
+      <!-- 右: 技術 -->
+      <div>
+        <div class="text-xs font-medium text-blue-800 mb-1 flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded bg-blue-100">技術</span>
+          <span class="text-zinc-500">6〜8 問</span>
+        </div>
+        <textarea class="w-full border rounded p-3 text-sm font-mono bg-blue-50" rows="14">⭐ T1. これまでに自分の手で config を流した NW 案件を1つ選び、構成・自分の判断・期間を STAR で教えてください
+  狙い: NW 構築スキルの現在進行形での維持
+
+Q2. BGP 改修で深夜メンテを 12 回完遂されたとのこと
+  狙い: 夜間作業耐性 / 責任感 / 問題解決力
+
+T3. 障害切り分けで苦労した経験を1つ、原因特定までの過程を教えてください
+  狙い: 問題解決力 / 仮説検証
+
+… (4〜8 問)</textarea>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 mt-3 flex-wrap">
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium">保存</button>
+      <span class="text-xs text-zinc-500">最終保存: 2026/6/18 11:52</span>
+      <div class="flex-1"></div>
+      <button class="border bg-white hover:bg-zinc-50 text-sm px-3 py-1 rounded">整形（API）</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">破棄</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">本文コピー</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">全文コピー</button>
+    </div>
+
+    <div class="text-xs text-zinc-500 mt-2">メリット：両方同時閲覧、独立編集。デメリット：1 カラム約 500px なので質問文が長いと折り返し多い</div>
+  </div>
+</section>
+
+<!-- ================================================================= -->
+<!-- 案 B: タブ切替                                                      -->
+<!-- ================================================================= -->
+<section id="B" class="case-card">
+  <div class="case-head">案 B：タブ切替（1 画面ずつ）</div>
+  <div class="p-6">
+
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="font-bold">⑤ 質問リスト</h3>
+      <div class="text-xs flex items-center gap-2">
+        <span class="text-zinc-500">モード:</span>
+        <span class="label-tag bg-blue-100 text-blue-800 text-[11px] px-2 py-0.5 rounded">● 貼付</span>
+        <span class="label-tag bg-white border text-zinc-600 text-[11px] px-2 py-0.5 rounded">○ API生成</span>
+      </div>
+    </div>
+
+    <div class="border border-dashed rounded p-2 mb-2 bg-zinc-50 flex items-center gap-3 text-xs">
+      <span class="text-zinc-600 flex-1">Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力を下のテキスト欄にペースト → 保存。</span>
+      <button class="border bg-white hover:bg-zinc-100 text-xs px-3 py-1 rounded">📋 コピー</button>
+    </div>
+
+    <div class="border-b flex items-center gap-1 mb-2">
+      <button class="px-4 py-2 text-sm font-medium border-b-2 border-emerald-500 text-emerald-800">非技術 <span class="text-zinc-500">(7)</span></button>
+      <button class="px-4 py-2 text-sm text-zinc-500 hover:bg-zinc-50">技術 <span class="text-zinc-400">(6〜8)</span></button>
+      <button class="px-4 py-2 text-sm text-zinc-500 hover:bg-zinc-50">全体 <span class="text-zinc-400">(合計)</span></button>
+    </div>
+
+    <textarea class="w-full border rounded p-3 text-sm font-mono bg-emerald-50" rows="14">⭐ Q1. 採用面談を受けようと思った経緯と、当社を選んだ理由を教えてください
+  狙い: 主体性 / 入社動機の整合性
+  解答例: キャリアの方向性と自社の事業領域が一致する点を具体的に語れるか
+
+Q2. 直近で「自分で工夫して仕事のやり方を変えた」エピソードを教えてください
+  狙い: 主体性 / 改善志向
+  解答例: 業務改善の小さな実例。自発的な動きと結果まで語れるか
+
+Q3. チームでフィードバックをもらった経験で、印象に残っているものは
+  狙い: 柔軟性 / 自己客観視
+  解答例: 受け入れ方と行動変化の有無
+
+… (4〜7 問)</textarea>
+
+    <div class="flex items-center gap-3 mt-3 flex-wrap">
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium">保存</button>
+      <span class="text-xs text-zinc-500">最終保存: 2026/6/18 11:52</span>
+      <div class="flex-1"></div>
+      <button class="border bg-white hover:bg-zinc-50 text-sm px-3 py-1 rounded">整形（API）</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">破棄</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">本文コピー</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">全文コピー</button>
+    </div>
+
+    <div class="text-xs text-zinc-500 mt-2">メリット：1 カラム幅が広い。狭い画面でも快適。デメリット：両方を並べて見られない</div>
+  </div>
+</section>
+
+<!-- ================================================================= -->
+<!-- 案 C: 上下積み                                                      -->
+<!-- ================================================================= -->
+<section id="C" class="case-card">
+  <div class="case-head">案 C：上下積み（セクション見出し）</div>
+  <div class="p-6">
+
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="font-bold">⑤ 質問リスト</h3>
+      <div class="text-xs flex items-center gap-2">
+        <span class="text-zinc-500">モード:</span>
+        <span class="label-tag bg-blue-100 text-blue-800 text-[11px] px-2 py-0.5 rounded">● 貼付</span>
+        <span class="label-tag bg-white border text-zinc-600 text-[11px] px-2 py-0.5 rounded">○ API生成</span>
+      </div>
+    </div>
+
+    <div class="border border-dashed rounded p-2 mb-2 bg-zinc-50 flex items-center gap-3 text-xs">
+      <span class="text-zinc-600 flex-1">Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力を下のテキスト欄にペースト → 保存。</span>
+      <button class="border bg-white hover:bg-zinc-100 text-xs px-3 py-1 rounded">📋 コピー</button>
+    </div>
+
+    <div class="space-y-2">
+      <div>
+        <div class="text-xs font-medium text-emerald-800 mb-1 flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded bg-emerald-100">非技術</span>
+          <span class="text-zinc-500">7 問</span>
+        </div>
+        <textarea class="w-full border rounded p-3 text-sm font-mono bg-emerald-50" rows="8">⭐ Q1. 採用面談を受けようと思った経緯と、当社を選んだ理由を教えてください
+  狙い: 主体性 / 入社動機の整合性
+  解答例: キャリアの方向性と自社の事業領域が一致する点を具体的に語れるか
+
+Q2. 直近で「自分で工夫して仕事のやり方を変えた」エピソードを教えてください
+  狙い: 主体性 / 改善志向
+… (3〜7 問)</textarea>
+      </div>
+      <div>
+        <div class="text-xs font-medium text-blue-800 mb-1 flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded bg-blue-100">技術</span>
+          <span class="text-zinc-500">6〜8 問</span>
+        </div>
+        <textarea class="w-full border rounded p-3 text-sm font-mono bg-blue-50" rows="8">⭐ T1. これまでに自分の手で config を流した NW 案件を 1 つ選び、構成・自分の判断・期間を STAR で
+  狙い: NW 構築スキルの現在進行形での維持
+
+T2. BGP 改修で深夜メンテを 12 回完遂されたとのこと
+  狙い: 夜間作業耐性 / 責任感 / 問題解決力
+… (3〜8 問)</textarea>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 mt-3 flex-wrap">
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium">保存</button>
+      <span class="text-xs text-zinc-500">最終保存: 2026/6/18 11:52</span>
+      <div class="flex-1"></div>
+      <button class="border bg-white hover:bg-zinc-50 text-sm px-3 py-1 rounded">整形（API）</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">破棄</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">本文コピー</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">全文コピー</button>
+    </div>
+
+    <div class="text-xs text-zinc-500 mt-2">メリット：実装が一番軽い。長い質問でも折り返さない。デメリット：比較しにくい。スクロールが伸びる</div>
+  </div>
+</section>
+
+<!-- ================================================================= -->
+<!-- 案 D: A + カウンター（進捗バッジ付き）                              -->
+<!-- ================================================================= -->
+<section id="D" class="case-card">
+  <div class="case-head">案 D：平行 2 カラム + 進捗カウンター（推奨）</div>
+  <div class="p-6">
+
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="font-bold">⑤ 質問リスト</h3>
+      <div class="text-xs flex items-center gap-2">
+        <span class="text-zinc-500">モード:</span>
+        <span class="label-tag bg-blue-100 text-blue-800 text-[11px] px-2 py-0.5 rounded">● 貼付</span>
+        <span class="label-tag bg-white border text-zinc-600 text-[11px] px-2 py-0.5 rounded">○ API生成</span>
+      </div>
+    </div>
+
+    <div class="border border-dashed rounded p-2 mb-2 bg-zinc-50 flex items-center gap-3 text-xs">
+      <span class="text-zinc-600 flex-1">Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力を下のテキスト欄にペースト → 保存。</span>
+      <button class="border bg-white hover:bg-zinc-100 text-xs px-3 py-1 rounded">📋 コピー</button>
+    </div>
+
+    <!-- カウンターバー -->
+    <div class="flex items-center gap-3 text-xs mb-2">
+      <span class="px-2 py-1 rounded bg-emerald-100 text-emerald-800 font-medium">非技術 7/7 ✓</span>
+      <span class="px-2 py-1 rounded bg-amber-100 text-amber-800 font-medium">技術 5/6〜8 ⚠</span>
+      <span class="text-zinc-500">合計 12 問</span>
+      <div class="flex-1"></div>
+      <span class="text-zinc-400">推奨：非技術 7 / 技術 6〜8</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <!-- 左: 非技術 -->
+      <div>
+        <textarea class="w-full border rounded p-3 text-sm font-mono bg-emerald-50" rows="14">⭐ Q1. 採用面談を受けようと思った経緯と、当社を選んだ理由を教えてください
+  狙い: 主体性 / 入社動機の整合性
+  解答例: キャリアの方向性と自社の事業領域が一致する点を具体的に語れるか
+
+Q2. 直近で「自分で工夫して仕事のやり方を変えた」エピソードを教えてください
+  狙い: 主体性 / 改善志向
+  解答例: 業務改善の小さな実例。自発的な動きと結果まで語れるか
+
+Q3. チームでフィードバックをもらった経験で、印象に残っているものは
+  狙い: 柔軟性 / 自己客観視
+  解答例: 受け入れ方と行動変化の有無
+
+… (4〜7 問)</textarea>
+      </div>
+      <!-- 右: 技術 -->
+      <div>
+        <textarea class="w-full border rounded p-3 text-sm font-mono bg-blue-50" rows="14">⭐ T1. これまでに自分の手で config を流した NW 案件を 1 つ選び、構成・自分の判断・期間を STAR で教えてください
+  狙い: NW 構築スキルの現在進行形での維持
+
+Q2. BGP 改修で深夜メンテを 12 回完遂されたとのこと
+  狙い: 夜間作業耐性 / 責任感 / 問題解決力
+
+T3. 障害切り分けで苦労した経験を 1 つ
+  狙い: 問題解決力 / 仮説検証
+
+… (4〜8 問)</textarea>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3 mt-3 flex-wrap">
+      <button class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium">保存</button>
+      <span class="text-xs text-zinc-500">最終保存: 2026/6/18 11:52</span>
+      <div class="flex-1"></div>
+      <button class="border bg-white hover:bg-zinc-50 text-sm px-3 py-1 rounded">整形（API）</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">破棄</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">本文コピー</button>
+      <button class="border hover:bg-zinc-50 text-sm px-3 py-1 rounded">全文コピー</button>
+    </div>
+
+    <div class="text-xs text-zinc-500 mt-2">メリット：A の利点＋上限/下限が一目で分かる（足りないと黄色 ⚠）。デメリット：少し情報密度が上がる</div>
+  </div>
+</section>
+
+<div class="text-xs text-zinc-400 text-center pt-2 pb-12">
+  UIプレビュー / 設計書 v1.4 ベース / 配色は emerald-50（非技術）+ blue-50（技術）想定
+</div>
+
+</div>
+
+</body>
+</html>

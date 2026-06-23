@@ -1,0 +1,522 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import type { Mode, Questions } from "@/lib/types";
+import { parseQuestions } from "@/lib/questionParser";
+import {
+  buildQuestionsPromptAction,
+  generateQuestionsApiAction,
+  reformatQuestionsApiAction,
+  saveQuestionsAction,
+} from "../actions";
+import { MaxPromptCopy } from "./MaxPromptCopy";
+import { ModeSwitch } from "./ModeSwitch";
+import {
+  ProviderModelSelect,
+  type ProviderModelOverride,
+} from "./ProviderModelSelect";
+import { useStableSectionScroll } from "./useStableSectionScroll";
+import type { LlmDefaults } from "../page";
+import { useConfirm } from "@/components/ui/use-confirm";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Tip } from "@/components/ui/tooltip";
+
+const NON_TECH_HEADER = "## 非技術";
+const TECH_HEADER = "## 技術";
+
+const DEFAULT_NON_TECH_TEMPLATE = `⭐ Q1. 簡単に自己紹介をお願いします（職歴・現在の役割・志望動機）
+  狙い: コミュニケーション力 / 整理して話す力
+  解答例: 時系列で簡潔に。冗長 / 自慢過多は減点
+
+Q2. これまでのキャリアで最も成長を実感した経験は？
+  狙い: 主体性 / 学習意欲
+  解答例: STAR で。自発的な動きと結果まで語れるか
+
+Q3. あなたの強みと弱みを3つずつ教えてください
+  狙い: 自己客観視 / 柔軟性
+  解答例: 弱みを「対処の仕方」まで語れるか
+
+Q4. 学生時代や前職で「最も努力したこと」は？
+  狙い: 継続力 / 困難への向き合い方
+  解答例: 期間と途中の壁を具体的に
+
+Q5. チームで意見が割れたとき、あなたはどう動きますか？
+  狙い: 対人影響力 / 調整力
+  解答例: 実例で、相手の立場理解と落とし所まで
+
+Q6. ストレスの発散方法や趣味、好きなスポーツはありますか？
+  狙い: ストレス対処 / 人物像
+  解答例: 偏らないバランス感を見る
+
+⭐ Q7. 5年後、どんな仕事をしていたいですか？当社でどう実現したい？
+  狙い: 入社意欲 / キャリアの整合性
+  解答例: 自社事業とのつながりが具体的か`;
+
+const TECH_PLACEHOLDER = `例（候補者の経歴・役割マスタから Max が生成 or 手書き）:
+
+⭐ T1. これまでに自分の手で config を流した NW 案件を1つ選び、構成・自分の判断・期間を STAR で
+  狙い: NW 構築スキルの現在進行形での維持
+  解答例: 直近案件名と自分の役割を具体化
+
+T2. BGP 改修で深夜メンテを完遂された経験で、最も切替が危なかった1回を選んで
+  狙い: 夜間作業耐性 / 責任感 / 問題解決力
+  解答例: 「N分以内に収束しなければロールバック」の閾値を明示できるか`;
+
+/** rawText を「非技術／技術」に分割する。見出しが無ければ全部を非技術として扱う（後方互換） */
+function splitSections(raw: string): { nonTech: string; tech: string } {
+  const nonIdx = raw.indexOf(NON_TECH_HEADER);
+  const techIdx = raw.indexOf(TECH_HEADER);
+  if (nonIdx < 0 && techIdx < 0) {
+    return { nonTech: raw, tech: "" };
+  }
+  if (nonIdx >= 0 && techIdx < 0) {
+    return { nonTech: raw.slice(nonIdx + NON_TECH_HEADER.length).trim(), tech: "" };
+  }
+  if (nonIdx < 0 && techIdx >= 0) {
+    return { nonTech: "", tech: raw.slice(techIdx + TECH_HEADER.length).trim() };
+  }
+  // 両方ある場合: 出現順は問わず、それぞれの後ろから次の見出しまで
+  if (nonIdx < techIdx) {
+    return {
+      nonTech: raw.slice(nonIdx + NON_TECH_HEADER.length, techIdx).trim(),
+      tech: raw.slice(techIdx + TECH_HEADER.length).trim(),
+    };
+  }
+  return {
+    tech: raw.slice(techIdx + TECH_HEADER.length, nonIdx).trim(),
+    nonTech: raw.slice(nonIdx + NON_TECH_HEADER.length).trim(),
+  };
+}
+
+function joinSections(nonTech: string, tech: string): string {
+  const n = nonTech.trim();
+  const t = tech.trim();
+  if (!n && !t) return "";
+  return `${NON_TECH_HEADER}\n${n}\n\n${TECH_HEADER}\n${t}\n`;
+}
+
+export function Section5Questions({
+  sessionId,
+  initial,
+  llmDefaults,
+}: {
+  sessionId: string;
+  initial: Questions | null;
+  llmDefaults: LlmDefaults;
+}) {
+  const [mode, setMode] = useState<Mode>(initial?.mode ?? "paste");
+  const { ref: rootRef, capture: captureScroll } = useStableSectionScroll(mode);
+  const initialSplit = splitSections(initial?.rawText ?? "");
+  const [nonTech, setNonTech] = useState(initialSplit.nonTech);
+  const [tech, setTech] = useState(initialSplit.tech);
+  const [savedAt, setSavedAt] = useState<string | null>(
+    initial?.updatedAt ?? null,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, startSave] = useTransition();
+  const [isGenerating, startGen] = useTransition();
+  const [isReformatting, startReformat] = useTransition();
+  const [llmOverride, setLlmOverride] = useState<ProviderModelOverride | undefined>(undefined);
+  const { confirm, ConfirmDialog } = useConfirm();
+
+  const combined = joinSections(nonTech, tech);
+  const initialCombined = initial?.rawText ?? "";
+
+  function handleSave() {
+    setError(null);
+    startSave(async () => {
+      await saveQuestionsAction(sessionId, mode, combined);
+      setSavedAt(new Date().toISOString());
+    });
+  }
+
+  function handleGenerate() {
+    setError(null);
+    startGen(async () => {
+      const res = await generateQuestionsApiAction(sessionId, llmOverride);
+      if (!res.ok) {
+        setError(res.error ?? "生成に失敗しました");
+        return;
+      }
+      if (res.text != null) {
+        // 戻ってきた整形済みテキストを 2 セクションに振り分け
+        const split = splitSections(res.text);
+        if (!split.nonTech && !split.tech) {
+          // 見出しが無ければ技術側に全部入れる
+          setTech(res.text);
+        } else {
+          if (split.nonTech) setNonTech(split.nonTech);
+          if (split.tech) setTech(split.tech);
+        }
+      }
+      setSavedAt(new Date().toISOString());
+    });
+  }
+
+  async function handleReformat() {
+    if (!combined.trim()) {
+      setError("整形する質問テキストがありません。");
+      return;
+    }
+    const ok = await confirm({
+      title: "Haiku 4.5 で整形して上書きしますか？",
+      description: "元の質問テキストには戻せません。よろしいですか？",
+      confirmLabel: "整形で上書き",
+      destructive: true,
+    });
+    if (!ok) return;
+    setError(null);
+    startReformat(async () => {
+      const res = await reformatQuestionsApiAction(sessionId, llmOverride);
+      if (!res.ok) {
+        setError(res.error ?? "整形に失敗しました");
+        return;
+      }
+      if (res.text != null) {
+        const split = splitSections(res.text);
+        if (!split.nonTech && !split.tech) {
+          setTech(res.text);
+        } else {
+          setNonTech(split.nonTech);
+          setTech(split.tech);
+        }
+      }
+      setSavedAt(new Date().toISOString());
+    });
+  }
+
+  const busy = isSaving || isGenerating || isReformatting;
+
+  function bodyOnly(src: string): string {
+    return src
+      .split(/\r?\n/)
+      .filter((line) => {
+        const t = line.trim();
+        if (!t) return false;
+        if (/^狙い[:：]/.test(t)) return false;
+        if (/^解答例[:：]/.test(t)) return false;
+        if (t === NON_TECH_HEADER || t === TECH_HEADER) return false;
+        return true;
+      })
+      .join("\n");
+  }
+
+  function handleDiscard() {
+    const s = splitSections(initial?.rawText ?? "");
+    setNonTech(s.nonTech);
+    setTech(s.tech);
+    setError(null);
+  }
+
+  async function handleInsertTemplate() {
+    if (nonTech.trim()) {
+      const ok = await confirm({
+        title: "現在の非技術質問を上書きしますか？",
+        description: "テンプレートで置き換えます。",
+        confirmLabel: "上書きする",
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    setNonTech(DEFAULT_NON_TECH_TEMPLATE);
+  }
+
+  // 質問件数のラフカウント（⭐ または Q または T で始まる行）
+  const nonTechCount = (nonTech.match(/^[⭐\s]*[QT]\d/gm) || []).length;
+  const techCount = (tech.match(/^[⭐\s]*[QT]\d/gm) || []).length;
+
+  return (
+    <div ref={rootRef}>
+      <div className="flex items-center justify-between mb-2 gap-2 min-h-8">
+        <h3 className="font-bold whitespace-nowrap">⑤ 質問リスト</h3>
+        <div className="flex items-center gap-2 flex-nowrap min-w-0">
+          <ModeSwitch
+            mode={mode}
+            onChange={(m) => {
+              captureScroll();
+              setMode(m);
+            }}
+            apiLabel="API生成"
+            apiEnabled
+          />
+          {mode === "api" && (
+            <ProviderModelSelect
+              stage="questions"
+              defaultProvider={llmDefaults.defaultProvider}
+              defaultModel={llmDefaults.modelBy.questions}
+              value={llmOverride}
+              onChange={setLlmOverride}
+              hasKey={llmDefaults.hasKey}
+              disabled={busy}
+            />
+          )}
+        </div>
+      </div>
+
+      {mode === "api" && (
+        <div className="border rounded p-3 mb-2 bg-zinc-50 flex items-center gap-3 text-sm">
+          <div className="flex-1 text-zinc-600 min-w-0">
+            ② 面談者情報 + ④ 凍結条件を入力に、AI で「非技術 7 問 + 技術 6〜8 問」を section 付きで生成します。
+          </div>
+          <Button
+            type="button"
+            onClick={handleGenerate}
+            disabled={busy}
+          >
+            {isGenerating ? "生成中…" : "質問を生成"}
+          </Button>
+        </div>
+      )}
+
+      {mode === "paste" && (
+        <MaxPromptCopy
+          fetcher={() => buildQuestionsPromptAction(sessionId)}
+          hint={
+            <>
+              Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力（## 非技術 / ## 技術 の section 付き）を下にペースト → 保存。
+            </>
+          }
+          className="mb-2"
+        />
+      )}
+
+      {/* カウンター */}
+      <div className="flex items-center gap-2 text-xs mb-2 flex-wrap">
+        <span
+          className={`px-2 py-1 rounded font-medium ${
+            nonTechCount === 7
+              ? "bg-emerald-100 text-emerald-800"
+              : nonTechCount === 0
+                ? "bg-zinc-100 text-zinc-500"
+                : "bg-amber-100 text-amber-800"
+          }`}
+        >
+          非技術 {nonTechCount}/7 {nonTechCount === 7 ? "✓" : nonTechCount === 0 ? "" : "⚠"}
+        </span>
+        <span
+          className={`px-2 py-1 rounded font-medium ${
+            techCount >= 6 && techCount <= 8
+              ? "bg-blue-100 text-blue-800"
+              : techCount === 0
+                ? "bg-zinc-100 text-zinc-500"
+                : "bg-amber-100 text-amber-800"
+          }`}
+        >
+          技術 {techCount}/6〜8 {techCount >= 6 && techCount <= 8 ? "✓" : techCount === 0 ? "" : "⚠"}
+        </span>
+        <span className="text-zinc-500">合計 {nonTechCount + techCount} 問</span>
+        <div className="flex-1" />
+        <Tip content="非技術 7 問のデフォルトテンプレートを左カラムに流し込む">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleInsertTemplate}
+            disabled={busy}
+          >
+            📝 非技術テンプレを入れる
+          </Button>
+        </Tip>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* 左: 非技術 */}
+        <div>
+          <div className="text-xs font-medium text-emerald-800 mb-1 flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-emerald-100">非技術</span>
+            <span className="text-zinc-500">候補者によらない共通質問</span>
+          </div>
+          <Textarea
+            className="w-full text-sm font-mono bg-emerald-50"
+            rows={14}
+            placeholder={DEFAULT_NON_TECH_TEMPLATE}
+            value={nonTech}
+            onChange={(e) => setNonTech(e.target.value)}
+          />
+        </div>
+
+        {/* 右: 技術 */}
+        <div>
+          <div className="text-xs font-medium text-blue-800 mb-1 flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-blue-100">技術</span>
+            <span className="text-zinc-500">候補者の経歴に合わせた専門質問</span>
+          </div>
+          <Textarea
+            className="w-full text-sm font-mono bg-blue-50"
+            rows={14}
+            placeholder={TECH_PLACEHOLDER}
+            value={tech}
+            onChange={(e) => setTech(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {error && (
+        <div className="mt-2 border border-red-200 bg-red-50 text-red-700 text-sm rounded px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 mt-2 flex-wrap">
+        <Button
+          type="button"
+          onClick={handleSave}
+          disabled={busy}
+        >
+          {isSaving ? "保存中…" : "保存"}
+        </Button>
+        {savedAt && (
+          <span className="text-xs text-zinc-500">
+            最終保存: {new Date(savedAt).toLocaleString("ja-JP")}
+          </span>
+        )}
+        <div className="flex-1" />
+        <Tip content="Haiku 4.5 で ⭐/狙い/解答例 のフォーマットに整形して上書き">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleReformat}
+            disabled={busy || !combined.trim()}
+          >
+            {isReformatting ? "整形中…" : "整形（API）"}
+          </Button>
+        </Tip>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleDiscard}
+          disabled={busy || combined === initialCombined}
+        >
+          破棄
+        </Button>
+        <Tip content="狙い/解答例の行を除いてコピー">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(bodyOnly(combined)).catch(() => {});
+            }}
+            disabled={!combined}
+          >
+            本文コピー
+          </Button>
+        </Tip>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            navigator.clipboard.writeText(combined).catch(() => {});
+          }}
+          disabled={!combined}
+        >
+          全文コピー
+        </Button>
+      </div>
+
+      <StructuredPreview combined={combined} />
+
+      <div className="text-xs text-zinc-500 mt-2">
+        ※ 保存時は <code className="bg-zinc-100 px-1 rounded">## 非技術</code> /{" "}
+        <code className="bg-zinc-100 px-1 rounded">## 技術</code> の見出し付きで結合されます。
+        旧形式（見出しなし）は左の「非技術」に取り込まれます。
+      </div>
+      <ConfirmDialog />
+    </div>
+  );
+}
+
+/** 構造化プレビュー：rawText を parseQuestions で配列化してカード表示。折りたたみ可能 */
+function StructuredPreview({ combined }: { combined: string }) {
+  const { nonTech, tech } = parseQuestions(combined);
+  const total = nonTech.length + tech.length;
+  if (total === 0) return null;
+
+  return (
+    <details className="mt-3 border rounded-lg" open>
+      <summary className="cursor-pointer text-xs text-zinc-600 px-3 py-2 bg-zinc-50 select-none">
+        構造化プレビュー — {total} 問（非技術 {nonTech.length} / 技術 {tech.length}）
+        <span className="text-zinc-400 ml-2">
+          ※ 保存時に questions.json の items 配列に同じ内容が入ります
+        </span>
+      </summary>
+      <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+        <CategoryCard
+          title="非技術"
+          items={nonTech}
+          prefix="Q"
+          bg="bg-emerald-50/50"
+          accent="border-l-emerald-400"
+        />
+        <CategoryCard
+          title="技術"
+          items={tech}
+          prefix="T"
+          bg="bg-blue-50/50"
+          accent="border-l-blue-400"
+        />
+      </div>
+    </details>
+  );
+}
+
+function CategoryCard({
+  title,
+  items,
+  prefix,
+  bg,
+  accent,
+}: {
+  title: string;
+  items: ReturnType<typeof parseQuestions>["nonTech"];
+  prefix: "Q" | "T";
+  bg: string;
+  accent: string;
+}) {
+  return (
+    <div className={`rounded ${bg} p-2`}>
+      <div className="text-xs font-medium text-zinc-700 mb-2">
+        {title} ({items.length})
+      </div>
+      {items.length === 0 ? (
+        <div className="text-xs text-zinc-400 px-2 py-3 text-center">なし</div>
+      ) : (
+        <ol className="space-y-2">
+          {items.map((q, i) => (
+            <li
+              key={i}
+              className={`bg-white border border-l-4 ${accent} rounded px-2 py-1.5 text-xs`}
+            >
+              <div className="flex items-start gap-1">
+                <span className="text-zinc-400 tabular shrink-0">
+                  {prefix}
+                  {i + 1}
+                </span>
+                {q.star && (
+                  <span className="text-amber-500 shrink-0" title="必須質問">
+                    ⭐
+                  </span>
+                )}
+                <span className="text-zinc-800 leading-snug">{q.question}</span>
+              </div>
+              {q.aim && (
+                <div className="text-zinc-500 mt-1 pl-6">
+                  <span className="text-zinc-400">狙い:</span> {q.aim}
+                </div>
+              )}
+              {q.example && (
+                <div className="text-zinc-500 pl-6">
+                  <span className="text-zinc-400">解答例:</span> {q.example}
+                </div>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
