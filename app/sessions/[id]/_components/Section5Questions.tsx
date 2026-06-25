@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { Mode, Questions } from "@/lib/types";
+import type { Mode, Questions, QuestionCounts } from "@/lib/types";
 import { parseQuestions } from "@/lib/questionParser";
 import {
   buildQuestionsPromptAction,
@@ -100,11 +100,15 @@ export function Section5Questions({
   sessionId,
   initial,
   llmDefaults,
+  questionCounts,
 }: {
   sessionId: string;
   initial: Questions | null;
   llmDefaults: LlmDefaults;
+  questionCounts: QuestionCounts;
 }) {
+  const targetNonTech = questionCounts.nontech;
+  const targetTech = questionCounts.tech;
   const [mode, setMode] = useState<Mode>(initial?.mode ?? "paste");
   const { ref: rootRef, capture: captureScroll } = useStableSectionScroll(mode);
   const initialSplit = splitSections(initial?.rawText ?? "");
@@ -257,7 +261,7 @@ export function Section5Questions({
       {mode === "api" && (
         <div className="border rounded p-3 mb-2 bg-zinc-50 flex items-center gap-3 text-sm">
           <div className="flex-1 text-zinc-600 min-w-0">
-            ② 面談者情報 + ④ 凍結条件を入力に、AI で「非技術 7 問 + 技術 6〜8 問」を section 付きで生成します。
+            ② 面談者情報 + ④ 凍結条件を入力に、AI で「非技術 {targetNonTech} 問 + 技術 {targetTech} 問」を section 付きで生成します。
           </div>
           <Button
             type="button"
@@ -281,33 +285,35 @@ export function Section5Questions({
         />
       )}
 
-      {/* カウンター */}
+      {/* カウンター — 目標値は設定の questionCounts（exact match で緑/青判定） */}
       <div className="flex items-center gap-2 text-xs mb-2 flex-wrap">
         <span
           className={`px-2 py-1 rounded font-medium ${
-            nonTechCount === 7
+            nonTechCount === targetNonTech
               ? "bg-emerald-100 text-emerald-800"
               : nonTechCount === 0
                 ? "bg-zinc-100 text-zinc-500"
                 : "bg-amber-100 text-amber-800"
           }`}
         >
-          非技術 {nonTechCount}/7 {nonTechCount === 7 ? "✓" : nonTechCount === 0 ? "" : "⚠"}
+          非技術 {nonTechCount}/{targetNonTech}{" "}
+          {nonTechCount === targetNonTech ? "✓" : nonTechCount === 0 ? "" : "⚠"}
         </span>
         <span
           className={`px-2 py-1 rounded font-medium ${
-            techCount >= 6 && techCount <= 8
+            techCount === targetTech
               ? "bg-blue-100 text-blue-800"
               : techCount === 0
                 ? "bg-zinc-100 text-zinc-500"
                 : "bg-amber-100 text-amber-800"
           }`}
         >
-          技術 {techCount}/6〜8 {techCount >= 6 && techCount <= 8 ? "✓" : techCount === 0 ? "" : "⚠"}
+          技術 {techCount}/{targetTech}{" "}
+          {techCount === targetTech ? "✓" : techCount === 0 ? "" : "⚠"}
         </span>
         <span className="text-zinc-500">合計 {nonTechCount + techCount} 問</span>
         <div className="flex-1" />
-        <Tip content="非技術 7 問のデフォルトテンプレートを左カラムに流し込む">
+        <Tip content="非技術のデフォルトテンプレ（固定 7 問）を左カラムに流し込む">
           <Button
             type="button"
             variant="outline"

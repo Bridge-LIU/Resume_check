@@ -7,7 +7,7 @@ import { DataRootField } from "./_components/DataRootField";
 import { RetentionManager } from "./_components/RetentionManager";
 import { BackupManager } from "./_components/BackupManager";
 import { ProvidersField } from "./_components/ProvidersField";
-import { Button } from "@/components/ui/button";
+import { SaveSettingsButton } from "./_components/SaveSettingsButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -50,12 +50,24 @@ async function updateSettings(formData: FormData) {
       ? submittedDefaultProvider
       : current.defaultProvider;
 
+  // ⑤質問生成数（1〜50 にクランプ）
+  const clampQ = (v: FormDataEntryValue | null, fallback: number) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(1, Math.min(50, Math.floor(n)));
+  };
+  const questionCounts = {
+    nontech: clampQ(formData.get("q_nontech"), current.questionCounts.nontech),
+    tech: clampQ(formData.get("q_tech"), current.questionCounts.tech),
+  };
+
   const next: Settings = {
     ...current,
     dataRoot:
       String(formData.get("dataRoot") ?? current.dataRoot).trim() || "./data",
     defaultProvider,
     providers,
+    questionCounts,
     retention: {
       ...current.retention,
       enabled: formData.get("retentionEnabled") === "on",
@@ -115,6 +127,45 @@ export default async function Page() {
               providers={s.providers}
               envStatus={envStatus}
             />
+
+            {/* 質問生成数 — prompt と maxTokens 上限が両方この値から自動算出される */}
+            <section className="space-y-3">
+              <div className="font-medium text-sm">質問生成数</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="q_nontech" className="text-xs text-zinc-500">
+                    非技術
+                  </Label>
+                  <Input
+                    id="q_nontech"
+                    name="q_nontech"
+                    type="number"
+                    min={1}
+                    max={50}
+                    defaultValue={s.questionCounts.nontech}
+                  />
+                  <div className="text-[10px] text-zinc-400">
+                    自己紹介・キャリア・志望動機 等
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="q_tech" className="text-xs text-zinc-500">
+                    技術
+                  </Label>
+                  <Input
+                    id="q_tech"
+                    name="q_tech"
+                    type="number"
+                    min={1}
+                    max={50}
+                    defaultValue={s.questionCounts.tech}
+                  />
+                  <div className="text-[10px] text-zinc-400">
+                    候補者の経歴・条件に紐づく専門質問
+                  </div>
+                </div>
+              </div>
+            </section>
 
             {/* 保存期間（編集可能化） */}
             <section className="space-y-3">
@@ -240,9 +291,7 @@ export default async function Page() {
             </section>
 
             <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button type="submit" size="sm">
-                保存
-              </Button>
+              <SaveSettingsButton />
             </div>
           </form>
         </div>

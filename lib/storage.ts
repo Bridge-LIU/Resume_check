@@ -97,10 +97,22 @@ function migrateSettings(raw: unknown): Settings {
     if (s.api.defaultModel) providers.anthropic.defaultModel = s.api.defaultModel;
   }
 
+  const questionCounts = {
+    nontech: Math.max(
+      1,
+      Math.min(50, Math.floor(s.questionCounts?.nontech ?? 7)),
+    ),
+    tech: Math.max(
+      1,
+      Math.min(50, Math.floor(s.questionCounts?.tech ?? 8)),
+    ),
+  };
+
   return {
     dataRoot: s.dataRoot ?? "./data",
     defaultProvider: s.defaultProvider ?? "anthropic",
     providers,
+    questionCounts,
     retention: {
       enabled: s.retention?.enabled ?? true,
       anchor: "closedAt",
@@ -499,7 +511,7 @@ export function importMaster(json: string): { roles: number; evalAxes: number } 
 const sessionsDir = () => dataPath("sessions");
 const sessionDir = (id: string) => path.join(sessionsDir(), id);
 
-/** ID 生成: YYYYMMDD_HHMM_<氏名>_<役割> */
+/** ID 生成: YYYYMMDD_HHMM_<氏名>_<役割>（ユーザ希望により日本語フォルダ名を維持） */
 export function generateSessionId(氏名: string, 役割: string, when = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const date = `${when.getFullYear()}${pad(when.getMonth() + 1)}${pad(when.getDate())}`;
@@ -553,16 +565,34 @@ export function deleteSession(id: string): void {
 }
 
 /**
- * セッションを複製する。設定済みの ②要約／④凍結条件／⑤質問／uploads/ を引き継ぎ、
- * ⑥議事録・⑧評価は引き継がない（同じ候補者で別ラウンドを行う想定）。
+ * セッションを複製する。
+ * - 引き継ぎ: ②要約 / uploads/（履歴書は役割に依らない）
+ * - 同じ役割なら ④凍結条件 / ⑤質問 も引き継ぐ
+ * - 役割を変えた場合 ④⑤ は破棄（旧役割向けに作られたものなので意味がない）
+ * - ⑥議事録 / ⑧評価は常に引き継がない（別ラウンドのため）
+ *
+ * @param srcId 複製元のセッション ID
+ * @param opts.氏名 上書きする氏名（省略時は元と同じ）
+ * @param opts.役割 上書きする役割（省略時は元と同じ。変えると ④⑤ はコピーされない）
  */
-export function duplicateSession(srcId: string): SessionMeta | null {
+export function duplicateSession(
+  srcId: string,
+  opts: { 氏名?: string; 役割?: string } = {},
+): SessionMeta | null {
   const src = getSessionMeta(srcId);
   if (!src) return null;
-  const meta = createSession(src.氏名, src.役割);
+  const 氏名 = (opts.氏名?.trim() || src.氏名).trim();
+  const 役割 = (opts.役割?.trim() || src.役割).trim();
+  const roleChanged = 役割 !== src.役割;
+  const meta = createSession(氏名, 役割);
   const srcDir = sessionDir(srcId);
   const dstDir = sessionDir(meta.id);
-  for (const name of ["candidate.json", "conditions_snapshot.json", "questions.json"]) {
+
+  // ②要約は役割に依らないので常にコピー
+  const filesToCopy = roleChanged
+    ? ["candidate.json"]
+    : ["candidate.json", "conditions_snapshot.json", "questions.json"];
+  for (const name of filesToCopy) {
     const f = path.join(srcDir, name);
     if (fs.existsSync(f)) fs.copyFileSync(f, path.join(dstDir, name));
   }
@@ -570,10 +600,10 @@ export function duplicateSession(srcId: string): SessionMeta | null {
   if (fs.existsSync(srcUploads)) {
     fs.cpSync(srcUploads, path.join(dstDir, "uploads"), { recursive: true });
   }
-  if (getConditionsSnapshot(meta.id)) {
+  if (!roleChanged && getConditionsSnapshot(meta.id)) {
     saveSessionMeta({ ...meta, status: "質問公開" });
   } else {
-    // saveSessionMeta を通らない経路でも候補者一覧シートを必ず追従させる
+    // saveSessionMeta を通らない経路でも面談者一覧シートを必ず追従させる
     fireSessionsMirror();
   }
   return getSessionMeta(meta.id);

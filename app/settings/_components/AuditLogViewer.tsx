@@ -17,6 +17,8 @@ const EVENT_LABEL: Record<AuditEvent, string> = {
   "backup.delete": "バックアップ削除",
   "retention.schedulerStart": "定期スイープ開始",
   "retention.sweep.auto": "自動スイープ実行",
+  "session.candidateSummarize": "②候補者 API 要約",
+  "session.questionsGenerate": "⑤質問 API 生成",
   "session.questionsReformat": "⑤質問 API 整形",
   "session.minutesSummarize": "⑥議事録 API 要約",
 };
@@ -36,6 +38,8 @@ const EVENT_PILL: Partial<Record<AuditEvent, string>> = {
   "backup.delete": "bg-red-100 text-red-800",
   "retention.schedulerStart": "bg-zinc-100 text-zinc-700",
   "retention.sweep.auto": "bg-amber-100 text-amber-800",
+  "session.candidateSummarize": "bg-blue-100 text-blue-800",
+  "session.questionsGenerate": "bg-blue-100 text-blue-800",
   "session.questionsReformat": "bg-blue-100 text-blue-800",
   "session.minutesSummarize": "bg-blue-100 text-blue-800",
 };
@@ -72,61 +76,73 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
 
   return (
     <div className="bg-white rounded-xl border shadow-sm">
-      <div className="p-6 space-y-3">
-        <div className="flex items-center gap-3">
+      <details className="group">
+        <summary className="p-6 cursor-pointer list-none flex items-center gap-3 hover:bg-zinc-50/50 rounded-xl">
+          <svg
+            className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-90"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M7.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L10.586 10 7.293 6.707a1 1 0 010-1.414z" />
+          </svg>
           <h3 className="font-bold">直近の監査ログ</h3>
-          <span className="text-xs text-zinc-500">最新 {limit} 件</span>
+          <span className="text-xs text-zinc-500">
+            最新 {limit} 件 ・ {entries.length}件記録
+          </span>
           <div className="flex-1" />
           <span className="text-xs text-zinc-400 font-mono">
             data/logs/audit.log
           </span>
-        </div>
-        <div className="text-xs text-zinc-500">
-          PII（氏名・履歴書本文・議事録本文）は記録しない方針。表示は時刻降順。
-        </div>
-        {entries.length === 0 ? (
-          <div className="border-2 border-dashed rounded-lg p-8 text-center text-sm text-zinc-500">
-            まだ監査ログがありません
+        </summary>
+        <div className="px-6 pb-6 space-y-3">
+          <div className="text-xs text-zinc-500">
+            PII（氏名・履歴書本文・議事録本文）は記録しない方針。表示は時刻降順。
           </div>
-        ) : (
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-zinc-50 text-zinc-600">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium w-44">時刻</th>
-                  <th className="text-left px-3 py-2 font-medium w-36">イベント</th>
-                  <th className="text-left px-3 py-2 font-medium w-56">対象</th>
-                  <th className="text-left px-3 py-2 font-medium">補足</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {entries.map((e, i) => (
-                  <tr key={`${e.ts}-${i}`} className="hover:bg-zinc-50">
-                    <td className="px-3 py-1.5 tabular text-zinc-600">
-                      {formatTime(e.ts)}
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
-                          EVENT_PILL[e.event] ?? "bg-zinc-100 text-zinc-700"
-                        }`}
-                      >
-                        {EVENT_LABEL[e.event] ?? e.event}
-                      </span>
-                    </td>
-                    <td className="px-3 py-1.5 font-mono text-[11px] text-zinc-700 break-all">
-                      {e.sessionId ?? "—"}
-                    </td>
-                    <td className="px-3 py-1.5 text-zinc-600 break-all">
-                      {metaSummary(e) || "—"}
-                    </td>
+          {entries.length === 0 ? (
+            <div className="border-2 border-dashed rounded-lg p-8 text-center text-sm text-zinc-500">
+              まだ監査ログがありません
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-zinc-50 text-zinc-600">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium w-44">時刻</th>
+                    <th className="text-left px-3 py-2 font-medium w-36">イベント</th>
+                    <th className="text-left px-3 py-2 font-medium w-56">対象</th>
+                    <th className="text-left px-3 py-2 font-medium">補足</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                </thead>
+                <tbody className="divide-y">
+                  {entries.map((e, i) => (
+                    <tr key={`${e.ts}-${i}`} className="hover:bg-zinc-50">
+                      <td className="px-3 py-1.5 tabular text-zinc-600">
+                        {formatTime(e.ts)}
+                      </td>
+                      <td className="px-3 py-1.5">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
+                            EVENT_PILL[e.event] ?? "bg-zinc-100 text-zinc-700"
+                          }`}
+                        >
+                          {EVENT_LABEL[e.event] ?? e.event}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1.5 font-mono text-[11px] text-zinc-700 break-all">
+                        {e.sessionId ?? "—"}
+                      </td>
+                      <td className="px-3 py-1.5 text-zinc-600 break-all">
+                        {metaSummary(e) || "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </details>
     </div>
   );
 }

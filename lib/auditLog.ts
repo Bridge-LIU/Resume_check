@@ -18,6 +18,8 @@ export type AuditEvent =
   | "session.restore"
   | "session.duplicate"
   | "session.freezeConditions"
+  | "session.candidateSummarize"
+  | "session.questionsGenerate"
   | "session.questionsReformat"
   | "session.minutesSummarize"
   | "session.saveEvaluation"

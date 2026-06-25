@@ -142,6 +142,14 @@ export interface ProviderConfig {
   models: Partial<Record<LlmStage, string>>;
 }
 
+/** ⑤質問生成時の問数設定。prompt 文と maxTokens が両方この値から動的に決まる。 */
+export interface QuestionCounts {
+  /** 非技術質問の数（既定 7） */
+  nontech: number;
+  /** 技術質問の数（既定 8） */
+  tech: number;
+}
+
 /** config/settings.json */
 export interface Settings {
   dataRoot: string;
@@ -154,6 +162,8 @@ export interface Settings {
    * 直接参照しないこと。
    */
   api?: { key: string; defaultModel: string };
+  /** ⑤質問生成の問数（未設定なら 7 + 8 = 15問の既定） */
+  questionCounts: QuestionCounts;
   retention: {
     enabled: boolean;
     anchor: "closedAt";

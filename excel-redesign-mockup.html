@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>Excel リデザイン 3案</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e3e6eb;
+    --ink: #1f2933;
+    --muted: #6b7280;
+    --accent: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background: var(--bg); color: var(--ink); margin: 0; padding: 28px 20px 80px; line-height: 1.55;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  .sub { color: var(--muted); font-size: 13px; }
+
+  /* ─── 現状（問題点） ─── */
+  .problem {
+    background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;
+    padding: 16px 20px; margin-bottom: 28px;
+  }
+  .problem h2 { margin: 0 0 8px; font-size: 14px; color: #9a3412; letter-spacing: .04em; }
+  .problem ul { margin: 4px 0 0; padding-left: 20px; font-size: 13.5px; }
+  .problem li { margin: 3px 0; }
+
+  /* ─── 案ブロック ─── */
+  .plan {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    margin-bottom: 28px; overflow: hidden;
+  }
+  .plan-head {
+    padding: 16px 22px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px; font-weight: 700; font-size: 14px;
+    background: #dbeafe; color: #1d4ed8;
+  }
+  .plan-head h2 { margin: 0; font-size: 17px; }
+  .pros { color: var(--muted); font-size: 13px; }
+  .tag {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: #f1f5f9; color: #475569; margin-left: 4px;
+  }
+  .tag.green { background: #dcfce7; color: #166534; }
+  .tag.amber { background: #fef3c7; color: #92400e; }
+  .plan-body { padding: 20px 22px; background: #fbfcfd; }
+
+  /* ─── 共通の Excel 風プレビュー ─── */
+  .xls-wrap {
+    background: white; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden;
+    margin: 12px 0; font-size: 12px;
+  }
+  .xls-tabs {
+    display: flex; gap: 0; padding: 0 8px; background: #f3f4f6;
+    border-bottom: 1px solid #d1d5db; font-size: 11.5px;
+  }
+  .xls-tab {
+    padding: 7px 14px; border-right: 1px solid #d1d5db;
+    color: #6b7280; background: #f9fafb;
+  }
+  .xls-tab.active { background: white; color: #1f2937; font-weight: 600; }
+  table.xls {
+    width: 100%; border-collapse: collapse; table-layout: fixed;
+  }
+  table.xls th, table.xls td {
+    border: 1px solid #e5e7eb; padding: 6px 8px; vertical-align: top;
+    word-break: break-word;
+  }
+  table.xls th {
+    background: #f8fafc; color: #475569; font-weight: 600; font-size: 11px;
+    text-align: center; letter-spacing: .02em;
+  }
+  table.xls td.center { text-align: center; vertical-align: middle; }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 600;
+  }
+  .pill-pass { background: #dcfce7; color: #166534; }
+  .pill-fail { background: #fee2e2; color: #991b1b; }
+  .pill-mid  { background: #e4e4e7; color: #3f3f46; }
+  .score-good { color: #15803d; font-weight: 700; }
+  .score-mid  { color: #b45309; font-weight: 700; }
+  .score-bad  { color: #b91c1c; font-weight: 700; }
+  .mark { font-size: 13px; }
+  .mark.g { color: #15803d; }
+  .mark.b { color: #1d4ed8; }
+  .mark.a { color: #b45309; }
+  .mark.r { color: #b91c1c; }
+  .axis-mini {
+    display: inline-flex; gap: 4px; align-items: center; font-size: 11px;
+  }
+  .axis-mini .a-name { color: #6b7280; }
+  .axis-mini .a-score { font-weight: 700; }
+  .bar {
+    display: inline-block; width: 50px; height: 6px; background: #e5e7eb;
+    border-radius: 3px; overflow: hidden; vertical-align: middle;
+  }
+  .bar > i { display: block; height: 100%; }
+  .bar.g > i { background: #22c55e; }
+  .bar.b > i { background: #3b82f6; }
+  .bar.a > i { background: #f59e0b; }
+  .bar.r > i { background: #ef4444; }
+
+  .grouped-headers th { background: #eff6ff !important; color: #1e40af !important; }
+  .grouped-headers th.group-detail { background: #f5f3ff !important; color: #6d28d9 !important; }
+  .grouped-headers th.group-meta { background: #f1f5f9 !important; color: #475569 !important; }
+
+  /* ─── カード式（案B） ─── */
+  .card-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .card-cell {
+    border: 1.5px solid #d1d5db; border-radius: 8px; padding: 12px 14px;
+    background: white; font-size: 12px;
+  }
+  .card-cell h3 {
+    margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
+    font-size: 14px; padding-bottom: 8px; border-bottom: 1px dashed #e5e7eb;
+  }
+  .card-cell h3 .name { font-weight: 700; }
+  .card-cell h3 .role-pill {
+    font-size: 10.5px; padding: 2px 8px; border-radius: 999px;
+    background: #dbeafe; color: #1d4ed8;
+  }
+  .card-cell .row {
+    display: grid; grid-template-columns: 60px 1fr; gap: 6px;
+    padding: 4px 0; border-bottom: 1px dotted #f3f4f6;
+  }
+  .card-cell .row .k { color: #6b7280; font-size: 11px; }
+  .card-cell .row .v { font-size: 12px; }
+  .card-cell .axis-row {
+    display: grid; grid-template-columns: 70px 30px 50px 1fr; gap: 6px;
+    align-items: center; padding: 3px 0; font-size: 11.5px;
+  }
+  .card-cell .footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid #f3f4f6;
+  }
+  .card-cell .total {
+    font-size: 22px; font-weight: 700; line-height: 1;
+  }
+
+  /* ─── KPI ダッシュボード（案C） ─── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    margin: 8px 0 14px;
+  }
+  .kpi {
+    background: white; border: 1px solid #d1d5db; border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .kpi .label { font-size: 11px; color: #6b7280; letter-spacing: .04em; }
+  .kpi .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .kpi .delta { font-size: 11px; color: #15803d; }
+
+  /* マスタ案 */
+  .master-block {
+    background: white; border: 1.5px solid #d1d5db; border-radius: 8px;
+    padding: 14px 16px; margin: 8px 0; font-size: 12px;
+  }
+  .master-block h3 {
+    margin: 0 0 10px; display: flex; align-items: center; gap: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid #e5e7eb;
+  }
+  .master-block h3 .role-name { font-weight: 700; font-size: 15px; }
+  .axis-weights { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0; }
+  .aw {
+    display: flex; flex-direction: column; align-items: center;
+    background: #f8fafc; border-radius: 6px; padding: 6px 12px; min-width: 70px;
+  }
+  .aw .n { font-size: 10.5px; color: #6b7280; }
+  .aw .w { font-size: 14px; font-weight: 700; color: #1d4ed8; }
+  .cond-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+  .cond-cols ul { margin: 4px 0 0 18px; padding: 0; font-size: 11.5px; }
+  .cond-cols h4 { margin: 0 0 4px; font-size: 11px; color: #6b7280; letter-spacing: .04em; }
+  .line-info {
+    display: flex; gap: 16px; font-size: 11.5px; color: #475569; margin-top: 8px;
+  }
+  .line-info b { color: #1f2937; }
+
+  .compare-cb {
+    color: var(--muted); font-size: 12px; padding: 8px 14px; background: #f8fafc;
+    border-top: 1px solid var(--border);
+  }
+  .compare-cb b { color: var(--ink); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  .vote {
+    margin-top: 36px; padding: 16px 20px; border: 2px dashed #93c5fd;
+    background: #eff6ff; border-radius: 12px; color: #1e3a8a; font-size: 14px;
+  }
+  .vote b { color: #1d4ed8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Excel リデザイン 3案</h1>
+  <div class="sub">面談者一覧.xlsx ／ マスタ.xlsx — 「情報が多すぎ・不美観」への解</div>
+</header>
+
+<div class="problem">
+  <h2>⚠️ 現状の課題</h2>
+  <ul>
+    <li><b>面談者一覧</b>：15 列を 1 行に詰め込み。経歴／スキル／強み／軸別評価／良い点／懸念点 が <b>同じ高さの 1 行</b>に並ぶため、軸別評価の長さに合わせて他列も巨大化。</li>
+    <li><b>マスタ</b>：役割×軸の重みが横長の表でズラッと並び、条件①／②も同じ行に押し込まれて読みづらい。</li>
+    <li>セル内が情報密度 MAX なので「俯瞰」と「詳細」が両立していない。</li>
+  </ul>
+</div>
+
+<!-- ─────────────────── 案A: 二層分割（俯瞰 + 詳細を別シート） ─────────────────── -->
+<section class="plan">
+  <div class="plan-head">
+    <span class="badge">A</span>
+    <h2>俯瞰 + 詳細 — 二層シート分割</h2>
+    <span class="pros">メイン7列だけ。詳細は別シートにリンク <span class="tag green">読みやすさ◎</span><span class="tag">最小変更</span></span>
+  </div>
+  <div class="plan-body">
+
+    <h4 style="margin:0 0 6px; font-size:13px; color:#475569">📋 面談者一覧.xlsx</h4>
+    <div class="xls-wrap">
+      <div class="xls-tabs">
+        <div class="xls-tab active">①一覧（俯瞰）</div>
+        <div class="xls-tab">②詳細</div>
+        <div class="xls-tab">③統計</div>
+      </div>
+      <table class="xls">
+        <colgroup>
+          <col style="width:14%"><col style="width:12%"><col style="width:9%"><col style="width:10%">
+          <col style="width:30%"><col style="width:9%"><col style="width:8%"><col style="width:8%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>候補者</th><th>役割</th><th>面談日</th><th>使用AI</th>
+            <th>4 軸スコア（一目で）</th><th>総合</th><th>合否</th><th>詳細→</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>山田 太郎</b></td>
+            <td class="center">NW中途</td>
+            <td class="center">06-17</td>
+            <td class="center">Claude</td>
+            <td>
+              <span class="axis-mini"><span class="a-name">主</span><span class="bar g"><i style="width:90%"></i></span><span class="a-score">4.5</span></span>
+              <span class="axis-mini"><span class="a-name">問</span><span class="bar a"><i style="width:70%"></i></span><span class="a-score">3.5</span></span>
+              <span class="axis-mini"><span class="a-name">対</span><span class="bar b"><i style="width:84%"></i></span><span class="a-score">4.2</span></span>
+              <span class="axis-mini"><span class="a-name">柔</span><span class="bar g"><i style="width:92%"></i></span><span class="a-score">4.6</span></span>
+            </td>
+            <td class="center"><span class="score-good">4.3</span></td>
+            <td class="center"><span class="pill pill-pass">合格</span></td>
+            <td class="center" style="color:#1d4ed8">②へ</td>
+          </tr>
+          <tr>
+            <td><b>佐藤 花子</b></td>
+            <td class="center">Server中途</td>
+            <td class="center">06-15</td>
+            <td class="center">Gemini</td>
+            <td>
+              <span class="axis-mini"><span class="a-name">主</span><span class="bar a"><i style="width:74%"></i></span><span class="a-score">3.7</span></span>
+              <span class="axis-mini"><span class="a-name">問</span><span class="bar b"><i style="width:80%"></i></span><span class="a-score">4.0</span></span>
+              <span class="axis-mini"><span class="a-name">対</span><span class="bar a"><i style="width:70%"></i></span><span class="a-score">3.5</span></span>
+              <span class="axis-mini"><span class="a-name">柔</span><span class="bar a"><i style="width:76%"></i></span><span class="a-score">3.8</span></span>
+            </td>
+            <td class="center"><span class="score-mid">3.8</span></td>
+            <td class="center"><span class="pill pill-mid">普通</span></td>
+            <td class="center" style="color:#1d4ed8">②へ</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">→ 行高さは固定（28px 程度）。スクロールせず10〜20件が一目で並ぶ。経歴・根拠・コメントは ②詳細 シートで開く。</p>
+
+    <h4 style="margin:14px 0 6px; font-size:13px; color:#475569">📁 マスタ.xlsx</h4>
+    <div class="xls-wrap">
+      <div class="xls-tabs">
+        <div class="xls-tab active">役割サマリ</div>
+        <div class="xls-tab">条件詳細</div>
+        <div class="xls-tab">評価条件</div>
+      </div>
+      <table class="xls">
+        <colgroup>
+          <col style="width:16%"><col style="width:10%"><col style="width:8%"><col style="width:8%">
+          <col style="width:8%"><col style="width:8%"><col style="width:10%"><col style="width:10%">
+          <col style="width:10%"><col style="width:12%">
+        </colgroup>
+        <thead class="grouped-headers">
+          <tr>
+            <th>役割</th><th>未経験可</th>
+            <th>主体性</th><th>問題解決</th><th>対人</th><th>柔軟</th>
+            <th>合格</th><th>普通</th>
+            <th>条件①件数</th><th>条件②件数</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>NW（ネットワーク）</b></td><td class="center">×</td>
+            <td class="center">3</td><td class="center">4</td><td class="center">3</td><td class="center">3</td>
+            <td class="center"><b>4.2</b></td><td class="center">3.5</td>
+            <td class="center">9</td><td class="center">5</td></tr>
+          <tr><td><b>Server</b></td><td class="center">×</td>
+            <td class="center">3</td><td class="center">3</td><td class="center">3</td><td class="center">3</td>
+            <td class="center"><b>4.0</b></td><td class="center">3.4</td>
+            <td class="center">8</td><td class="center">5</td></tr>
+          <tr><td><b>PMO</b></td><td class="center">○</td>
+            <td class="center">3</td><td class="center">3</td><td class="center">4</td><td class="center">4</td>
+            <td class="center"><b>3.8</b></td><td class="center">3.2</td>
+            <td class="center">7</td><td class="center">5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">→ 役割を見比べるための表に専念。条件①／②の文章は別シートで縦長に。</p>
+
+  </div>
+  <div class="compare-cb">
+    <b>👍 メリット</b>：実装変更が一番少ない（buildSessionsXlsx に 2 シート追加するだけ）。普段使いは「①一覧」で完結。<br>
+    <b>👎 デメリット</b>：詳細を見たいときシート切替が要る。
+  </div>
+</section>
+
+<!-- ─────────────────── 案B: カード式 ─────────────────── -->
+<section class="plan">
+  <div class="plan-head">
+    <span class="badge" style="background:#fce7f3;color:#be185d">B</span>
+    <h2>カード式 — 1 候補者 1 ブロック</h2>
+    <span class="pros">表ではなく「カード」を並べる。1人分が縦に整理 <span class="tag amber">最も見栄え◎</span><span class="tag">実装多め</span></span>
+  </div>
+  <div class="plan-body">
+
+    <h4 style="margin:0 0 6px; font-size:13px; color:#475569">📋 面談者一覧.xlsx — A4 印刷も綺麗</h4>
+    <div class="card-grid">
+      <div class="card-cell">
+        <h3>
+          <span class="name">山田 太郎</span>
+          <span class="role-pill">NW中途</span>
+          <span style="margin-left:auto" class="pill pill-pass">合格</span>
+        </h3>
+        <div class="row"><span class="k">面談日</span><span class="v">2026-06-17 ／ Claude 評価</span></div>
+        <div class="row"><span class="k">経歴</span><span class="v">SIer 4年（NW構築・運用保守）。CCNA保有。</span></div>
+        <div class="row"><span class="k">スキル</span><span class="v">Cisco / Juniper / 設計書作成</span></div>
+        <div class="row"><span class="k">強み</span><span class="v" style="color:#1e40af">学習意欲・初動が速い</span></div>
+
+        <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px">
+          <div style="font-size:10.5px; color:#6b7280; margin-bottom:4px">軸別評価（重み込み）</div>
+          <div class="axis-row"><span class="k">主体性</span><span class="mark g">◎</span><b>4.5</b><span style="font-size:10.5px;color:#6b7280">独学で CCNA を…</span></div>
+          <div class="axis-row"><span class="k">問題解決</span><span class="mark a">△</span><b>3.5</b><span style="font-size:10.5px;color:#6b7280">障害切分けは説明できたが…</span></div>
+          <div class="axis-row"><span class="k">対人影響</span><span class="mark b">○</span><b>4.2</b><span style="font-size:10.5px;color:#6b7280">顧客視点で会話できる</span></div>
+          <div class="axis-row"><span class="k">柔軟性</span><span class="mark g">◎</span><b>4.6</b><span style="font-size:10.5px;color:#6b7280">体制変更にも前向き</span></div>
+          <div class="axis-row"><span class="k">自己解決</span><span style="color:#6d28d9;font-weight:700">★ 4 / 5</span><span></span><span></span></div>
+        </div>
+
+        <div class="row" style="margin-top:8px"><span class="k">良い点</span><span class="v" style="color:#166534">学習意欲と初動の速さが具体例で確認できた</span></div>
+        <div class="row"><span class="k">懸念点</span><span class="v" style="color:#991b1b">夜間作業の体力面の確証が不足（要確認）</span></div>
+
+        <div class="footer">
+          <span style="font-size:11px;color:#6b7280">総合スコア</span>
+          <span class="total score-good">4.3</span>
+        </div>
+      </div>
+
+      <div class="card-cell">
+        <h3>
+          <span class="name">佐藤 花子</span>
+          <span class="role-pill" style="background:#fef3c7;color:#92400e">Server中途</span>
+          <span style="margin-left:auto" class="pill pill-mid">普通</span>
+        </h3>
+        <div class="row"><span class="k">面談日</span><span class="v">2026-06-15 ／ Gemini 評価</span></div>
+        <div class="row"><span class="k">経歴</span><span class="v">運用2年→構築希望。Linux 中心。</span></div>
+        <div class="row"><span class="k">スキル</span><span class="v">RHEL / Ansible / Zabbix</span></div>
+        <div class="row"><span class="k">強み</span><span class="v" style="color:#1e40af">手順整備が丁寧</span></div>
+
+        <div style="margin-top:10px; padding:8px; background:#f8fafc; border-radius:6px">
+          <div style="font-size:10.5px; color:#6b7280; margin-bottom:4px">軸別評価</div>
+          <div class="axis-row"><span class="k">主体性</span><span class="mark a">△</span><b>3.7</b><span style="font-size:10.5px;color:#6b7280">指示待ちの場面あり</span></div>
+          <div class="axis-row"><span class="k">問題解決</span><span class="mark b">○</span><b>4.0</b><span style="font-size:10.5px;color:#6b7280">原因切分け OK</span></div>
+          <div class="axis-row"><span class="k">対人影響</span><span class="mark a">△</span><b>3.5</b><span style="font-size:10.5px;color:#6b7280">主張がやや弱い</span></div>
+          <div class="axis-row"><span class="k">柔軟性</span><span class="mark a">△</span><b>3.8</b><span style="font-size:10.5px;color:#6b7280">新技術への抵抗少なめ</span></div>
+          <div class="axis-row"><span class="k">自己解決</span><span style="color:#6d28d9;font-weight:700">★ 3 / 5</span><span></span><span></span></div>
+        </div>
+
+        <div class="row" style="margin-top:8px"><span class="k">良い点</span><span class="v" style="color:#166534">手順を残せる丁寧さ</span></div>
+        <div class="row"><span class="k">懸念点</span><span class="v" style="color:#991b1b">主体的に提案する場面が見えない</span></div>
+
+        <div class="footer">
+          <span style="font-size:11px;color:#6b7280">総合スコア</span>
+          <span class="total score-mid">3.8</span>
+        </div>
+      </div>
+    </div>
+    <p class="note">→ Excel 上では「セル結合 + 1候補者 ≒ 12行」で 1ブロック。横並び 2列にすれば A4 に 2 人ぴったり。</p>
+
+    <h4 style="margin:18px 0 6px; font-size:13px; color:#475569">📁 マスタ.xlsx</h4>
+    <div class="master-block">
+      <h3>
+        <span class="role-name">🌐 NW（ネットワーク）</span>
+        <span class="pill" style="background:#fef3c7;color:#92400e">経験 3 年以上</span>
+        <span class="pill pill-mid">未経験 ×</span>
+      </h3>
+      <div class="axis-weights">
+        <div class="aw"><span class="n">主体性</span><span class="w">3</span></div>
+        <div class="aw"><span class="n">問題解決</span><span class="w">4</span></div>
+        <div class="aw"><span class="n">対人影響</span><span class="w">3</span></div>
+        <div class="aw"><span class="n">柔軟性</span><span class="w">3</span></div>
+      </div>
+      <div class="line-info">
+        <span>合格ライン <b style="color:#15803d">4.2</b></span>
+        <span>普通ライン <b style="color:#b45309">3.5</b></span>
+      </div>
+      <div class="cond-cols">
+        <div>
+          <h4>条件① 基本人物像（9）</h4>
+          <ul>
+            <li>報連相ができる</li><li>顧客視点で考えられる</li><li>責任感がある</li>
+            <li>LAN 配線ができる</li><li>NW 構築ができる</li><li>…</li>
+          </ul>
+        </div>
+        <div>
+          <h4>条件② 未経験者必須（5・未使用）</h4>
+          <ul style="opacity:.5">
+            <li>PC 基本操作</li><li>普通自動車免許</li><li>…</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="note">→ 役割 1 件 = 1 ブロック。スコア基準・重み・条件が同じ枠に集約。「未経験可 = false」なら条件②は淡色化。</p>
+
+  </div>
+  <div class="compare-cb">
+    <b>👍 メリット</b>：見た目が一番きれい。<b>印刷</b>・共有・候補者ファイル添付向き。<br>
+    <b>👎 デメリット</b>：表計算的なフィルタ／ソートは効かない（カード式の宿命）。実装は <code>ExcelJS</code> のセル結合＋複数行レイアウトでやや工数増。
+  </div>
+</section>
+
+<!-- ─────────────────── 案C: ダッシュボード式 ─────────────────── -->
+<section class="plan">
+  <div class="plan-head">
+    <span class="badge" style="background:#dcfce7;color:#166534">C</span>
+    <h2>ダッシュボード式 — KPI + 一覧</h2>
+    <span class="pros">表の上に KPI カードを置いて経営／本部報告にも使える <span class="tag green">プレゼン◎</span><span class="tag">実装中</span></span>
+  </div>
+  <div class="plan-body">
+
+    <h4 style="margin:0 0 6px; font-size:13px; color:#475569">📋 面談者一覧.xlsx — 経営会議で映える形</h4>
+    <div class="xls-wrap" style="padding:14px">
+      <div class="kpi-grid">
+        <div class="kpi"><div class="label">今月の面談数</div><div class="value">12</div><div class="delta">前月 +3</div></div>
+        <div class="kpi"><div class="label">合格率</div><div class="value" style="color:#15803d">58%</div><div class="delta">前月 +12%</div></div>
+        <div class="kpi"><div class="label">平均総合スコア</div><div class="value" style="color:#1d4ed8">4.0</div><div class="delta" style="color:#6b7280">前月 ±0</div></div>
+        <div class="kpi"><div class="label">使用 AI 分布</div><div class="value" style="font-size:14px;line-height:1.3;margin-top:6px">Claude 65%<br><span style="color:#6b7280;font-size:11px">Gemini 25% / ChatGPT 10%</span></div></div>
+      </div>
+
+      <table class="xls">
+        <colgroup>
+          <col style="width:16%"><col style="width:12%"><col style="width:9%">
+          <col style="width:36%"><col style="width:9%"><col style="width:9%"><col style="width:9%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>候補者</th><th>役割</th><th>面談日</th>
+            <th>4 軸スコア（重み付き）</th><th>総合</th><th>合否</th><th>使用AI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>山田 太郎</b></td>
+            <td class="center">NW中途</td>
+            <td class="center">06-17</td>
+            <td>
+              <div style="display:grid;grid-template-columns:50px 1fr 30px;gap:4px;align-items:center;font-size:11px">
+                <span style="color:#6b7280">主体性</span><span class="bar g"><i style="width:90%"></i></span><b>4.5</b>
+                <span style="color:#6b7280">問題解決</span><span class="bar a"><i style="width:70%"></i></span><b>3.5</b>
+                <span style="color:#6b7280">対人影響</span><span class="bar b"><i style="width:84%"></i></span><b>4.2</b>
+                <span style="color:#6b7280">柔軟性</span><span class="bar g"><i style="width:92%"></i></span><b>4.6</b>
+              </div>
+            </td>
+            <td class="center"><span class="score-good" style="font-size:16px">4.3</span></td>
+            <td class="center"><span class="pill pill-pass">合格</span></td>
+            <td class="center">Claude</td>
+          </tr>
+          <tr>
+            <td><b>佐藤 花子</b></td>
+            <td class="center">Server中途</td>
+            <td class="center">06-15</td>
+            <td>
+              <div style="display:grid;grid-template-columns:50px 1fr 30px;gap:4px;align-items:center;font-size:11px">
+                <span style="color:#6b7280">主体性</span><span class="bar a"><i style="width:74%"></i></span><b>3.7</b>
+                <span style="color:#6b7280">問題解決</span><span class="bar b"><i style="width:80%"></i></span><b>4.0</b>
+                <span style="color:#6b7280">対人影響</span><span class="bar a"><i style="width:70%"></i></span><b>3.5</b>
+                <span style="color:#6b7280">柔軟性</span><span class="bar a"><i style="width:76%"></i></span><b>3.8</b>
+              </div>
+            </td>
+            <td class="center"><span class="score-mid" style="font-size:16px">3.8</span></td>
+            <td class="center"><span class="pill pill-mid">普通</span></td>
+            <td class="center">Gemini</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin:10px 4px 0">↑ 経歴／良い点／懸念は「詳細」シートにリンク。表は俯瞰特化、上のカードでサマリ表現。</p>
+    </div>
+
+    <h4 style="margin:18px 0 6px; font-size:13px; color:#475569">📁 マスタ.xlsx</h4>
+    <div class="xls-wrap" style="padding:14px">
+      <div class="kpi-grid">
+        <div class="kpi"><div class="label">登録役割数</div><div class="value">4</div></div>
+        <div class="kpi"><div class="label">評価軸数</div><div class="value">4</div></div>
+        <div class="kpi"><div class="label">既定 合格ライン</div><div class="value" style="color:#15803d">4.2</div></div>
+        <div class="kpi"><div class="label">既定 普通ライン</div><div class="value" style="color:#b45309">3.5</div></div>
+      </div>
+
+      <table class="xls">
+        <colgroup>
+          <col style="width:18%"><col style="width:8%">
+          <col style="width:42%"><col style="width:8%"><col style="width:8%"><col style="width:16%">
+        </colgroup>
+        <thead>
+          <tr><th>役割</th><th>未経験</th><th>軸重みプロファイル</th><th>合格</th><th>普通</th><th>条件詳細</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>NW（ネットワーク）</b></td>
+            <td class="center">×</td>
+            <td>
+              <div style="display:flex;gap:8px;align-items:center;font-size:11px">
+                <span style="width:40px;color:#6b7280">主</span><span class="bar b" style="width:80px"><i style="width:60%"></i></span><b>3</b>
+                <span style="width:40px;color:#6b7280">問</span><span class="bar b" style="width:80px"><i style="width:80%"></i></span><b>4</b>
+                <span style="width:40px;color:#6b7280">対</span><span class="bar b" style="width:80px"><i style="width:60%"></i></span><b>3</b>
+                <span style="width:40px;color:#6b7280">柔</span><span class="bar b" style="width:80px"><i style="width:60%"></i></span><b>3</b>
+              </div>
+            </td>
+            <td class="center"><b style="color:#15803d">4.2</b></td>
+            <td class="center">3.5</td>
+            <td class="center" style="color:#1d4ed8">詳細→</td>
+          </tr>
+          <tr>
+            <td><b>PMO</b></td>
+            <td class="center">○</td>
+            <td>
+              <div style="display:flex;gap:8px;align-items:center;font-size:11px">
+                <span style="width:40px;color:#6b7280">主</span><span class="bar b" style="width:80px"><i style="width:60%"></i></span><b>3</b>
+                <span style="width:40px;color:#6b7280">問</span><span class="bar b" style="width:80px"><i style="width:60%"></i></span><b>3</b>
+                <span style="width:40px;color:#6b7280">対</span><span class="bar b" style="width:80px"><i style="width:80%"></i></span><b>4</b>
+                <span style="width:40px;color:#6b7280">柔</span><span class="bar b" style="width:80px"><i style="width:80%"></i></span><b>4</b>
+              </div>
+            </td>
+            <td class="center"><b style="color:#15803d">3.8</b></td>
+            <td class="center">3.2</td>
+            <td class="center" style="color:#1d4ed8">詳細→</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+  <div class="compare-cb">
+    <b>👍 メリット</b>：「面談AI評価ツール」の存在価値が伝わる。<b>本部報告書</b>として配れる。<br>
+    <b>👎 デメリット</b>：KPI カードは ExcelJS のマージセル＋背景色＋大きいフォントで作る必要あり。マスタの「軸重みプロファイル」はバー描画が手間（数値だけにする選択肢も）。
+  </div>
+</section>
+
+<div class="vote">
+  <b>👉 次に進む方法</b>：気に入った案を <code>A</code>/<code>B</code>/<code>C</code> で教えてください（混合 OK：例「面談者は B、マスタは A」）。
+  選ばれたら <code>lib/excelMirror.ts</code> をその方向で書き直します。「もっとこうしたい」も歓迎。
+</div>
+
+</div>
+</body>
+</html>

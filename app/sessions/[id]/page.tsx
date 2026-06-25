@@ -11,6 +11,7 @@ import {
   getQuestions,
   getRole,
   getSessionMeta,
+  listRoles,
   loadSettings,
 } from "@/lib/storage";
 import type { LlmStage, ProviderId } from "@/lib/types";
@@ -69,6 +70,15 @@ export default async function SessionPage({
   const evaluation = getEvaluation(id);
   const roleMaster = getRole(meta.役割);
   const settings = loadSettings();
+  const allRoles = listRoles();
+  const availableRoles = allRoles.map((r) => ({
+    id: r.id,
+    label: r.役割 ? `${r.id}（${r.役割}）` : r.id,
+  }));
+  // 現在の役割がマスタから消されていても select に出せるよう、不足分を補完
+  if (!availableRoles.some((r) => r.id === meta.役割)) {
+    availableRoles.unshift({ id: meta.役割, label: `${meta.役割}（マスタ削除済）` });
+  }
 
   // 既定プロバイダ × 各工程モデルを計算（セッション内 ProviderModelSelect の既定表示用）
   const defProv = settings.providers[settings.defaultProvider];
@@ -137,6 +147,9 @@ export default async function SessionPage({
           sessionId={meta.id}
           initialHold={meta.hold}
           initialResult={meta.result}
+          current氏名={meta.氏名}
+          current役割={meta.役割}
+          availableRoles={availableRoles}
         />
         <span className="text-xs text-zinc-400 whitespace-nowrap" title="作成日時">
           作成: {createdFull}
@@ -166,6 +179,7 @@ export default async function SessionPage({
               sessionId={id}
               initial={questions}
               llmDefaults={llmDefaults}
+              questionCounts={settings.questionCounts}
             />
           </section>
           <section id="s6" className="scroll-mt-4">

@@ -24,6 +24,7 @@ import {
   RESUME_FILE_ACCEPT,
   type ResumeKind,
 } from "@/lib/resumeKind";
+import { formatStructuredSummary } from "@/lib/summaryFormat";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -50,12 +51,20 @@ export function Section2Candidate({
 }) {
   const [mode, setMode] = useState<Mode>(initial?.mode ?? "paste");
   const { ref: rootRef, capture: captureScroll } = useStableSectionScroll(mode);
-  const [text, setText] = useState(initial?.要約 ?? "");
-  // 構造化 3 フィールド（AI が JSON で返した場合のみ埋まる。空＝旧形式）
-  const [career, setCareer] = useState(initial?.経歴 ?? "");
-  const [skills, setSkills] = useState(initial?.主要スキル ?? "");
-  const [strengths, setStrengths] = useState(initial?.強み ?? "");
-  const hasStructured = !!(career || skills || strengths);
+  // 保存は 要約 1 本のみ（Excel 出力時に見出しで 3 列へ分割）。
+  // 旧データで構造化 3 フィールドだけが残っているケースでは、それを 1 本に整形して初期値に。
+  const initialText = (() => {
+    const t = initial?.要約 ?? "";
+    if (t.trim()) return t;
+    const s = {
+      経歴: initial?.経歴 ?? "",
+      主要スキル: initial?.主要スキル ?? "",
+      強み: initial?.強み ?? "",
+    };
+    if (s.経歴 || s.主要スキル || s.強み) return formatStructuredSummary(s);
+    return "";
+  })();
+  const [text, setText] = useState(initialText);
   const [savedAt, setSavedAt] = useState<string | null>(
     initial?.updatedAt ?? null,
   );
@@ -87,7 +96,7 @@ export function Section2Candidate({
     const kind = detectResumeKind(f.type, f.name);
     if (!kind) {
       setApiError(
-        "対応していないファイル形式です。PDF / Word(.docx) / Excel(.xlsx) を選んでください。",
+        "対応していないファイル形式です。PDF / Word(.docx) / Excel(.xlsx / .xls) を選んでください。",
       );
       setResumeFile(null);
       setResumeKind(null);
@@ -181,7 +190,7 @@ export function Section2Candidate({
       {mode === "api" && (
         <div className="border rounded-lg p-3 mb-3 bg-zinc-50 space-y-3">
           <div className="text-xs text-zinc-600">
-            履歴書（<strong>PDF / Word(.docx) / Excel(.xlsx)</strong>）をアップロードするか、
+            履歴書（<strong>PDF / Word(.docx) / Excel(.xlsx / .xls)</strong>）をアップロードするか、
             テキストを貼り付けて「要約する（API）」を押すと AI が経歴・スキル・強み・懸念点で要約します。
             <br />
             <span className="text-zinc-500">
@@ -282,10 +291,10 @@ export function Section2Candidate({
         />
       )}
 
-      <div className="text-xs text-zinc-500 mb-1">要約テキスト（保存対象）</div>
+      <div className="text-xs text-zinc-500 mb-1">要約</div>
       <Textarea
-        className="w-full text-sm"
-        rows={6}
+        className="w-full text-sm leading-relaxed"
+        rows={14}
         placeholder={
           mode === "api"
             ? "API で要約するとここに反映されます。手で編集することもできます。"
@@ -294,6 +303,9 @@ export function Section2Candidate({
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
+      <div className="text-[11px] text-zinc-400 mt-1">
+        ※ Excel 出力時、「経歴サマリ」「主要スキル」「強み」の見出しで 3 列に自動分割されます。
+      </div>
       <div className="flex items-center gap-3 mt-2">
         <Button
           type="button"

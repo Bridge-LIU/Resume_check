@@ -21,6 +21,7 @@ import {
   getQuestions,
   getRole,
   getSessionMeta,
+  loadSettings,
   resolveEvalForRole,
   saveCandidate,
   saveConditionsSnapshot,
@@ -43,6 +44,7 @@ import type {
 import { writeAudit } from "@/lib/auditLog";
 import { flattenToItems, parseQuestions } from "@/lib/questionParser";
 import { softDeleteSession } from "@/lib/retention";
+import { validateName } from "@/lib/validation";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -126,16 +128,77 @@ export async function setResultAction(
   revalidatePath("/");
 }
 
-export async function duplicateSessionAction(id: string): Promise<void> {
-  const meta = duplicateSession(id);
-  if (!meta) throw new Error("複製元のセッションが見つかりません");
-  writeAudit("session.duplicate", {
-    sessionId: meta.id,
-    meta: { sourceId: id },
-  });
-  revalidatePath("/");
+/**
+ * セッションを複製する Server Action。
+ *
+ * ⚠️ 引数は **ASCII キーのオブジェクト**（`newName` / `newRole`）にしてある。
+ * 過去に `{ 氏名, 役割 }` のような非 ASCII キーを使ったところ、Next.js 16 + Turbopack
+ * + Windows の組み合わせで RSC payload のシリアライゼーション境界で値が
+ * Shift-JIS 化けする事象が出たため（フォルダ名が mojibake になる）。
+ */
+export async function duplicateSessionAction(
+  id: string,
+  newName?: string,
+  newRole?: string,
+): Promise<void> {
+  // NFC 正規化（macOS の NFD 入力や合成漏れによる差分を消す）
+  const name = newName ? newName.normalize("NFC").trim() : undefined;
+  const role = newRole ? newRole.normalize("NFC").trim() : undefined;
+
+  // 受信バイト列を 16 進で残す（mojibake 再発時の決定打）
+  if (name !== undefined) {
+    console.log(
+      "[duplicateSessionAction] name hex=",
+      Buffer.from(name, "utf-8").toString("hex"),
+      "raw=",
+      JSON.stringify(name),
+    );
+  }
+  console.log("[duplicateSessionAction] start", { id, name, role });
+
+  let newId: string | null = null;
+  try {
+    const src = getSessionMeta(id);
+    if (!src) throw new Error("複製元のセッションが見つかりません");
+
+    // 氏名バリデーション（指定されている場合のみ）
+    if (name !== undefined && name !== src.氏名) {
+      const v = validateName(name);
+      if (!v.ok) throw new Error(`氏名: ${v.error}`);
+    }
+    // 役割が指定されているならマスタ存在チェック（タイポによる詰みを防ぐ）
+    if (role && role !== src.役割) {
+      if (!getRole(role)) {
+        throw new Error(`役割マスタが見つかりません: ${role}`);
+      }
+    }
+    const meta = duplicateSession(id, { 氏名: name, 役割: role });
+    if (!meta) throw new Error("複製元のセッションが見つかりません");
+    newId = meta.id;
+    console.log(
+      "[duplicateSessionAction] copied",
+      "newId=",
+      newId,
+      "hex=",
+      Buffer.from(newId, "utf-8").toString("hex").slice(0, 80) + "...",
+    );
+    writeAudit("session.duplicate", {
+      sessionId: meta.id,
+      meta: {
+        sourceId: id,
+        nameChanged: meta.氏名 !== src.氏名,
+        roleChanged: meta.役割 !== src.役割,
+      },
+    });
+    revalidatePath("/");
+    console.log("[duplicateSessionAction] redirecting to", newId);
+  } catch (e) {
+    console.error("[duplicateSessionAction] failed", e);
+    throw e;
+  }
+  // redirect() は内部で NEXT_REDIRECT を throw するので try ブロック外で呼ぶ
   // meta.id には日本語（氏名）が含まれるため、x-action-redirect ヘッダで Invalid character になるのを防ぐ
-  redirect(`/sessions/${encodeURIComponent(meta.id)}`);
+  redirect(`/sessions/${encodeURIComponent(newId!)}`);
 }
 
 /**
@@ -155,15 +218,12 @@ export async function saveCandidateAction(
   id: string,
   mode: Mode,
   要約: string,
-  structured?: { 経歴?: string; 主要スキル?: string; 強み?: string },
 ): Promise<void> {
+  // 構造化 3 フィールドは保存しない方針に統一（Excel 出力時に 要約 を見出しでパースして分解）
   const data: Candidate = {
     mode,
     要約,
     updatedAt: nowIso(),
-    ...(structured?.経歴 ? { 経歴: structured.経歴 } : {}),
-    ...(structured?.主要スキル ? { 主要スキル: structured.主要スキル } : {}),
-    ...(structured?.強み ? { 強み: structured.強み } : {}),
   };
   saveCandidate(id, data);
   bumpSession(id);
@@ -231,9 +291,6 @@ export async function summarizeCandidateApiAction(
   ok: boolean;
   error?: string;
   summary?: string;
-  経歴?: string;
-  主要スキル?: string;
-  強み?: string;
 }> {
   const { provider, model } = resolveLlm("summary", override);
   if (!hasKey(provider)) return noKeyError(provider);
@@ -272,47 +329,48 @@ export async function summarizeCandidateApiAction(
   }
 
   try {
+    const userPrompt = SUMMARY_TEXT_INSTRUCTION + kindNote + resumeText;
     let raw = await callLlm({
       provider,
       model,
       system: SUMMARY_SYSTEM,
-      user: SUMMARY_TEXT_INSTRUCTION + kindNote + resumeText,
+      user: userPrompt,
       jsonMode: true,
     });
     raw = raw.trim();
     if (!raw) {
       return { ok: false, error: "AI から空の応答が返りました。" };
     }
+    writeAudit("session.candidateSummarize", {
+      sessionId: id,
+      meta: {
+        provider,
+        model,
+        inputChars: SUMMARY_SYSTEM.length + userPrompt.length,
+        outputChars: raw.length,
+      },
+    });
     const parts = parseSummaryJson(raw);
-    let data: Candidate;
-    if (parts) {
-      // 構造化 JSON が取得できた → 3 フィールド + 統合要約を保存
-      data = {
-        mode: "api",
-        要約: composeCombinedSummary(parts),
-        updatedAt: nowIso(),
-        provider,
-        経歴: parts.経歴,
-        主要スキル: parts.主要スキル,
-        強み: parts.強み,
-      };
-    } else {
-      // JSON 解析失敗 → 生テキストを 要約 にフォールバック保存
-      data = {
-        mode: "api",
-        要約: raw,
-        updatedAt: nowIso(),
-        provider,
-      };
-    }
+    // 構造化 3 フィールドは保存しない方針：JSON が取れたら見出し付きで 要約 に統合、
+    // 取れなければ生テキストをそのまま 要約 に。Excel 出力時に見出しでパースする。
+    const data: Candidate = parts
+      ? {
+          mode: "api",
+          要約: composeCombinedSummary(parts),
+          updatedAt: nowIso(),
+          provider,
+        }
+      : {
+          mode: "api",
+          要約: raw,
+          updatedAt: nowIso(),
+          provider,
+        };
     saveCandidate(id, data);
     bumpSession(id);
     return {
       ok: true,
       summary: data.要約,
-      経歴: data.経歴,
-      主要スキル: data.主要スキル,
-      強み: data.強み,
     };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -377,26 +435,44 @@ export async function saveQuestionsAction(
   bumpSession(id);
 }
 
-const QUESTIONS_SYSTEM_PROMPT =
-  "あなたは面接設計の専門家です。候補者の経歴要約と求める人材条件を入力として、面談で使う質問を2セクションに分けて作ってください。\n\n" +
-  "【非技術】候補者によらず採用面談で共通して聞きたい質問を **7問**（自己紹介・キャリア・強み弱み・努力したこと・対人・趣味/ストレス対処・志望動機 等）。\n" +
-  "【技術】候補者の経歴・求める人材条件に紐づく専門質問を **6〜8問**（STAR法・コンピテンシー・キラー質問の観点で深掘り）。\n\n" +
-  "各質問には『狙い』（評価したい軸）と『簡単な解答例』を必ず添えてください。最重要の必須質問には『⭐』を先頭に付けてください。\n" +
-  "前置き・コードフェンス・後書きは不要。下記フォーマットを厳守してください。\n\n" +
-  "出力フォーマット:\n" +
-  "## 非技術\n" +
-  "⭐ Q1. 質問文\n" +
-  "  狙い: 評価したい軸\n" +
-  "  解答例: 想定される良い回答の要点\n\n" +
-  "Q2. 質問文\n" +
-  "  狙い: ...\n" +
-  "  解答例: ...\n" +
-  "（…全7問）\n\n" +
-  "## 技術\n" +
-  "⭐ T1. 質問文\n" +
-  "  狙い: ...\n" +
-  "  解答例: ...\n" +
-  "（…6〜8問）\n";
+/**
+ * 質問生成 system prompt を問数から組み立てる。
+ * - 非技術 N問・技術 M問の数値が prompt と maxTokens の両方を駆動する
+ */
+function buildQuestionsSystemPrompt(nontech: number, tech: number): string {
+  return (
+    "あなたは面接設計の専門家です。候補者の経歴要約と求める人材条件を入力として、面談で使う質問を2セクションに分けて作ってください。\n\n" +
+    `【非技術】候補者によらず採用面談で共通して聞きたい質問を **${nontech}問**（自己紹介・キャリア・強み弱み・努力したこと・対人・趣味/ストレス対処・志望動機 等）。\n` +
+    `【技術】候補者の経歴・求める人材条件に紐づく専門質問を **${tech}問**（STAR法・コンピテンシー・キラー質問の観点で深掘り）。\n\n` +
+    "各質問には『狙い』（評価したい軸）と『簡単な解答例』を必ず添えてください。最重要の必須質問には『⭐』を先頭に付けてください。\n" +
+    "前置き・コードフェンス・後書きは不要。下記フォーマットを厳守してください。\n\n" +
+    "出力フォーマット:\n" +
+    "## 非技術\n" +
+    "⭐ Q1. 質問文\n" +
+    "  狙い: 評価したい軸\n" +
+    "  解答例: 想定される良い回答の要点\n\n" +
+    "Q2. 質問文\n" +
+    "  狙い: ...\n" +
+    "  解答例: ...\n" +
+    `（…全${nontech}問）\n\n` +
+    "## 技術\n" +
+    "⭐ T1. 質問文\n" +
+    "  狙い: ...\n" +
+    "  解答例: ...\n" +
+    `（…全${tech}問）\n`
+  );
+}
+
+/**
+ * 問数から maxTokens を算出。
+ * 1問あたり日本語で 質問文+狙い+解答例 ≈ 200〜400 tokens。
+ * 安全係数で 1問=500 tokens、+ ヘッダ・前置きで 1000 tokens の buffer。
+ *   maxTokens = (nontech + tech) × 500 + 1000
+ * 例: 7+8=15 → 8500 / 10+10=20 → 11000 / 15+15=30 → 16000
+ */
+function estimateQuestionsMaxTokens(nontech: number, tech: number): number {
+  return (nontech + tech) * 500 + 1000;
+}
 
 export async function generateQuestionsApiAction(
   id: string,
@@ -423,6 +499,8 @@ export async function generateQuestionsApiAction(
     };
   }
 
+  const { nontech, tech } = loadSettings().questionCounts;
+  const systemPrompt = buildQuestionsSystemPrompt(nontech, tech);
   const user =
     "# 候補者情報（②要約）\n" +
     candidate.要約 +
@@ -434,9 +512,10 @@ export async function generateQuestionsApiAction(
     responseText = await callLlm({
       provider,
       model,
-      system: QUESTIONS_SYSTEM_PROMPT,
+      system: systemPrompt,
       user,
-      maxTokens: 2000,
+      // 問数から動的算出。設定が変わると上限も自動追従
+      maxTokens: estimateQuestionsMaxTokens(nontech, tech),
       cacheSystem: true,
     });
   } catch (e) {
@@ -444,6 +523,16 @@ export async function generateQuestionsApiAction(
   }
 
   const text = responseText.trim();
+  writeAudit("session.questionsGenerate", {
+    sessionId: id,
+    meta: {
+      provider,
+      model,
+      questionCounts: { nontech, tech },
+      inputChars: systemPrompt.length + user.length,
+      outputChars: text.length,
+    },
+  });
   const existing = getQuestions(id);
   const data: Questions = {
     mode: "api",
@@ -492,7 +581,8 @@ export async function reformatQuestionsApiAction(
       model,
       system: REFORMAT_SYSTEM_PROMPT,
       user: REFORMAT_USER_PREFIX + existing.rawText,
-      maxTokens: 2000,
+      // 質問本文の整形なので、元の長さと同等以上を返せるよう余裕を持たせる
+      maxTokens: 8000,
     });
   } catch (e) {
     return { ok: false, error: (e as Error).message };
@@ -512,7 +602,15 @@ export async function reformatQuestionsApiAction(
   saveQuestions(id, data);
   writeAudit("session.questionsReformat", {
     sessionId: id,
-    meta: { provider, model, originalMode: existing.mode },
+    meta: {
+      provider,
+      model,
+      originalMode: existing.mode,
+      inputChars:
+        REFORMAT_SYSTEM_PROMPT.length +
+        (REFORMAT_USER_PREFIX + existing.rawText).length,
+      outputChars: text.length,
+    },
   });
   bumpSession(id);
 
@@ -591,6 +689,11 @@ export async function summarizeMinutesApiAction(
     meta: {
       provider,
       model,
+      inputChars:
+        MINUTES_SUMMARIZE_SYSTEM.length +
+        (MINUTES_SUMMARIZE_INSTRUCTION + minutes.text).length,
+      outputChars: summary.length,
+      // 互換用: 旧キーも維持（既存ログ集計が壊れないように）
       originalChars: minutes.text.length,
       summaryChars: summary.length,
     },
@@ -753,8 +856,9 @@ export async function buildQuestionsPromptAction(id: string): Promise<PromptResu
       error: "② 面談者情報が空です。候補者の要約を保存してからコピーしてください。",
     };
   }
+  const { nontech, tech } = loadSettings().questionCounts;
   const prompt =
-    QUESTIONS_SYSTEM_PROMPT +
+    buildQuestionsSystemPrompt(nontech, tech) +
     "\n\n---\n\n" +
     "# 候補者情報（②要約）\n" +
     candidate.要約 +
@@ -842,7 +946,8 @@ export async function evaluateInterviewApiAction(
       model,
       system: EVAL_SYSTEM_PROMPT,
       user,
-      maxTokens: 2000,
+      // 4軸 × 根拠 + 良い点 + 懸念点 を JSON で日本語生成するため余裕を持たせる
+      maxTokens: 4000,
       cacheSystem: true,
       jsonMode: true,
     });
@@ -880,6 +985,8 @@ export async function evaluateInterviewApiAction(
       model,
       合否: evalData.合否,
       総合スコア: evalData.総合スコア,
+      inputChars: EVAL_SYSTEM_PROMPT.length + user.length,
+      outputChars: responseText.length,
     },
   });
   bumpSession(id);

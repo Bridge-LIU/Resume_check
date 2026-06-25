@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
 import type { Role } from "@/lib/types";
 import {
   validateRoleMasterId,
@@ -16,13 +17,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tip } from "@/components/ui/tooltip";
 
 const EXPORT_VERSION = "1.0";
-
-interface ImportResult {
-  imported: string[];
-  skipped: { id: string; reason: string }[];
-  errors: { index: number; error: string }[];
-  message?: string;
-}
 
 type DraftRole = Role & { _isNew?: boolean; _originalId?: string };
 
@@ -78,9 +72,6 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
   const [editing, setEditing] = useState<DraftRole | null>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [importing, setImporting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { confirm, ConfirmDialog } = useConfirm();
 
   // textarea の生テキスト。editing.条件* は正規化された配列を保持し、
@@ -171,7 +162,6 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
 
   function exportRoles() {
     setError(null);
-    setImportResult(null);
     const payload = {
       version: EXPORT_VERSION,
       exportedAt: new Date().toISOString(),
@@ -187,95 +177,6 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }
-
-  function triggerImport() {
-    setError(null);
-    setImportResult(null);
-    fileInputRef.current?.click();
-  }
-
-  async function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = ""; // 同じファイル再選択で onChange が走るように
-    if (!file) return;
-
-    setImporting(true);
-    setError(null);
-    setImportResult(null);
-    try {
-      const text = await file.text();
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        throw new Error("JSON として解析できませんでした");
-      }
-      // 受け付ける形: { roles: [...] } / Role[] のどちらでも
-      const rolesInFile = Array.isArray(parsed)
-        ? (parsed as unknown[])
-        : ((parsed as { roles?: unknown[] })?.roles ?? null);
-      if (!Array.isArray(rolesInFile)) {
-        throw new Error("ファイル内に roles 配列が見つかりません");
-      }
-      const count = rolesInFile.length;
-      if (count === 0) throw new Error("roles が空です");
-
-      const conflictIds = new Set(roles.map((r) => r.id));
-      const willConflict = rolesInFile.filter(
-        (r): r is { id: string } =>
-          !!r && typeof r === "object" && typeof (r as { id?: unknown }).id === "string" &&
-          conflictIds.has((r as { id: string }).id),
-      ).map((r) => r.id);
-
-      let overwrite = false;
-      if (willConflict.length > 0) {
-        overwrite = await confirm({
-          title: `${count} 件取り込みます`,
-          description:
-            `うち ${willConflict.length} 件は既存 ID と重複します:\n` +
-            `  ${willConflict.join(", ")}\n\n` +
-            `「上書き」= 既存を上書き / 「スキップ」= 重複分はスキップ`,
-          confirmLabel: "上書きする",
-          cancelLabel: "スキップ",
-          destructive: true,
-        });
-      } else {
-        const ok = await confirm({
-          title: `${count} 件の役割マスタを取り込みます`,
-          description: "よろしいですか？",
-          confirmLabel: "取り込む",
-        });
-        if (!ok) {
-          setImporting(false);
-          return;
-        }
-      }
-
-      const res = await fetch("/api/master/roles/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version: EXPORT_VERSION, roles: rolesInFile, overwrite }),
-      });
-      if (!res.ok) {
-        throw new Error(await readApiError(res, "取り込みに失敗しました"));
-      }
-      const data = (await res.json().catch(() => null)) as ImportResult | null;
-      if (!data) throw new Error("レスポンスを解析できませんでした");
-      setImportResult(data);
-      startTransition(() => router.refresh());
-      // 楽観的には refresh で initialRoles が再注入されないので、別途 GET し直す
-      try {
-        const r = await fetch("/api/master/roles", { cache: "no-store" });
-        if (r.ok) setRoles((await r.json()) as Role[]);
-      } catch {
-        /* 失敗は致命的でない */
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setImporting(false);
-    }
   }
 
   async function remove(role: Role) {
@@ -306,24 +207,6 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
         <h2 className="font-bold text-sm">求める人材条件マスタ（役割別）</h2>
         <span className="text-xs text-zinc-500">{roles.length} 件</span>
         <div className="flex-1" />
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={onImportFile}
-        />
-        <Tip content="JSON ファイルから役割マスタを取り込む">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={triggerImport}
-            disabled={importing}
-          >
-            {importing ? "取込中…" : "Import"}
-          </Button>
-        </Tip>
         <Tip content="現在の役割マスタを JSON で書き出す">
           <Button
             type="button"
@@ -347,38 +230,6 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
         {error && (
           <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2 whitespace-pre-line">
             {error}
-          </div>
-        )}
-
-        {importResult && (
-          <div className="text-sm border rounded px-3 py-2 bg-zinc-50 space-y-1">
-            <div className="font-medium text-zinc-800">取り込み結果</div>
-            {importResult.imported.length > 0 && (
-              <div className="text-emerald-700">
-                取込: {importResult.imported.length} 件（{importResult.imported.join(", ")}）
-              </div>
-            )}
-            {importResult.skipped.length > 0 && (
-              <div className="text-amber-700">
-                スキップ: {importResult.skipped.length} 件（
-                {importResult.skipped.map((s) => `${s.id}: ${s.reason}`).join(" / ")}）
-              </div>
-            )}
-            {importResult.errors.length > 0 && (
-              <div className="text-red-700">
-                エラー: {importResult.errors.length} 件（
-                {importResult.errors.map((e) => `#${e.index} ${e.error}`).join(" / ")}）
-              </div>
-            )}
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              onClick={() => setImportResult(null)}
-              className="text-xs text-zinc-500 h-auto p-0"
-            >
-              閉じる
-            </Button>
           </div>
         )}
 
@@ -422,25 +273,33 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
                 <td className="px-4 py-2 text-right tabular text-zinc-600">
                   {r.条件2_未経験者必須.length}
                 </td>
-                <td className="px-4 py-2 text-right space-x-3">
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    onClick={() => beginEdit(r)}
-                    className="text-blue-600 h-auto p-0"
-                  >
-                    編集
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    onClick={() => remove(r)}
-                    className="text-red-600 h-auto p-0"
-                  >
-                    削除
-                  </Button>
+                <td className="px-4 py-2 text-right whitespace-nowrap">
+                  <div className="inline-flex items-center gap-2">
+                    <Tip content="編集">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => beginEdit(r)}
+                        aria-label={`${r.役割 || r.id} を編集`}
+                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </Tip>
+                    <Tip content="削除">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => remove(r)}
+                        aria-label={`${r.役割 || r.id} を削除`}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </Tip>
+                  </div>
                 </td>
               </tr>
             ))}

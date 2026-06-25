@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>/settings — 並び替え案</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI",
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Meiryo", sans-serif; }
+  body { font-size: 13px; line-height: 1.55; background: #f4f4f5; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; display: inline-block; font-weight: 500; }
+  .pill-pass { background: #dcfce7; color: #166534; }
+  .pill-edit { background: #e4e4e7; color: #3f3f46; }
+  .tab-btn { padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid transparent; color: #52525b; }
+  .tab-btn:hover { background: #fff; }
+  .tab-btn.active { background: #fff; border-color: #e5e7eb; color: #18181b; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+
+  /* セクション区切り */
+  .section-divider {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 18px;
+    margin-top: 18px;
+  }
+  .section-divider:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+  .h3 { font-size: 14px; font-weight: 700; color: #18181b; margin-bottom: 4px; }
+  .h3-hint { font-size: 11px; color: #71717a; margin-bottom: 12px; }
+  .field-label { font-size: 11px; color: #71717a; font-weight: 500; }
+  .input-mock {
+    border: 1px solid #d4d4d8; border-radius: 6px; padding: 6px 10px;
+    background: #fff; font-size: 13px; height: 32px; display: flex; align-items: center;
+  }
+  .switch-mock {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px;
+    background: #fff; border: 1px solid #d4d4d8; border-radius: 999px;
+    font-size: 12px;
+  }
+  .save-btn {
+    background: #2563eb; color: #fff; font-size: 13px; padding: 6px 14px;
+    border-radius: 6px; font-weight: 500; cursor: pointer; border: 0;
+  }
+  .action-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 20px; margin-top: 16px;
+  }
+  .action-card h3 {
+    font-size: 14px; font-weight: 700; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pill-mock-pass { background: #dcfce7; color: #166534; }
+  .ai-badge {
+    display: inline-block; font-size: 10px; padding: 1px 6px;
+    background: #ede9fe; color: #6d28d9; border-radius: 4px; margin-left: 6px;
+  }
+  /* 案 C 用：バックアップ統合カード */
+  .merged-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+    padding: 20px; margin-top: 16px;
+  }
+  .merged-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+</style>
+</head>
+<body class="text-zinc-900">
+
+<header class="bg-white border-b px-6 py-4 sticky top-0 z-20">
+  <div class="max-w-[1100px] mx-auto flex items-center gap-6 flex-wrap">
+    <div>
+      <h1 class="font-bold text-lg">/settings — 並び替え案</h1>
+      <div class="text-xs text-zinc-500 mt-0.5">現在のごちゃ感を解消する 3 案を比較</div>
+    </div>
+    <div class="flex-1"></div>
+    <div id="tabs" class="flex gap-1 bg-zinc-100 p-1 rounded-xl">
+      <button class="tab-btn" data-tab="current">現状（参考）</button>
+      <button class="tab-btn active" data-tab="a">案 A（推奨）</button>
+      <button class="tab-btn" data-tab="b">案 B（AI最下部）</button>
+      <button class="tab-btn" data-tab="c">案 C（バックアップ統合）</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1100px] mx-auto p-6 space-y-4">
+
+<!-- ====================================================== -->
+<!-- 現状（参考） -->
+<!-- ====================================================== -->
+<section data-panel="current" class="hidden">
+  <div class="text-xs text-zinc-500 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-3">
+    現状の問題：バックアップ保持が「保存期間」の中にネストされている。セクション境界が薄くて流し読みしづらい。
+  </div>
+
+  <div class="bg-white rounded-xl border shadow-sm p-6 max-w-3xl space-y-4">
+    <h2 class="font-bold text-lg">設定</h2>
+
+    <div>
+      <div class="h3">データ保存先</div>
+      <div class="input-mock w-80">./data</div>
+    </div>
+
+    <div>
+      <div class="h3">LLM プロバイダ</div>
+      <div class="text-xs text-zinc-500 mb-2">Anthropic / OpenAI / Google の API キー・既定モデル</div>
+      <div class="border rounded p-3 space-y-2 bg-zinc-50">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="pill pill-pass">Claude</span> 設定済 既定 ●
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="pill pill-pass">ChatGPT</span> 設定済
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="pill pill-edit">Gemini</span> 未設定
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="h3">質問生成数</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">非技術</div><div class="input-mock">7</div></div>
+        <div><div class="field-label mb-1">技術</div><div class="input-mock">8</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="h3">保存期間（§7.5）</div>
+      <div class="switch-mock mb-2"><input type="checkbox" checked> 自動削除を有効化</div>
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div><div class="field-label mb-1">採用</div><div class="input-mock">0</div></div>
+        <div><div class="field-label mb-1">不採用</div><div class="input-mock">180</div></div>
+        <div><div class="field-label mb-1">未確定</div><div class="input-mock">0</div></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div><div class="field-label mb-1">ゴミ箱の猶予日数</div><div class="input-mock">14</div></div>
+        <div><div class="switch-mock"><input type="checkbox" checked> 匿名サマリを analytics/ に残す</div></div>
+      </div>
+      <!-- バックアップ保持が「保存期間」の中にネスト ⚠️ -->
+      <div class="border-t pt-3 grid grid-cols-2 gap-3 bg-amber-50/40 -mx-1 px-1">
+        <div><div class="field-label mb-1">バックアップ保存日数 <span class="text-amber-600">⚠ ここに入ってる</span></div><div class="input-mock">90</div></div>
+        <div><div class="field-label mb-1">バックアップ世代上限</div><div class="input-mock">0</div></div>
+      </div>
+    </div>
+
+    <div class="text-right border-t pt-3"><button class="save-btn">保存</button></div>
+  </div>
+
+  <div class="action-card max-w-3xl"><h3>保存期間スイープ <span class="pill pill-mock-pass">有効</span></h3><div class="text-xs text-zinc-500">手動実行・プレビュー</div></div>
+  <div class="action-card max-w-3xl"><h3>バックアップ</h3><div class="text-xs text-zinc-500">data/sessions + data/master → data/_backups/</div></div>
+  <div class="action-card max-w-3xl"><h3>監査ログ</h3></div>
+</section>
+
+<!-- ====================================================== -->
+<!-- 案 A 推奨 -->
+<!-- ====================================================== -->
+<section data-panel="a">
+  <div class="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2 mb-3">
+    <strong>案 A（推奨）</strong>：データ→AI→保存期間→バックアップ保持の順に並べ替え。AI 系（LLM＋質問生成数）をひとまとめに。バックアップ保持を独立セクションに。
+  </div>
+
+  <div class="bg-white rounded-xl border shadow-sm p-6 max-w-3xl space-y-4">
+    <h2 class="font-bold text-lg">設定</h2>
+
+    <div class="section-divider">
+      <div class="h3">データ</div>
+      <div class="h3-hint">セッションとマスタの保存先</div>
+      <div>
+        <div class="field-label mb-1">データ保存先</div>
+        <div class="input-mock w-80">./data</div>
+      </div>
+    </div>
+
+    <div class="section-divider">
+      <div class="h3">AI <span class="ai-badge">3 プロバイダ対応</span></div>
+      <div class="h3-hint">②要約・⑤質問・⑧評価で使う LLM</div>
+
+      <div class="border rounded p-3 space-y-2 bg-zinc-50 mb-3">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="pill pill-pass">Claude</span> 設定済 既定 ●
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="pill pill-pass">ChatGPT</span> 設定済
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="pill pill-edit">Gemini</span> 未設定
+        </div>
+      </div>
+
+      <div class="field-label mb-1">質問生成数</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">非技術</div><div class="input-mock">7</div></div>
+        <div><div class="field-label mb-1">技術</div><div class="input-mock">8</div></div>
+      </div>
+    </div>
+
+    <div class="section-divider">
+      <div class="h3">保存期間（削除ルール）</div>
+      <div class="h3-hint">判定確定日からの自動削除。ゴミ箱に猶予あり</div>
+      <div class="switch-mock mb-2"><input type="checkbox" checked> 自動削除を有効化</div>
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div><div class="field-label mb-1">採用</div><div class="input-mock">0</div></div>
+        <div><div class="field-label mb-1">不採用</div><div class="input-mock">180</div></div>
+        <div><div class="field-label mb-1">未確定</div><div class="input-mock">0</div></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">ゴミ箱の猶予日数</div><div class="input-mock">14</div></div>
+        <div class="flex items-end"><div class="switch-mock"><input type="checkbox" checked> 匿名サマリを analytics/ に残す</div></div>
+      </div>
+    </div>
+
+    <div class="section-divider">
+      <div class="h3">バックアップ保持</div>
+      <div class="h3-hint">data/_backups/ の世代管理</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">保存日数</div><div class="input-mock">90</div></div>
+        <div><div class="field-label mb-1">世代上限</div><div class="input-mock">0 (無制限)</div></div>
+      </div>
+    </div>
+
+    <div class="text-right border-t pt-3"><button class="save-btn">保存</button></div>
+  </div>
+
+  <div class="action-card max-w-3xl"><h3>保存期間スイープ <span class="pill pill-mock-pass">有効</span></h3><div class="text-xs text-zinc-500">手動実行・プレビュー</div></div>
+  <div class="action-card max-w-3xl"><h3>バックアップ管理</h3><div class="text-xs text-zinc-500">手動バックアップ・復元</div></div>
+  <div class="action-card max-w-3xl"><h3>監査ログ</h3></div>
+</section>
+
+<!-- ====================================================== -->
+<!-- 案 B AI最下部 -->
+<!-- ====================================================== -->
+<section data-panel="b" class="hidden">
+  <div class="text-xs text-zinc-700 bg-blue-50 border border-blue-200 rounded px-3 py-2 mb-3">
+    <strong>案 B</strong>：データ→保存期間→バックアップ保持→AI の順。AI を一番下にして、よく触る基本系を上に集約。
+  </div>
+
+  <div class="bg-white rounded-xl border shadow-sm p-6 max-w-3xl space-y-4">
+    <h2 class="font-bold text-lg">設定</h2>
+
+    <div class="section-divider"><div class="h3">データ</div><div><div class="field-label mb-1">データ保存先</div><div class="input-mock w-80">./data</div></div></div>
+
+    <div class="section-divider">
+      <div class="h3">保存期間（削除ルール）</div>
+      <div class="switch-mock mb-2"><input type="checkbox" checked> 自動削除を有効化</div>
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div><div class="field-label mb-1">採用</div><div class="input-mock">0</div></div>
+        <div><div class="field-label mb-1">不採用</div><div class="input-mock">180</div></div>
+        <div><div class="field-label mb-1">未確定</div><div class="input-mock">0</div></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">ゴミ箱の猶予日数</div><div class="input-mock">14</div></div>
+        <div class="flex items-end"><div class="switch-mock"><input type="checkbox" checked> 匿名サマリを残す</div></div>
+      </div>
+    </div>
+
+    <div class="section-divider">
+      <div class="h3">バックアップ保持</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">保存日数</div><div class="input-mock">90</div></div>
+        <div><div class="field-label mb-1">世代上限</div><div class="input-mock">0</div></div>
+      </div>
+    </div>
+
+    <div class="section-divider">
+      <div class="h3">AI <span class="ai-badge">調整は時々</span></div>
+      <div class="h3-hint">普段は触らない</div>
+      <div class="border rounded p-3 space-y-2 bg-zinc-50 mb-3">
+        <div class="flex items-center gap-2 text-xs"><span class="pill pill-pass">Claude</span> 設定済 既定 ●</div>
+        <div class="flex items-center gap-2 text-xs"><span class="pill pill-pass">ChatGPT</span> 設定済</div>
+        <div class="flex items-center gap-2 text-xs"><span class="pill pill-edit">Gemini</span> 未設定</div>
+      </div>
+      <div class="field-label mb-1">質問生成数</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">非技術</div><div class="input-mock">7</div></div>
+        <div><div class="field-label mb-1">技術</div><div class="input-mock">8</div></div>
+      </div>
+    </div>
+
+    <div class="text-right border-t pt-3"><button class="save-btn">保存</button></div>
+  </div>
+
+  <div class="action-card max-w-3xl"><h3>保存期間スイープ <span class="pill pill-mock-pass">有効</span></h3></div>
+  <div class="action-card max-w-3xl"><h3>バックアップ管理</h3></div>
+  <div class="action-card max-w-3xl"><h3>監査ログ</h3></div>
+</section>
+
+<!-- ====================================================== -->
+<!-- 案 C バックアップ統合 -->
+<!-- ====================================================== -->
+<section data-panel="c" class="hidden">
+  <div class="text-xs text-violet-700 bg-violet-50 border border-violet-200 rounded px-3 py-2 mb-3">
+    <strong>案 C</strong>：バックアップ「保持設定」と「手動バックアップ管理」を 1 カードに統合。保存期間も同様に「設定 + スイープ」を 1 カードに。フォームが分割されるが関連性が高まる。
+  </div>
+
+  <div class="bg-white rounded-xl border shadow-sm p-6 max-w-3xl space-y-4">
+    <h2 class="font-bold text-lg">基本設定</h2>
+
+    <div class="section-divider"><div class="h3">データ</div><div><div class="field-label mb-1">データ保存先</div><div class="input-mock w-80">./data</div></div></div>
+
+    <div class="section-divider">
+      <div class="h3">AI</div>
+      <div class="border rounded p-3 space-y-2 bg-zinc-50 mb-3">
+        <div class="flex items-center gap-2 text-xs"><span class="pill pill-pass">Claude</span> 設定済 既定 ●</div>
+        <div class="flex items-center gap-2 text-xs"><span class="pill pill-pass">ChatGPT</span> 設定済</div>
+        <div class="flex items-center gap-2 text-xs"><span class="pill pill-edit">Gemini</span> 未設定</div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">非技術問数</div><div class="input-mock">7</div></div>
+        <div><div class="field-label mb-1">技術問数</div><div class="input-mock">8</div></div>
+      </div>
+    </div>
+
+    <div class="text-right border-t pt-3"><button class="save-btn">基本設定を保存</button></div>
+  </div>
+
+  <!-- 保存期間 1 カード（設定＋スイープ） -->
+  <div class="merged-card max-w-3xl">
+    <div class="merged-card-head">
+      <div>
+        <h3 class="font-bold">保存期間（削除ルール）</h3>
+        <div class="text-xs text-zinc-500">設定 + スイープを 1 カードに</div>
+      </div>
+      <span class="pill pill-pass">有効</span>
+    </div>
+    <div class="space-y-3">
+      <div class="switch-mock"><input type="checkbox" checked> 自動削除を有効化</div>
+      <div class="grid grid-cols-3 gap-3">
+        <div><div class="field-label mb-1">採用</div><div class="input-mock">0</div></div>
+        <div><div class="field-label mb-1">不採用</div><div class="input-mock">180</div></div>
+        <div><div class="field-label mb-1">未確定</div><div class="input-mock">0</div></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">ゴミ箱の猶予日数</div><div class="input-mock">14</div></div>
+        <div class="flex items-end"><div class="switch-mock"><input type="checkbox" checked> 匿名サマリを残す</div></div>
+      </div>
+      <div class="text-right pt-2">
+        <button class="save-btn mr-2" style="background:#10b981">保存期間を保存</button>
+        <button class="save-btn" style="background:#f59e0b">次に消える面談を確認</button>
+        <button class="save-btn ml-1" style="background:#ef4444">スイープ実行</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- バックアップ 1 カード（保持＋管理） -->
+  <div class="merged-card max-w-3xl">
+    <div class="merged-card-head">
+      <div>
+        <h3 class="font-bold">バックアップ</h3>
+        <div class="text-xs text-zinc-500">保持設定 + 手動バックアップ・復元を 1 カードに</div>
+      </div>
+    </div>
+    <div class="space-y-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div><div class="field-label mb-1">保存日数</div><div class="input-mock">90</div></div>
+        <div><div class="field-label mb-1">世代上限</div><div class="input-mock">0</div></div>
+      </div>
+      <div class="text-right pt-2">
+        <button class="save-btn mr-2" style="background:#10b981">バックアップ設定を保存</button>
+        <button class="save-btn" style="background:#2563eb">今すぐバックアップ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-card max-w-3xl"><h3>監査ログ</h3></div>
+</section>
+
+</main>
+
+<script>
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll("section[data-panel]").forEach(s => {
+      s.classList.toggle("hidden", s.dataset.panel !== tab);
+    });
+  });
+});
+</script>
+
+</body>
+</html>

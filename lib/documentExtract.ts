@@ -36,7 +36,7 @@ export async function extractResumeText(
   const kind = detectResumeKind(mimeType, fileName);
   if (!kind) {
     throw new Error(
-      `対応していないファイル形式です: ${fileName}（${mimeType || "不明な MIME"}）。PDF / Word(.docx) / Excel(.xlsx) のみ受け付けます。`,
+      `対応していないファイル形式です: ${fileName}（${mimeType || "不明な MIME"}）。PDF / Word(.docx) / Excel(.xlsx / .xls) のみ受け付けます。`,
     );
   }
 

@@ -3,9 +3,9 @@
  *
  * テンプレート `C:\Users\admin\Desktop\大体功能.xlsx` のシート構成に合わせる：
  *   - マスタ.xlsx    : "M_役割別"（役割マスタ）+ "評価条件"（グローバル既定）
- *   - 候補者一覧.xlsx : "①D_候補者一覧"（候補者ごとに 1 行）
+ *   - 面談者一覧.xlsx : "①D_面談者一覧"（面談者ごとに 1 行）
  *
- * 配置先: `<dataRoot>/exports/{マスタ,候補者一覧}.xlsx`
+ * 配置先: `<dataRoot>/exports/{マスタ,面談者一覧}.xlsx`
  *
  * 自動ミラーはマスタ／セッション保存時に fire-and-forget で呼ばれる（storage.ts）。
  * 失敗してもメインの JSON 保存は成功扱い（console.warn のみ）。
@@ -31,9 +31,10 @@ import {
   loadSettings,
   resolveEvalForRole,
 } from "./storage";
+import { parseStructuredSummary } from "./summaryFormat";
 
 export const MASTER_FILE = "マスタ.xlsx";
-export const SESSIONS_FILE = "候補者一覧.xlsx";
+export const SESSIONS_FILE = "面談者一覧.xlsx";
 export const MASTER_FILE_ASCII = "master.xlsx";
 export const SESSIONS_FILE_ASCII = "sessions.xlsx";
 
@@ -66,6 +67,27 @@ const BORDER_THIN: Partial<ExcelJS.Borders> = {
   right: { style: "thin", color: { argb: "FFE5E7EB" } },
 };
 
+const BORDER_WHITE: Partial<ExcelJS.Borders> = {
+  top: { style: "thin", color: { argb: "FFFFFFFF" } },
+  bottom: { style: "thin", color: { argb: "FFFFFFFF" } },
+  left: { style: "thin", color: { argb: "FFFFFFFF" } },
+  right: { style: "thin", color: { argb: "FFFFFFFF" } },
+};
+
+/** 役割 id → pill 塗りつぶし色（argb） */
+const ROLE_PILL_COLORS: Record<string, string> = {
+  NW: "FF3B82F6",       // blue-500
+  Server: "FF8B5CF6",   // violet-500
+  Dev: "FF14B8A6",      // teal-500
+  Special: "FFF59E0B",  // amber-500
+  PMO: "FFEF4444",      // red-500
+  ITSupport: "FF64748B",// slate-500
+};
+
+function solidFill(argb: string): ExcelJS.FillPattern {
+  return { type: "pattern", pattern: "solid", fgColor: { argb } };
+}
+
 function styleHeaderRow(row: ExcelJS.Row): void {
   row.height = 22;
   row.eachCell((cell) => {
@@ -84,6 +106,27 @@ function applyBordersTo(ws: ExcelJS.Worksheet): void {
   });
 }
 
+/** 条件①/② の richText: 見出し（大きく色付き）＋ "• " 接頭辞の本文 */
+function buildConditionRich(
+  title: string,
+  items: string[],
+  titleArgb: string,
+): ExcelJS.CellRichTextValue {
+  const blocks: { text: string; font?: Partial<ExcelJS.Font> }[] = [
+    {
+      text: title + "\n\n",
+      font: { bold: true, size: 12, color: { argb: titleArgb } },
+    },
+  ];
+  items.forEach((item, i) => {
+    blocks.push({
+      text: "• " + item + (i === items.length - 1 ? "" : "\n"),
+      font: { size: 10, color: { argb: "FF374151" } },
+    });
+  });
+  return { richText: blocks };
+}
+
 /* ─────────────── マスタ.xlsx ─────────────── */
 
 export async function buildMasterXlsx(): Promise<Buffer> {
@@ -99,114 +142,273 @@ export async function buildMasterXlsx(): Promise<Buffer> {
     "対人影響力",
     "柔軟性",
   ];
+  const axisCount = axisNames.length;
+
+  // 列インデックス
+  const COL_ROLE = 1;
+  const COL_COND1 = 2;
+  const COL_COND2 = 3;
+  const COL_AXIS_START = 4;
+  const COL_AXIS_END = 3 + axisCount;
+  const COL_PASS = COL_AXIS_END + 1;
+  const COL_NORMAL = COL_AXIS_END + 2;
+  const COL_LAST = COL_NORMAL;
 
   // ── Sheet "M_役割別" ──
   const ws1 = wb.addWorksheet("M_役割別", {
-    views: [{ state: "frozen", ySplit: 1 }],
+    views: [{ state: "frozen", ySplit: 2, showGridLines: false }],
   });
 
-  const header = [
-    "役割と条件",
-    "条件①",
-    "条件②",
-    ...axisNames,
-    "合格",
-    "普通",
-  ];
-  ws1.addRow(header);
-  styleHeaderRow(ws1.getRow(1));
-
-  // 列幅
   ws1.columns = [
-    { width: 32 },
-    { width: 48 },
-    { width: 38 },
+    { width: 22 }, // 役割
+    { width: 50 }, // 条件①
+    { width: 42 }, // 条件②
     ...axisNames.map(() => ({ width: 10 })),
-    { width: 8 },
-    { width: 8 },
+    { width: 9 }, // 合格
+    { width: 9 }, // 普通
   ];
 
-  for (const role of roles) {
+  // ── Super header (row 1) ──
+  const superRow = ws1.getRow(1);
+  superRow.getCell(COL_ROLE).value = "役割";
+  superRow.getCell(COL_COND1).value = "採用条件";
+  superRow.getCell(COL_AXIS_START).value = "軸別重み (1–5)";
+  superRow.getCell(COL_PASS).value = "判定閾値";
+  ws1.mergeCells(1, COL_COND1, 1, COL_COND2);
+  ws1.mergeCells(1, COL_AXIS_START, 1, COL_AXIS_END);
+  ws1.mergeCells(1, COL_PASS, 1, COL_NORMAL);
+
+  superRow.getCell(COL_ROLE).fill = solidFill("FF1F2937");
+  superRow.getCell(COL_ROLE).font = {
+    bold: true,
+    size: 11,
+    color: { argb: "FFFFFFFF" },
+  };
+  superRow.getCell(COL_COND1).fill = solidFill("FFE5E7EB");
+  superRow.getCell(COL_COND1).font = {
+    bold: true,
+    size: 11,
+    color: { argb: "FF1F2937" },
+  };
+  superRow.getCell(COL_AXIS_START).fill = solidFill("FFDBEAFE");
+  superRow.getCell(COL_AXIS_START).font = {
+    bold: true,
+    size: 11,
+    color: { argb: "FF1E40AF" },
+  };
+  superRow.getCell(COL_PASS).fill = solidFill("FFFEF3C7");
+  superRow.getCell(COL_PASS).font = {
+    bold: true,
+    size: 11,
+    color: { argb: "FF92400E" },
+  };
+  for (let c = 1; c <= COL_LAST; c++) {
+    superRow.getCell(c).alignment = {
+      vertical: "middle",
+      horizontal: "center",
+    };
+    superRow.getCell(c).border = BORDER_THIN;
+  }
+  superRow.height = 28;
+
+  // ── Sub header (row 2) ──
+  const subRow = ws1.getRow(2);
+  subRow.getCell(COL_ROLE).value = "役割と条件";
+  subRow.getCell(COL_COND1).value = "条件①";
+  subRow.getCell(COL_COND2).value = "条件②";
+  axisNames.forEach((name, i) => {
+    subRow.getCell(COL_AXIS_START + i).value = name;
+  });
+  subRow.getCell(COL_PASS).value = "合格";
+  subRow.getCell(COL_NORMAL).value = "普通";
+  styleHeaderRow(subRow);
+  subRow.height = 22;
+  // 軸列: blue-50 / amber-50 で super header と色トーンを揃える
+  for (let i = 0; i < axisCount; i++) {
+    const c = subRow.getCell(COL_AXIS_START + i);
+    c.fill = solidFill("FFEFF6FF");
+    c.font = { bold: true, size: 11, color: { argb: "FF1E40AF" } };
+  }
+  [COL_PASS, COL_NORMAL].forEach((col) => {
+    const c = subRow.getCell(col);
+    c.fill = solidFill("FFFFFBEB");
+    c.font = { bold: true, size: 11, color: { argb: "FF92400E" } };
+  });
+
+  // ── Data rows ──
+  roles.forEach((role, idx) => {
     const resolved = ev ? resolveEvalForRole(ev, role.id) : null;
     const weights = resolved?.評価軸.map((a) => a.重み) ?? [];
     const goal = resolved?.合格ライン ?? null;
     const pass = resolved?.普通ライン ?? null;
-    const cond1Text =
-      "条件①: 基本人物像（常に評価）\n" + role.条件1_基本人物像.join("\n");
-    const cond2Text =
-      "条件②: 未経験者必須\n" + role.条件2_未経験者必須.join("\n");
+
     const row = ws1.addRow([
       role.役割,
-      cond1Text,
-      cond2Text,
+      null, // 条件① — richText で後埋め
+      null, // 条件② — richText で後埋め
       ...weights,
       goal,
       pass,
     ]);
 
-    // 役割名: 左中央
-    row.getCell(1).alignment = {
+    // 1: 役割 — pill 風
+    const roleColor = ROLE_PILL_COLORS[role.id] ?? "FF64748B";
+    const roleCell = row.getCell(COL_ROLE);
+    roleCell.fill = solidFill(roleColor);
+    roleCell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+    roleCell.alignment = {
       vertical: "middle",
-      horizontal: "left",
+      horizontal: "center",
       wrapText: true,
     };
-    row.getCell(1).font = { bold: true };
+    roleCell.border = BORDER_WHITE;
 
-    // 条件①/②: 左上揃え＋折返し
-    row.getCell(2).alignment = {
-      vertical: "top",
-      horizontal: "left",
-      wrapText: true,
-    };
-    row.getCell(3).alignment = {
-      vertical: "top",
-      horizontal: "left",
-      wrapText: true,
-    };
+    // 2: 条件① rich text（slate-900 見出し）
+    const c1 = row.getCell(COL_COND1);
+    c1.value = buildConditionRich(
+      "条件①: 基本人物像（常に評価）",
+      role.条件1_基本人物像,
+      "FF111827",
+    );
+    c1.alignment = { vertical: "top", horizontal: "left", wrapText: true };
 
-    // 軸重み・合格・普通: 中央寄せ
-    for (let i = 4; i <= 3 + axisNames.length + 2; i++) {
-      row.getCell(i).alignment = {
-        vertical: "middle",
-        horizontal: "center",
-      };
-      row.getCell(i).numFmt = i > 3 + axisNames.length ? "0.0" : "0";
+    // 3: 条件② rich text（amber-700 見出し）
+    const c2 = row.getCell(COL_COND2);
+    c2.value = buildConditionRich(
+      "条件②: 未経験者必須",
+      role.条件2_未経験者必須,
+      "FFB45309",
+    );
+    c2.alignment = { vertical: "top", horizontal: "left", wrapText: true };
+
+    // 軸列
+    for (let i = 0; i < axisCount; i++) {
+      const c = row.getCell(COL_AXIS_START + i);
+      c.alignment = { vertical: "middle", horizontal: "center" };
+      c.numFmt = "0";
+      c.font = { color: { argb: "FF1E3A8A" }, size: 11 };
     }
 
-    // 行高さは内容に応じて自動（ExcelJS は wrapText を有効にすると Excel 側で自動高さ）
+    // 合格 / 普通
+    [COL_PASS, COL_NORMAL].forEach((col) => {
+      const c = row.getCell(col);
+      c.alignment = { vertical: "middle", horizontal: "center" };
+      c.numFmt = "0.0";
+      c.font = { bold: true, color: { argb: "FF92400E" }, size: 11 };
+    });
+
+    // ゼブラ縞: 偶数番目の役割行 (idx=1,3,5..) のみ B〜I に zinc-50
+    if (idx % 2 === 1) {
+      for (let c = COL_COND1; c <= COL_LAST; c++) {
+        const cell = row.getCell(c);
+        if (!cell.fill) cell.fill = solidFill("FFF9FAFB");
+      }
+    }
+
     row.height = Math.max(
       80,
-      Math.min(220, Math.max(role.条件1_基本人物像.length, role.条件2_未経験者必須.length) * 18 + 30),
+      Math.min(
+        220,
+        Math.max(
+          role.条件1_基本人物像.length,
+          role.条件2_未経験者必須.length,
+        ) *
+          18 +
+          30,
+      ),
     );
-  }
+  });
+
   applyBordersTo(ws1);
+
+  ws1.autoFilter = {
+    from: { row: 2, column: COL_ROLE },
+    to: { row: roles.length + 2, column: COL_LAST },
+  };
 
   // ── Sheet "評価条件" ──
   const ws2 = wb.addWorksheet("評価条件", {
-    views: [{ state: "frozen", ySplit: 1 }],
+    views: [{ state: "frozen", ySplit: 1, showGridLines: false }],
   });
-  ws2.addRow(["項目", "値"]);
-  styleHeaderRow(ws2.getRow(1));
-  ws2.columns = [{ width: 32 }, { width: 50 }];
+  ws2.columns = [{ width: 24 }, { width: 36 }];
 
-  const evRows: (string | number | null)[][] = [
-    ["方式", ev?.方式 ?? "BARS"],
-    ["軸重み（共通既定・固定）", 3],
-    ["合格ライン（既定）", ev?.合格ライン ?? null],
-    ["普通ライン（既定）", ev?.普通ライン ?? null],
-    ["評価軸", axisNames.join(" / ")],
-    ["スケール最小", ev?.スケール.最小 ?? null],
-    ["スケール最大", ev?.スケール.最大 ?? null],
-    ["スケール刻み", ev?.スケール.刻み ?? null],
-    ["スケール段階数", ev?.スケール.段階数 ?? null],
-    ["自己解決レベル", ev?.自己解決レベル ?? ""],
-  ];
-  for (const r of evRows) {
-    const row = ws2.addRow(r);
-    row.getCell(1).font = { bold: true, color: { argb: "FF475569" } };
-    row.getCell(1).alignment = { vertical: "middle", horizontal: "left" };
-    row.getCell(2).alignment = { vertical: "middle", horizontal: "left" };
-  }
+  // タイトル行（row 1）
+  ws2.mergeCells(1, 1, 1, 2);
+  const titleCell = ws2.getCell(1, 1);
+  titleCell.value = "評価条件マスタ";
+  titleCell.fill = solidFill("FFDBEAFE");
+  titleCell.font = { bold: true, size: 13, color: { argb: "FF1E3A8A" } };
+  titleCell.alignment = { vertical: "middle", horizontal: "center" };
+  titleCell.border = BORDER_THIN;
+  ws2.getRow(1).height = 32;
+
+  let cursor = 2;
+  const addSection = (label: string) => {
+    ws2.mergeCells(cursor, 1, cursor, 2);
+    const c = ws2.getCell(cursor, 1);
+    c.value = label;
+    c.fill = solidFill("FF1F2937");
+    c.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+    c.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    c.border = BORDER_THIN;
+    ws2.getRow(cursor).height = 24;
+    cursor += 1;
+  };
+  const addKV = (
+    key: string,
+    value: string | number | null,
+    opts?: { valueBg?: string; valueFmt?: string; valueColor?: string },
+  ) => {
+    const row = ws2.getRow(cursor);
+    const k = row.getCell(1);
+    k.value = key;
+    k.fill = solidFill("FFF3F4F6");
+    k.font = { bold: true, size: 11, color: { argb: "FF475569" } };
+    k.alignment = { vertical: "middle", horizontal: "right", indent: 1 };
+
+    const v = row.getCell(2);
+    v.value = value;
+    v.alignment = {
+      vertical: "middle",
+      horizontal: "left",
+      indent: 1,
+      wrapText: true,
+    };
+    if (opts?.valueBg) v.fill = solidFill(opts.valueBg);
+    if (opts?.valueFmt) v.numFmt = opts.valueFmt;
+    if (opts?.valueColor) {
+      v.font = { bold: true, color: { argb: opts.valueColor }, size: 11 };
+    }
+    row.height = 22;
+    cursor += 1;
+  };
+
+  addSection("評価方式");
+  addKV("方式", ev?.方式 ?? "BARS");
+
+  addSection("軸の既定重み");
+  addKV("軸重み（共通既定・固定）", 3);
+  addKV("評価軸", axisNames.join(" / "));
+
+  addSection("判定ライン既定");
+  addKV("合格ライン", ev?.合格ライン ?? null, {
+    valueBg: "FFFEF3C7",
+    valueFmt: "0.0",
+    valueColor: "FF92400E",
+  });
+  addKV("普通ライン", ev?.普通ライン ?? null, {
+    valueBg: "FFFEF3C7",
+    valueFmt: "0.0",
+    valueColor: "FF92400E",
+  });
+
+  addSection("スケール定義");
+  addKV("スケール最小", ev?.スケール.最小 ?? null);
+  addKV("スケール最大", ev?.スケール.最大 ?? null);
+  addKV("スケール刻み", ev?.スケール.刻み ?? null);
+  addKV("スケール段階数", ev?.スケール.段階数 ?? null);
+  addKV("自己解決レベル", ev?.自己解決レベル ?? "");
+
   applyBordersTo(ws2);
 
   const buf = await wb.xlsx.writeBuffer();
@@ -225,7 +427,7 @@ export async function writeMasterMirror(): Promise<void> {
   }
 }
 
-/* ─────────────── 候補者一覧.xlsx ─────────────── */
+/* ─────────────── 面談者一覧.xlsx ─────────────── */
 
 /** スコア → ◎/○/△/× と色（emerald/blue/amber/red） */
 function scoreMark(score: number | null): { symbol: string; color: string } {
@@ -312,7 +514,7 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
     "柔軟性",
   ];
 
-  const ws = wb.addWorksheet("①D_候補者一覧", {
+  const ws = wb.addWorksheet("①D_面談者一覧", {
     views: [{ state: "frozen", ySplit: 1, xSplit: 1 }],
   });
 
@@ -338,6 +540,32 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
   ];
   ws.addRow(header);
   styleHeaderRow(ws.getRow(1));
+
+  // ヘッダ列ごとの文字色（セマンティックグループに合わせる）
+  const headerColors = [
+    "FF334155", // 候補者 (slate-700)
+    "FF334155", // 役割
+    "FF1E40AF", // 経歴サマリ (blue-800)
+    "FF2563EB", // 主要スキル (blue-600)
+    "FF6D28D9", // 強み (violet-700)
+    "FF7C3AED", // 軸別評価 (violet-600)
+    "FF15803D", // 良い点 (emerald-700)
+    "FFB91C1C", // 懸念点 (red-700)
+    "FF475569", // 使用AI (slate-600)
+    "FF1F2937", // 総合スコア (gray-800)
+    "FF1F2937", // 合否
+    "FF334155", // 面談日
+    "FF475569", // 結果
+    "FF475569", // 状態
+    "FF6B7280", // 自動削除 (gray-500)
+  ];
+  const headerRow = ws.getRow(1);
+  headerColors.forEach((argb, i) => {
+    headerRow.getCell(i + 1).font = {
+      ...HEADER_FONT,
+      color: { argb },
+    };
+  });
 
   ws.columns = [
     { width: 18 }, // 候補者
@@ -395,11 +623,25 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
     const retentionDays = settings.retention.days[s.result];
     const retentionCell: number | null =
       s.hold || !retentionDays || retentionDays <= 0 ? null : retentionDays;
-    // 経歴サマリ列: 構造化された 経歴 フィールドがあれば優先、無ければ 要約 をフォールバック
-    const career = candidate?.経歴?.trim() ?? "";
-    const skills = candidate?.主要スキル?.trim() ?? "";
-    const strengths = candidate?.強み?.trim() ?? "";
-    const careerCol = career || (candidate?.要約 ?? "");
+    // 3 列の取り出し：
+    //   保存方針は 要約 単一テキストに統一。Excel 出力時に見出しで 3 列へ分割する。
+    //   旧データで構造化フィールドが残っている場合のみ、それを優先（後方互換）。
+    const hasLegacyStructured = !!(
+      candidate?.経歴 ||
+      candidate?.主要スキル ||
+      candidate?.強み
+    );
+    const parsed = hasLegacyStructured
+      ? {
+          経歴: candidate?.経歴?.trim() ?? "",
+          主要スキル: candidate?.主要スキル?.trim() ?? "",
+          強み: candidate?.強み?.trim() ?? "",
+        }
+      : parseStructuredSummary(candidate?.要約 ?? "");
+    const career = parsed.経歴;
+    const skills = parsed.主要スキル;
+    const strengths = parsed.強み;
+    const careerCol = career;
     const good = evalu?.良い点 ?? "";
     const concern = evalu?.懸念点 ?? "";
 
@@ -601,7 +843,7 @@ export async function writeSessionsMirror(): Promise<void> {
     ensureDir(dir);
     fs.writeFileSync(path.join(dir, SESSIONS_FILE), buf);
   } catch (e) {
-    console.warn("[excelMirror] 候補者一覧.xlsx 書込失敗:", e);
+    console.warn("[excelMirror] 面談者一覧.xlsx 書込失敗:", e);
   }
 }
 

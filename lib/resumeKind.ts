@@ -21,9 +21,10 @@ const MIME_TO_KIND: Record<string, ResumeKind> = {
 
 /** ファイル入力の accept 属性に渡す MIME + 拡張子 */
 export const RESUME_FILE_ACCEPT =
-  ".pdf,.docx,.xlsx,application/pdf," +
+  ".pdf,.docx,.xlsx,.xls,application/pdf," +
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document," +
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet," +
+  "application/vnd.ms-excel";
 
 export function detectResumeKind(
   mimeType: string,
