@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getEvaluation, listSessions } from "@/lib/storage";
 import { SessionListFilters } from "./_components/SessionListFilters";
 import { SessionListTable } from "./_components/SessionListTable";
-import { SessionsExportButton } from "./_components/SessionsExportButton";
 
 type SP = Promise<{ state?: string; role?: string; result?: string; q?: string }>;
 
@@ -32,7 +31,6 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
         <div className="flex items-center gap-3">
           <h2 className="font-bold text-lg">面談一覧</h2>
           <div className="flex-1" />
-          <SessionsExportButton />
         </div>
 
         <SessionListFilters

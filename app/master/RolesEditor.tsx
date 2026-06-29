@@ -215,7 +215,7 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
             onClick={exportRoles}
             disabled={roles.length === 0}
           >
-            Export
+            エクスポート
           </Button>
         </Tip>
         <Button
@@ -228,7 +228,11 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
 
       <div className="p-6 space-y-4">
         {error && (
-          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2 whitespace-pre-line">
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2 whitespace-pre-line"
+          >
             {error}
           </div>
         )}

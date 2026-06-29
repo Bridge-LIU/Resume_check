@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tip } from "@/components/ui/tooltip";
 import {
   aggregateBy,
   aggregateTotal,
@@ -30,17 +33,14 @@ export default async function CostPage() {
   if (records.length === 0) {
     return (
       <div className="bg-white rounded-xl border shadow-sm">
+        <PageHeader title="コスト試算" />
         <div className="p-6 space-y-3">
-          <h2 className="font-bold text-lg">コスト試算</h2>
           <div className="text-sm text-zinc-500 leading-relaxed">
             LLM API 呼び出しの記録がまだありません。
             <br />
             ②要約 / ⑤生成 / ⑥議事録 / ⑧評価 を「API モード」で実行すると、
             ここに概算コストが集計されます。
           </div>
-          <Link href="/" className="text-sm text-blue-600 hover:underline">
-            ← 一覧へ戻る
-          </Link>
         </div>
       </div>
     );
@@ -59,12 +59,10 @@ export default async function CostPage() {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border shadow-sm">
-        <header className="px-6 py-3 border-b flex items-center gap-4">
-          <h2 className="font-bold">コスト試算</h2>
-          <span className="text-xs text-zinc-500">
-            {records.length} 件の呼び出し ・ 直近 5000 件まで
-          </span>
-        </header>
+        <PageHeader
+          title="コスト試算"
+          meta={`${records.length} 件の呼び出し ・ 直近 5000 件まで`}
+        />
 
         <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard label="累計" value={fmtJpy(total.totalJpy)} sub={fmtUsd(total.totalUsd)} />
@@ -236,6 +234,29 @@ function CostTable({
         ))}
       </tbody>
     </table>
+  );
+}
+
+function PageHeader({ title, meta }: { title: string; meta?: string }) {
+  return (
+    <header className="px-4 py-2.5 border-b flex items-center gap-3 text-sm">
+      <Tip content="一覧へ戻る">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="group h-8 pl-2 pr-3 gap-1.5 rounded-full text-xs font-medium text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
+        >
+          <Link href="/" aria-label="一覧へ戻る">
+            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+            一覧
+          </Link>
+        </Button>
+      </Tip>
+      <div className="h-5 w-px bg-zinc-200" aria-hidden="true" />
+      <div className="font-bold whitespace-nowrap">{title}</div>
+      {meta && <span className="text-xs text-zinc-500">{meta}</span>}
+    </header>
   );
 }
 

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Tip } from "@/components/ui/tooltip";
 import {
   getConditionsSnapshot,
@@ -107,14 +109,11 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
   if (ids.length < 2) {
     return (
       <div className="bg-white rounded-xl border shadow-sm">
+        <CompareHeader title="横断比較" />
         <div className="p-6 space-y-3">
-          <h2 className="font-bold text-lg">横断比較</h2>
           <p className="text-sm text-zinc-600">
             比較するには 2 件以上のセッションが必要です。
           </p>
-          <Link href="/" className="text-blue-600 hover:underline text-sm">
-            ← 一覧へ戻る
-          </Link>
         </div>
       </div>
     );
@@ -142,14 +141,11 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
   if (cols.length === 0) {
     return (
       <div className="bg-white rounded-xl border shadow-sm">
+        <CompareHeader title="横断比較" />
         <div className="p-6 space-y-3">
-          <h2 className="font-bold text-lg">横断比較</h2>
           <p className="text-sm text-red-700">
             指定された ID のセッションが見つかりませんでした。
           </p>
-          <Link href="/" className="text-blue-600 hover:underline text-sm">
-            ← 一覧へ戻る
-          </Link>
         </div>
       </div>
     );
@@ -214,17 +210,16 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
 
   return (
     <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-      <header className="px-6 py-3 border-b flex items-center gap-4 text-sm">
-        <Link href="/" className="text-blue-600 hover:underline">
-          ← 一覧
-        </Link>
-        <h2 className="font-bold">
-          横断比較 <span className="text-xs text-zinc-500 ml-2">{cols.length} 件</span>
-          {isTransposed && (
-            <span className="ml-2 pill pill-eval text-[10px]">転置ビュー</span>
-          )}
-        </h2>
-      </header>
+      <CompareHeader
+        title="横断比較"
+        count={cols.length}
+        suffix={
+          isTransposed ? (
+            <span className="pill pill-eval text-2xs">転置ビュー</span>
+          ) : null
+        }
+      />
+
 
       <div className="p-6 space-y-6">
         {isTransposed ? (
@@ -493,5 +488,39 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
         )}
       </div>
     </div>
+  );
+}
+
+function CompareHeader({
+  title,
+  count,
+  suffix,
+}: {
+  title: string;
+  count?: number;
+  suffix?: React.ReactNode;
+}) {
+  return (
+    <header className="px-4 py-2.5 border-b flex items-center gap-3 text-sm">
+      <Tip content="一覧へ戻る">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="group h-8 pl-2 pr-3 gap-1.5 rounded-full text-xs font-medium text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
+        >
+          <Link href="/" aria-label="一覧へ戻る">
+            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+            一覧
+          </Link>
+        </Button>
+      </Tip>
+      <div className="h-5 w-px bg-zinc-200" aria-hidden="true" />
+      <div className="font-bold whitespace-nowrap">{title}</div>
+      {count != null && (
+        <span className="text-xs text-zinc-500">{count} 件</span>
+      )}
+      {suffix}
+    </header>
   );
 }

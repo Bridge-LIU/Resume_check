@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tip } from "@/components/ui/tooltip";
 import {
   aggregateByAxis,
   aggregateByMonth,
@@ -57,8 +60,8 @@ export default async function AnalyticsPage() {
   if (items.length === 0) {
     return (
       <div className="bg-white rounded-xl border shadow-sm">
+        <PageHeader title="分析（匿名サマリ）" />
         <div className="p-6 space-y-3">
-          <h2 className="font-bold text-lg">分析（匿名サマリ）</h2>
           <div className="text-sm text-zinc-500 leading-relaxed">
             匿名サマリがまだ 1 件もありません。
             <br />
@@ -69,9 +72,6 @@ export default async function AnalyticsPage() {
             参考：このデータは PII（氏名・履歴書・議事録）を含まない匿名集計です。
             設計書 §7.5。元のセッションが完全削除されても残せます。
           </div>
-          <Link href="/" className="text-sm text-blue-600 hover:underline">
-            ← 一覧へ戻る
-          </Link>
         </div>
       </div>
     );
@@ -82,13 +82,10 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border shadow-sm">
-        <header className="px-6 py-3 border-b flex items-center gap-4">
-          <h2 className="font-bold">分析（匿名サマリ）</h2>
-          <span className="text-xs text-zinc-500">
-            {items.length} 件 ・ {overall.earliest?.slice(0, 10) ?? "—"} 〜{" "}
-            {overall.latest?.slice(0, 10) ?? "—"}
-          </span>
-        </header>
+        <PageHeader
+          title="分析（匿名サマリ）"
+          meta={`${items.length} 件 ・ ${overall.earliest?.slice(0, 10) ?? "—"} 〜 ${overall.latest?.slice(0, 10) ?? "—"}`}
+        />
 
         {/* KPI カード */}
         <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -282,5 +279,28 @@ function KpiCard({
         {suffix && <span className="text-xs text-zinc-400">{suffix}</span>}
       </div>
     </div>
+  );
+}
+
+function PageHeader({ title, meta }: { title: string; meta?: string }) {
+  return (
+    <header className="px-4 py-2.5 border-b flex items-center gap-3 text-sm">
+      <Tip content="一覧へ戻る">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="group h-8 pl-2 pr-3 gap-1.5 rounded-full text-xs font-medium text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
+        >
+          <Link href="/" aria-label="一覧へ戻る">
+            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
+            一覧
+          </Link>
+        </Button>
+      </Tip>
+      <div className="h-5 w-px bg-zinc-200" aria-hidden="true" />
+      <div className="font-bold whitespace-nowrap">{title}</div>
+      {meta && <span className="text-xs text-zinc-500">{meta}</span>}
+    </header>
   );
 }
