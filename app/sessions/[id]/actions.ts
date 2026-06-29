@@ -146,7 +146,8 @@ export async function duplicateSessionAction(
   const role = newRole ? newRole.normalize("NFC").trim() : undefined;
 
   // 受信バイト列を 16 進で残す（mojibake 再発時の決定打）
-  if (name !== undefined) {
+  // PII を含むため、デバッグ環境変数が立ったときのみ出力する。
+  if (name !== undefined && process.env.DEBUG_DUPLICATE_HEX === "1") {
     console.log(
       "[duplicateSessionAction] name hex=",
       Buffer.from(name, "utf-8").toString("hex"),
@@ -154,7 +155,7 @@ export async function duplicateSessionAction(
       JSON.stringify(name),
     );
   }
-  console.log("[duplicateSessionAction] start", { id, name, role });
+  console.log("[duplicateSessionAction] start", { id, role });
 
   let newId: string | null = null;
   try {
@@ -486,7 +487,7 @@ export async function generateQuestionsApiAction(
     return {
       ok: false,
       error:
-        "④ 求める人材条件が未凍結です。先に「この内容で凍結する」を押してください。",
+        "② 求める人材条件が未凍結です。先に「この内容で凍結する」を押してください。",
     };
   }
 
@@ -495,7 +496,7 @@ export async function generateQuestionsApiAction(
     return {
       ok: false,
       error:
-        "② 面談者情報が空です。候補者の要約を入力（または API要約）して保存してから生成してください。",
+        "① 面談者情報が空です。候補者の要約を入力（または API要約）して保存してから生成してください。",
     };
   }
 
@@ -570,7 +571,7 @@ export async function reformatQuestionsApiAction(
   if (!existing || !existing.rawText.trim()) {
     return {
       ok: false,
-      error: "⑤ 質問テキストが空です。整形するには先に質問を保存してください。",
+      error: "③ 質問テキストが空です。整形するには先に質問を保存してください。",
     };
   }
 
@@ -657,7 +658,7 @@ export async function summarizeMinutesApiAction(
     return {
       ok: false,
       error:
-        "⑥ 議事録が空です。要約する前に議事録を貼り付けて保存してください。",
+        "④ 議事録が空です。要約する前に議事録を貼り付けて保存してください。",
     };
   }
 
@@ -846,14 +847,14 @@ export async function buildQuestionsPromptAction(id: string): Promise<PromptResu
   if (!snapshot) {
     return {
       ok: false,
-      error: "④ 求める人材条件が未凍結です。先に「この内容で凍結する」を押してください。",
+      error: "② 求める人材条件が未凍結です。先に「この内容で凍結する」を押してください。",
     };
   }
   const candidate = getCandidate(id);
   if (!candidate || !candidate.要約.trim()) {
     return {
       ok: false,
-      error: "② 面談者情報が空です。候補者の要約を保存してからコピーしてください。",
+      error: "① 面談者情報が空です。候補者の要約を保存してからコピーしてください。",
     };
   }
   const { nontech, tech } = loadSettings().questionCounts;
@@ -872,35 +873,30 @@ export async function buildQuestionsPromptAction(id: string): Promise<PromptResu
 export async function buildEvaluationPromptAction(id: string): Promise<PromptResult> {
   const snapshot = getConditionsSnapshot(id);
   if (!snapshot) {
-    return { ok: false, error: "④ 求める人材条件が未凍結です。" };
+    return { ok: false, error: "② 求める人材条件が未凍結です。" };
   }
   const minutes = getMinutes(id);
   if (!minutes || !minutes.text.trim()) {
     return {
       ok: false,
-      error: "⑥ 議事録が空です。議事録を貼り付けて保存してからコピーしてください。",
+      error: "④ 議事録が空です。議事録を貼り付けて保存してからコピーしてください。",
     };
   }
   const prompt =
     EVAL_SYSTEM_PROMPT +
     "\n\n---\n\n" +
-    "# 評価条件（④凍結スナップショット）\n" +
+    "# 評価条件\n" +
     JSON.stringify(snapshot, null, 2) +
-    "\n\n# 面談議事録（⑥）\n" +
+    "\n\n# 面談議事録\n" +
     minutes.text +
-    "\n\n# 出力スキーマ（このキー構造で返す。コードフェンスは付けず、JSON 1個のみ。プロパティの順序は問わない）\n" +
+    "\n\n# 出力スキーマ（このキー構造で返す）\n" +
     EVAL_OUTPUT_SCHEMA;
   return { ok: true, prompt };
 }
 
+// 設計書 v1.0 の文言。短く、JSON のみ返させる最小ルールに揃える。
 const EVAL_SYSTEM_PROMPT =
-  "あなたは採用評価の専門家です。BARS（行動基準評価）で厳正に採点し、説明文や前置きなしに、指定スキーマの JSON のみを出力してください。" +
-  "総合スコアは軸スコア × 軸重みの加重平均（重みが未指定なら単純平均）。" +
-  "合否は提示された評価条件の「合格ライン」以上=合格、「普通ライン」以上=普通、未満=不合格（数値はユーザーメッセージの評価条件 JSON から読み取り、自分で仮定しないこと）。" +
-  "軸ごとの『根拠』は必ず議事録の該当発言を短く引用すること（一般論で埋めない）。" +
-  "議事録に明確な根拠が無い項目は推測で採点せず、その軸スコアは控えめに付け、『懸念点』に『要確認: <項目>（議事録未確認）』と明記すること。" +
-  "『良い点』『懸念点』も議事録の事実に基づいて記述する。" +
-  "『自己解決レベル』(0〜5) は、議事録上で候補者が問題に対し自ら仮説・解決策を提示できているか、他者依存度はどうかを見て採点する（5=完全に自己解決、0=全面的に他者依存）。";
+  "あなたは採用評価の専門家です。BARS（行動基準評価）で厳正に採点し、説明文や前置きなしに、指定スキーマのJSONのみを出力してください。";
 
 const EVAL_OUTPUT_SCHEMA =
   '{"軸評価":[{"軸":"","スコア":0,"根拠":""}],"自己解決レベル":0,"総合スコア":0,"合否":"","良い点":"","懸念点":""}';
@@ -919,7 +915,7 @@ export async function evaluateInterviewApiAction(
     return {
       ok: false,
       error:
-        "④ 求める人材条件が未凍結です。先に「この内容で凍結する」を押してください。",
+        "② 求める人材条件が未凍結です。先に「この内容で凍結する」を押してください。",
     };
   }
 
@@ -927,7 +923,7 @@ export async function evaluateInterviewApiAction(
   if (!minutes || !minutes.text.trim()) {
     return {
       ok: false,
-      error: "⑥ 議事録が空です。議事録を貼り付けて保存してから評価してください。",
+      error: "④ 議事録が空です。議事録を貼り付けて保存してから評価してください。",
     };
   }
 

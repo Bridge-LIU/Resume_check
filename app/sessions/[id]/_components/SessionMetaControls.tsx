@@ -204,8 +204,8 @@ export function SessionMetaControls({
           <AlertDialogHeader>
             <AlertDialogTitle>セッションを複製</AlertDialogTitle>
             <AlertDialogDescription>
-              氏名・役割を編集できます。②要約と uploads/ は常に引き継ぎ、
-              ⑥議事録・⑧評価は引き継ぎません。
+              氏名・役割を編集できます。①要約と uploads/ は常に引き継ぎ、
+              ④議事録・⑤評価は引き継ぎません。
             </AlertDialogDescription>
           </AlertDialogHeader>
 

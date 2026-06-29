@@ -9,12 +9,9 @@ import {
 } from "../actions";
 import { MaxPromptCopy } from "./MaxPromptCopy";
 import { ModeSwitch } from "./ModeSwitch";
-import {
-  ProviderModelSelect,
-  type ProviderModelOverride,
-} from "./ProviderModelSelect";
+import { SectionHeaderBar } from "./SectionHeaderBar";
+import { type ProviderModelOverride } from "./ProviderModelSelect";
 import { useStableSectionScroll } from "./useStableSectionScroll";
-import type { LlmDefaults } from "../page";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -37,21 +34,20 @@ const SAMPLE = `{
 export function Section8Evaluation({
   sessionId,
   initial,
-  llmDefaults,
 }: {
   sessionId: string;
   initial: Evaluation | null;
-  llmDefaults: LlmDefaults;
 }) {
-  const [mode, setMode] = useState<Mode>(initial?.mode ?? "paste");
-  const { ref: rootRef, capture: captureScroll } = useStableSectionScroll(mode);
+  // API モードを UI から隠しているため、表示・保存とも貼付モードに固定
+  const [mode] = useState<Mode>("paste");
+  const { ref: rootRef } = useStableSectionScroll(mode);
   const [rawText, setRawText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Evaluation | null>(initial);
   const [strict, setStrict] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isEvaluating, startEvaluate] = useTransition();
-  const [llmOverride, setLlmOverride] = useState<ProviderModelOverride | undefined>(undefined);
+  const [llmOverride] = useState<ProviderModelOverride | undefined>(undefined);
 
   function handleSave() {
     setError(null);
@@ -97,36 +93,14 @@ export function Section8Evaluation({
 
   return (
     <div ref={rootRef}>
-      <div className="flex items-center justify-between mb-2 gap-2 min-h-8">
-        <h3 className="font-bold whitespace-nowrap">⑧ 評価・合否判定</h3>
-        <div className="flex items-center gap-2 flex-nowrap min-w-0">
-          <ModeSwitch
-            mode={mode}
-            onChange={(m) => {
-              captureScroll();
-              setMode(m);
-            }}
-            apiLabel="API評価"
-            apiEnabled
-          />
-          {mode === "api" && (
-            <ProviderModelSelect
-              stage={strict ? "evaluationStrict" : "evaluation"}
-              defaultProvider={llmDefaults.defaultProvider}
-              defaultModel={strict ? llmDefaults.modelBy.evaluationStrict : llmDefaults.modelBy.evaluation}
-              value={llmOverride}
-              onChange={setLlmOverride}
-              hasKey={llmDefaults.hasKey}
-              disabled={busy}
-            />
-          )}
-        </div>
-      </div>
+      <SectionHeaderBar title="⑤ 評価・合否判定" hasData={!!current}>
+        <ModeSwitch mode={mode} />
+      </SectionHeaderBar>
 
       {mode === "api" && (
         <div className="border rounded-lg p-3 mb-3 bg-zinc-50 space-y-3">
           <div className="text-xs text-zinc-600">
-            ④ 凍結条件 + ⑥ 議事録を入力に、AI が BARS で採点します。
+            ② 凍結条件 + ④ 議事録を入力に、AI が BARS で採点します。
             厳格モードでより高性能なモデルを使用。
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -154,7 +128,11 @@ export function Section8Evaluation({
             </span>
           </div>
           {error && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2"
+            >
               {error}
             </div>
           )}
@@ -190,7 +168,11 @@ export function Section8Evaluation({
             onChange={(e) => setRawText(e.target.value)}
           />
           {mode === "paste" && error && (
-            <div className="text-xs text-red-600 border border-red-200 bg-red-50 rounded p-2">
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="text-xs text-red-700 border border-red-200 bg-red-50 rounded p-2"
+            >
               {error}
             </div>
           )}

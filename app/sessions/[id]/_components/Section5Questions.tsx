@@ -11,12 +11,9 @@ import {
 } from "../actions";
 import { MaxPromptCopy } from "./MaxPromptCopy";
 import { ModeSwitch } from "./ModeSwitch";
-import {
-  ProviderModelSelect,
-  type ProviderModelOverride,
-} from "./ProviderModelSelect";
+import { SectionHeaderBar } from "./SectionHeaderBar";
+import { type ProviderModelOverride } from "./ProviderModelSelect";
 import { useStableSectionScroll } from "./useStableSectionScroll";
-import type { LlmDefaults } from "../page";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -99,18 +96,17 @@ function joinSections(nonTech: string, tech: string): string {
 export function Section5Questions({
   sessionId,
   initial,
-  llmDefaults,
   questionCounts,
 }: {
   sessionId: string;
   initial: Questions | null;
-  llmDefaults: LlmDefaults;
   questionCounts: QuestionCounts;
 }) {
   const targetNonTech = questionCounts.nontech;
   const targetTech = questionCounts.tech;
-  const [mode, setMode] = useState<Mode>(initial?.mode ?? "paste");
-  const { ref: rootRef, capture: captureScroll } = useStableSectionScroll(mode);
+  // API モードを UI から隠しているため、表示・保存とも貼付モードに固定
+  const [mode] = useState<Mode>("paste");
+  const { ref: rootRef } = useStableSectionScroll(mode);
   const initialSplit = splitSections(initial?.rawText ?? "");
   const [nonTech, setNonTech] = useState(initialSplit.nonTech);
   const [tech, setTech] = useState(initialSplit.tech);
@@ -121,7 +117,7 @@ export function Section5Questions({
   const [isSaving, startSave] = useTransition();
   const [isGenerating, startGen] = useTransition();
   const [isReformatting, startReformat] = useTransition();
-  const [llmOverride, setLlmOverride] = useState<ProviderModelOverride | undefined>(undefined);
+  const [llmOverride] = useState<ProviderModelOverride | undefined>(undefined);
   const { confirm, ConfirmDialog } = useConfirm();
 
   const combined = joinSections(nonTech, tech);
@@ -232,36 +228,17 @@ export function Section5Questions({
 
   return (
     <div ref={rootRef}>
-      <div className="flex items-center justify-between mb-2 gap-2 min-h-8">
-        <h3 className="font-bold whitespace-nowrap">⑤ 質問リスト</h3>
-        <div className="flex items-center gap-2 flex-nowrap min-w-0">
-          <ModeSwitch
-            mode={mode}
-            onChange={(m) => {
-              captureScroll();
-              setMode(m);
-            }}
-            apiLabel="API生成"
-            apiEnabled
-          />
-          {mode === "api" && (
-            <ProviderModelSelect
-              stage="questions"
-              defaultProvider={llmDefaults.defaultProvider}
-              defaultModel={llmDefaults.modelBy.questions}
-              value={llmOverride}
-              onChange={setLlmOverride}
-              hasKey={llmDefaults.hasKey}
-              disabled={busy}
-            />
-          )}
-        </div>
-      </div>
+      <SectionHeaderBar
+        title="③ 質問リスト"
+        hasData={!!initial?.rawText?.trim()}
+      >
+        <ModeSwitch mode={mode} />
+      </SectionHeaderBar>
 
       {mode === "api" && (
         <div className="border rounded p-3 mb-2 bg-zinc-50 flex items-center gap-3 text-sm">
           <div className="flex-1 text-zinc-600 min-w-0">
-            ② 面談者情報 + ④ 凍結条件を入力に、AI で「非技術 {targetNonTech} 問 + 技術 {targetTech} 問」を section 付きで生成します。
+            ① 面談者情報 + ② 凍結条件を入力に、AI で「非技術 {targetNonTech} 問 + 技術 {targetTech} 問」を section 付きで生成します。
           </div>
           <Button
             type="button"
@@ -359,7 +336,11 @@ export function Section5Questions({
       </div>
 
       {error && (
-        <div className="mt-2 border border-red-200 bg-red-50 text-red-700 text-sm rounded px-3 py-2">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="mt-2 border border-red-200 bg-red-50 text-red-700 text-sm rounded px-3 py-2"
+        >
           {error}
         </div>
       )}
@@ -373,7 +354,11 @@ export function Section5Questions({
           {isSaving ? "保存中…" : "保存"}
         </Button>
         {savedAt && (
-          <span className="text-xs text-zinc-500">
+          <span
+            role="status"
+            aria-live="polite"
+            className="text-xs text-zinc-500"
+          >
             最終保存: {new Date(savedAt).toLocaleString("ja-JP")}
           </span>
         )}

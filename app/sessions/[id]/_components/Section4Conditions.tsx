@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SectionHeaderBar } from "./SectionHeaderBar";
 
 export function Section4Conditions({
   sessionId,
@@ -25,30 +26,105 @@ export function Section4Conditions({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // 凍結済からの「修正」モード切替（snapshot.role を初期値に編集）
+  const [editing, setEditing] = useState(false);
 
-  // 凍結済：読み取り表示
-  if (snapshot) {
+  function handleFreeze(role: Role): void {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await freezeConditionsAction(sessionId, role);
+        setEditing(false);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    });
+  }
+
+  // マスタから役割の標準条件を取得して返す。EditableConditions が自分の state を上書きする。
+  async function fetchMasterRole(): Promise<Role | null> {
+    const fresh = await reloadRoleFromMasterAction(roleId);
+    if (!fresh) {
+      setError("マスタの取得に失敗しました");
+      return null;
+    }
+    setError(null);
+    return fresh;
+  }
+
+  // 凍結済かつ「修正」ボタン未押下：読み取り表示（F案：チップ群ヘッダー + 緑バー）
+  if (snapshot && !editing) {
+    const frozenShort = new Date(snapshot.frozenAt).toLocaleString("ja-JP", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     return (
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold">
-            ④ 求める人材条件{" "}
-            <span className="text-xs text-emerald-700 ml-2">凍結済 ✓</span>
-          </h3>
-          <span className="text-xs text-zinc-400">
-            凍結: {new Date(snapshot.frozenAt).toLocaleString("ja-JP")}
-          </span>
+        <div className="border-l-4 border-emerald-500 bg-emerald-50/40 pl-3 pr-2 py-2 rounded-r-md mb-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-bold text-zinc-800">② 求める人材条件</h3>
+            <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+              {snapshot.role.役割}
+            </span>
+            <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-50 text-zinc-600 border border-zinc-200">
+              経験 {snapshot.role.経験}
+            </span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+              凍結 {frozenShort}
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="inline-flex items-center gap-1 text-xs h-7 px-2.5"
+            onClick={() => {
+              setError(null);
+              setEditing(true);
+            }}
+          >
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4z" />
+            </svg>
+            修正
+          </Button>
         </div>
         <ConditionsReadView snapshot={snapshot} />
       </div>
     );
   }
 
-  // 未凍結：マスタを編集して凍結
+  // 凍結済の修正モード：snapshot.role を初期値に編集
+  if (snapshot && editing) {
+    return (
+      <EditableConditions
+        sessionId={sessionId}
+        roleId={roleId}
+        initial={snapshot.role}
+        isPending={isPending}
+        error={error}
+        revising
+        onLoadMaster={fetchMasterRole}
+        onCancel={() => {
+          setError(null);
+          setEditing(false);
+        }}
+        onFreeze={handleFreeze}
+      />
+    );
+  }
+
+  // 未凍結：マスタを編集して初回凍結
   if (!roleMaster) {
     return (
       <div>
-        <h3 className="font-bold mb-2">④ 求める人材条件</h3>
+        <SectionHeaderBar title="② 求める人材条件" hasData={false} />
         <div className="border rounded p-4 text-sm bg-amber-50 text-amber-800">
           役割「{roleId}」のマスタが見つかりません。/master で作成してください。
         </div>
@@ -63,28 +139,8 @@ export function Section4Conditions({
       initial={roleMaster}
       isPending={isPending}
       error={error}
-      onReload={() => {
-        startTransition(async () => {
-          const fresh = await reloadRoleFromMasterAction(roleId);
-          if (!fresh) {
-            setError("マスタの再読込に失敗しました");
-            return;
-          }
-          // 再読込はリロードで反映（簡単のため state 持ち回しはしない）
-          setError(null);
-          if (typeof window !== "undefined") window.location.reload();
-        });
-      }}
-      onFreeze={(role) => {
-        setError(null);
-        startTransition(async () => {
-          try {
-            await freezeConditionsAction(sessionId, role);
-          } catch (e) {
-            setError((e as Error).message);
-          }
-        });
-      }}
+      onLoadMaster={fetchMasterRole}
+      onFreeze={handleFreeze}
     />
   );
 }
@@ -133,7 +189,9 @@ function EditableConditions({
   initial,
   isPending,
   error,
-  onReload,
+  revising = false,
+  onLoadMaster,
+  onCancel,
   onFreeze,
 }: {
   sessionId: string;
@@ -141,7 +199,9 @@ function EditableConditions({
   initial: Role;
   isPending: boolean;
   error: string | null;
-  onReload: () => void;
+  revising?: boolean;
+  onLoadMaster: () => Promise<Role | null>;
+  onCancel?: () => void;
   onFreeze: (role: Role) => void;
 }) {
   const [role, setRole] = useState<Role>(initial);
@@ -149,6 +209,7 @@ function EditableConditions({
   // こうしないと controlled な textarea で改行直後の空行が消えてカーソルが進めなくなる。
   const [text1, setText1] = useState(() => listToText(initial.条件1_基本人物像));
   const [text2, setText2] = useState(() => listToText(initial.条件2_未経験者必須));
+  const [loadingMaster, setLoadingMaster] = useState(false);
 
   function updateConditions1(text: string) {
     setText1(text);
@@ -159,20 +220,58 @@ function EditableConditions({
     setRole((prev) => ({ ...prev, 条件2_未経験者必須: textToList(text) }));
   }
 
+  // 役割マスタの標準値をフォームに流し込む（ページ遷移なし・フォーム state だけ書き換え）。
+  async function handleLoadMaster() {
+    setLoadingMaster(true);
+    try {
+      const fresh = await onLoadMaster();
+      if (!fresh) return;
+      setRole(fresh);
+      setText1(listToText(fresh.条件1_基本人物像));
+      setText2(listToText(fresh.条件2_未経験者必須));
+    } finally {
+      setLoadingMaster(false);
+    }
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-bold">④ 求める人材条件</h3>
+      <SectionHeaderBar
+        title="② 求める人材条件"
+        hasData={false}
+        extra={
+          revising ? (
+            <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              修正中
+            </span>
+          ) : null
+        }
+      >
         <Button
           type="button"
-          variant="link"
+          variant="outline"
           size="sm"
-          onClick={onReload}
-          disabled={isPending}
+          onClick={handleLoadMaster}
+          disabled={isPending || loadingMaster}
+          className="inline-flex items-center gap-1 text-xs h-7 px-2.5"
         >
-          マスタ再読込
+          <svg
+            className={`w-3 h-3 ${loadingMaster ? "animate-spin" : ""}`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 12a9 9 0 0115.5-6.36L21 8" />
+            <polyline points="21 3 21 8 16 8" />
+            <path d="M21 12a9 9 0 01-15.5 6.36L3 16" />
+            <polyline points="3 21 3 16 8 16" />
+          </svg>
+          {loadingMaster ? "読込中…" : "役割の標準条件を読み込む"}
         </Button>
-      </div>
+      </SectionHeaderBar>
       <div className="border rounded p-4 space-y-3 bg-zinc-50 text-sm">
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-zinc-700 items-center">
           <div>
@@ -238,10 +337,29 @@ function EditableConditions({
           onClick={() => onFreeze(role)}
           disabled={isPending}
         >
-          {isPending ? "凍結中…" : "この内容で凍結する"}
+          {isPending
+            ? revising
+              ? "再凍結中…"
+              : "凍結中…"
+            : revising
+              ? "この内容で再凍結する"
+              : "この内容で凍結する"}
         </Button>
+        {revising && onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onCancel}
+            disabled={isPending}
+          >
+            キャンセル
+          </Button>
+        )}
         <span className="text-xs text-zinc-500">
-          凍結後はマスタを変更してもこの面談には影響しません。
+          {revising
+            ? "再凍結しても ③質問・④議事録には影響しません。"
+            : "凍結後はマスタを変更してもこの面談には影響しません。"}
         </span>
       </div>
     </div>

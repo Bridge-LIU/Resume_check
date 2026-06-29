@@ -9,12 +9,8 @@ import {
 } from "../actions";
 import { MaxPromptCopy } from "./MaxPromptCopy";
 import { ModeSwitch } from "./ModeSwitch";
-import {
-  ProviderModelSelect,
-  type ProviderModelOverride,
-} from "./ProviderModelSelect";
+import { type ProviderModelOverride } from "./ProviderModelSelect";
 import { useStableSectionScroll } from "./useStableSectionScroll";
-import type { LlmDefaults } from "../page";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -25,6 +21,7 @@ import {
   type ResumeKind,
 } from "@/lib/resumeKind";
 import { formatStructuredSummary } from "@/lib/summaryFormat";
+import { SectionHeaderBar } from "./SectionHeaderBar";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -43,14 +40,13 @@ function fileToBase64(file: File): Promise<string> {
 export function Section2Candidate({
   sessionId,
   initial,
-  llmDefaults,
 }: {
   sessionId: string;
   initial: Candidate | null;
-  llmDefaults: LlmDefaults;
 }) {
-  const [mode, setMode] = useState<Mode>(initial?.mode ?? "paste");
-  const { ref: rootRef, capture: captureScroll } = useStableSectionScroll(mode);
+  // API モードを UI から隠しているため、表示・保存とも貼付モードに固定
+  const [mode] = useState<Mode>("paste");
+  const { ref: rootRef } = useStableSectionScroll(mode);
   // 保存は 要約 1 本のみ（Excel 出力時に見出しで 3 列へ分割）。
   // 旧データで構造化 3 フィールドだけが残っているケースでは、それを 1 本に整形して初期値に。
   const initialText = (() => {
@@ -69,7 +65,7 @@ export function Section2Candidate({
     initial?.updatedAt ?? null,
   );
   const [isPending, startTransition] = useTransition();
-  const [llmOverride, setLlmOverride] = useState<ProviderModelOverride | undefined>(undefined);
+  const [llmOverride] = useState<ProviderModelOverride | undefined>(undefined);
 
   // API モード用
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -161,31 +157,9 @@ export function Section2Candidate({
 
   return (
     <div ref={rootRef}>
-      <div className="flex items-center justify-between mb-2 gap-2 min-h-8">
-        <h3 className="font-bold whitespace-nowrap">② 面談者情報</h3>
-        <div className="flex items-center gap-2 flex-nowrap min-w-0">
-          <ModeSwitch
-            mode={mode}
-            onChange={(m) => {
-              captureScroll();
-              setMode(m);
-            }}
-            apiLabel="API自動要約"
-            apiEnabled
-          />
-          {mode === "api" && (
-            <ProviderModelSelect
-              stage="summary"
-              defaultProvider={llmDefaults.defaultProvider}
-              defaultModel={llmDefaults.modelBy.summary}
-              value={llmOverride}
-              onChange={setLlmOverride}
-              hasKey={llmDefaults.hasKey}
-              disabled={summarizing || isPending}
-            />
-          )}
-        </div>
-      </div>
+      <SectionHeaderBar title="① 面談者情報" hasData={!!initial?.要約}>
+        <ModeSwitch mode={mode} />
+      </SectionHeaderBar>
 
       {mode === "api" && (
         <div className="border rounded-lg p-3 mb-3 bg-zinc-50 space-y-3">
@@ -259,7 +233,11 @@ export function Section2Candidate({
           </div>
 
           {apiError && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2"
+            >
               {apiError}
             </div>
           )}
@@ -315,7 +293,11 @@ export function Section2Candidate({
           {isPending ? "保存中…" : "保存"}
         </Button>
         {savedAt && (
-          <span className="text-xs text-zinc-500">
+          <span
+            role="status"
+            aria-live="polite"
+            className="text-xs text-zinc-500"
+          >
             最終保存: {new Date(savedAt).toLocaleString("ja-JP")}
           </span>
         )}
