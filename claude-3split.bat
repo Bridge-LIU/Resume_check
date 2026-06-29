@@ -7,7 +7,7 @@ REM ============================================================
 setlocal
 
 set "WORKDIR=%~1"
-if "%WORKDIR%"=="" set "WORKDIR=%~dp0.."
+if "%WORKDIR%"=="" set "WORKDIR=%~dp0."
 
 REM Make sure npm global bin is on PATH (where claude.cmd usually lives)
 set "PATH=%APPDATA%\npm;%PATH%"
