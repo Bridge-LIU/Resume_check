@@ -28,11 +28,16 @@ export const googleAdapter: LlmAdapter = {
       },
     };
 
+    // ⚠ キーは URL クエリではなくヘッダで渡す。クエリ方式だと
+    // 上流エラーレスポンスに URL がエコーされた際にキーが漏れる経路ができる。
     const res = await fetch(
-      `${BASE_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
+      `${BASE_URL}/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          "x-goog-api-key": key,
+        },
         body: JSON.stringify(body),
       },
     );

@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>セキュリティ修正サマリ — Resume_Claude</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --red: #b91c1c;
+    --red-bg: #fef2f2;
+    --green: #15803d;
+    --green-bg: #f0fdf4;
+    --amber: #b45309;
+    --amber-bg: #fffbeb;
+    --blue: #1e40af;
+    --blue-bg: #eff6ff;
+    --slate-bg: #f1f5f9;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+      "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 24px 80px; }
+  header.top { margin-bottom: 28px; }
+  header.top h1 {
+    margin: 0 0 6px; font-size: 22px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+  }
+  header.top .sub { color: var(--muted); font-size: 13px; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .badge {
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+    letter-spacing: .02em;
+  }
+  .b-crit { background: var(--red-bg); color: var(--red); }
+  .b-high { background: #fff7ed; color: #c2410c; }
+  .b-med  { background: var(--amber-bg); color: var(--amber); }
+  .b-low  { background: var(--slate-bg); color: #475569; }
+  .b-ok   { background: var(--green-bg); color: var(--green); }
+
+  section.summary {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; margin-bottom: 22px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  }
+  .stat { text-align: center; }
+  .stat .n { font-size: 26px; font-weight: 700; }
+  .stat .l { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .stat.crit .n { color: var(--red); }
+  .stat.high .n { color: #c2410c; }
+  .stat.med  .n { color: var(--amber); }
+  .stat.low  .n { color: #475569; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .card > header {
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .card > header h2 {
+    margin: 0; font-size: 15px; font-weight: 700;
+  }
+  .card > header .path {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; color: var(--muted);
+    background: var(--slate-bg); padding: 2px 8px; border-radius: 4px;
+  }
+  .card .body { padding: 16px 20px; }
+  .reason {
+    background: var(--slate-bg); padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; margin-bottom: 14px; color: #334155;
+  }
+  .reason strong { color: var(--ink); }
+
+  .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px) { .diff { grid-template-columns: 1fr; } }
+  .pane {
+    border-radius: 8px; overflow: hidden; border: 1px solid var(--line);
+    display: flex; flex-direction: column;
+  }
+  .pane header {
+    padding: 6px 12px; font-size: 11px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+  .pane.before header { background: var(--red-bg); color: var(--red); }
+  .pane.after header  { background: var(--green-bg); color: var(--green); }
+  .pane pre {
+    margin: 0; padding: 12px 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word;
+    background: #fafafa;
+    flex: 1;
+  }
+  .pane.before pre { background: #fff7f7; }
+  .pane.after  pre { background: #f4fbf6; }
+  code.inline {
+    background: var(--slate-bg); padding: 1px 6px; border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+  }
+  .pending {
+    background: var(--amber-bg); border: 1px solid #fde68a;
+    border-radius: 12px; padding: 16px 20px; margin-top: 22px;
+  }
+  .pending h2 { margin: 0 0 8px; font-size: 14px; color: var(--amber); }
+  .pending ul { margin: 6px 0 0 18px; padding: 0; }
+  .pending li { margin: 4px 0; font-size: 13px; }
+
+  footer.bottom {
+    margin-top: 30px; text-align: center; color: var(--muted); font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>🔒 セキュリティ監査 — 修正サマリ</h1>
+  <div class="sub">Resume_Claude — API キー漏洩・PII ログ・破壊操作 CSRF 等の修正</div>
+  <div class="badges">
+    <span class="badge b-crit">Critical 2</span>
+    <span class="badge b-high">High 1</span>
+    <span class="badge b-med">Medium 3</span>
+    <span class="badge b-low">Low 1</span>
+    <span class="badge b-ok">対応 7 件</span>
+  </div>
+</header>
+
+<section class="summary">
+  <div class="stat crit"><div class="n">2</div><div class="l">Critical 修正</div></div>
+  <div class="stat high"><div class="n">1</div><div class="l">High 修正</div></div>
+  <div class="stat med"><div class="n">3</div><div class="l">Medium 修正</div></div>
+  <div class="stat low"><div class="n">1</div><div class="l">Low 修正（削除）</div></div>
+</section>
+
+<!-- ────────── Critical 1 ────────── -->
+<div class="card">
+  <header>
+    <span class="badge b-crit">Critical</span>
+    <h2>1. 設定画面が API キーを RSC payload で client に送出</h2>
+    <span class="path">app/settings/page.tsx · _components/ProvidersField.tsx · lib/types.ts</span>
+  </header>
+  <div class="body">
+    <div class="reason">
+      <strong>問題:</strong> <code class="inline">&lt;ProvidersField providers={s.providers} /&gt;</code> が
+      <code class="inline">key</code> 文字列を含む <code class="inline">ProviderConfig</code> を丸ごと
+      Client Component に渡しており、Next.js の RSC payload に
+      <code class="inline">sk-ant-…</code> / <code class="inline">sk-proj-…</code> がそのまま乗ってブラウザ転送されていた。
+      <code class="inline">type="password"</code> は表示マスクのみで、ペイロード本体には残る。
+    </div>
+    <div class="diff">
+      <div class="pane before">
+        <header>Before</header>
+<pre>// page.tsx
+&lt;ProvidersField
+  defaultProvider={s.defaultProvider}
+  providers={s.providers}      // ← key 文字列を含む丸ごと渡し
+  envStatus={envStatus}
+/&gt;
+
+// ProvidersField.tsx
+providers: Record&lt;ProviderId, ProviderConfig&gt;;
+const hasFileKey = !!config.key.trim();</pre>
+      </div>
+      <div class="pane after">
+        <header>After</header>
+<pre>// page.tsx — boolean + モデル名だけに詰め替え
+const providersSafe: Record&lt;ProviderId, ProviderSafeStatus&gt; = {
+  anthropic: {
+    hasFileKey: !!s.providers.anthropic.key.trim(),
+    defaultModel: s.providers.anthropic.defaultModel,
+  },
+  openai:  { hasFileKey: …, defaultModel: … },
+  google:  { hasFileKey: …, defaultModel: … },
+};
+&lt;ProvidersField providers={providersSafe} … /&gt;
+
+// types.ts — 新規 type
+export interface ProviderSafeStatus {
+  hasFileKey: boolean;
+  defaultModel: string;
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── Critical 2 ────────── -->
+<div class="card">
+  <header>
+    <span class="badge b-crit">Critical</span>
+    <h2>2. <code class="inline">config/settings.json</code> の平文保存</h2>
+    <span class="path">lib/storage.ts</span>
+  </header>
+  <div class="body">
+    <div class="reason">
+      <strong>問題:</strong> ファイル ACL なしで API キーが平文 JSON。バックアップ・エディタ拡張・誤コピーで容易に流出。
+      <br><strong>暫定対応:</strong> 書き込み時に <code class="inline">mode: 0o600</code>（本人のみ rw）を強制。
+      WSL/Linux/macOS では実効的に保護、Windows は OS が POSIX bit を無視するので限定的（環境変数誘導を併用）。
+      <br><strong>本格対応（未実施・要相談）:</strong> <code class="inline">keytar</code> / Windows DPAPI で OS Credential Store に格納。
+    </div>
+    <div class="diff">
+      <div class="pane before">
+        <header>Before</header>
+<pre>export function saveSettings(s: Settings): void {
+  fs.mkdirSync(path.dirname(SETTINGS_PATH),
+    { recursive: true });
+  fs.writeFileSync(
+    SETTINGS_PATH,
+    JSON.stringify(s, null, 2),
+    "utf-8"
+  );
+}</pre>
+      </div>
+      <div class="pane after">
+        <header>After</header>
+<pre>export function saveSettings(s: Settings): void {
+  fs.mkdirSync(path.dirname(SETTINGS_PATH),
+    { recursive: true });
+  // 本人のみ rw（WSL/Linux/macOS 有効、Windows は noop）
+  fs.writeFileSync(SETTINGS_PATH,
+    JSON.stringify(s, null, 2),
+    { encoding: "utf-8", mode: 0o600 });
+  try { fs.chmodSync(SETTINGS_PATH, 0o600); }
+  catch { /* Windows noop */ }
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── High 3a ────────── -->
+<div class="card">
+  <header>
+    <span class="badge b-high">High</span>
+    <h2>3a. Google アダプタが <code class="inline">?key=</code> 形式でキーを URL に</h2>
+    <span class="path">lib/llm/google.ts</span>
+  </header>
+  <div class="body">
+    <div class="reason">
+      <strong>問題:</strong> URL クエリだと上流エラーレスポンスに URL がエコーされた瞬間、
+      <code class="inline">LlmCallError.message</code> 経由でクライアント UI と監査ログにキーが乗る経路ができる。
+      ヘッダ <code class="inline">x-goog-api-key</code> に変えれば構造的に漏れない。
+    </div>
+    <div class="diff">
+      <div class="pane before">
+        <header>Before</header>
+<pre>const res = await fetch(
+  `${BASE_URL}/${encodeURIComponent(model)}` +
+  `:generateContent?key=${encodeURIComponent(key)}`,
+  {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  },
+);</pre>
+      </div>
+      <div class="pane after">
+        <header>After</header>
+<pre>// キーはヘッダで渡す
+const res = await fetch(
+  `${BASE_URL}/${encodeURIComponent(model)}` +
+  `:generateContent`,
+  {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-goog-api-key": key,
+    },
+    body: JSON.stringify(body),
+  },
+);</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── High 3b ────────── -->
+<div class="card">
+  <header>
+    <span class="badge b-high">High</span>
+    <h2>3b. <code class="inline">LlmCallError</code> がレスポンス本文をそのまま UI に伝播</h2>
+    <span class="path">lib/llm/types.ts</span>
+  </header>
+  <div class="body">
+    <div class="reason">
+      <strong>問題:</strong> <code class="inline">await res.text()</code> を error message にそのまま連結していたため、
+      上流が URL や header をエコーする HTML ページを返した場合に Bearer / sk- / AIza 等が
+      クライアント側 <code class="inline">&lt;div role="alert"&gt;</code> に出る可能性。
+      <strong>対応:</strong> <code class="inline">redactSecrets()</code> で正規表現マスク + 500 字に切り詰め。
+    </div>
+    <div class="diff">
+      <div class="pane before">
+        <header>Before</header>
+<pre>export class LlmCallError extends Error {
+  constructor(
+    public provider: ProviderId,
+    public status: number,
+    message: string,
+  ) {
+    super(
+      `${provider} API error ${status}: ${message}`
+    );
+    this.name = "LlmCallError";
+  }
+}</pre>
+      </div>
+      <div class="pane after">
+        <header>After</header>
+<pre>const SECRET_PATTERNS: RegExp[] = [
+  /sk-(?:ant|proj|live|test)[-_][A-Za-z0-9_-]{8,}/g,
+  /sk-[A-Za-z0-9_-]{20,}/g,
+  /AIza[0-9A-Za-z_-]{20,}/g,
+  /Bearer\s+[A-Za-z0-9._-]{16,}/gi,
+  /key=[A-Za-z0-9_-]{16,}/g,
+  /x-api-key:\s*[^\s,;]+/gi,
+  /x-goog-api-key:\s*[^\s,;]+/gi,
+];
+
+export function redactSecrets(input: string): string {
+  let out = input;
+  for (const pat of SECRET_PATTERNS)
+    out = out.replace(pat, "[REDACTED]");
+  if (out.length > 500) out = out.slice(0, 500) + "…";
+  return out;
+}
+
+export class LlmCallError extends Error {
+  constructor(provider, status, message) {
+    super(`${provider} API error ${status}: ` +
+          redactSecrets(message));
+    …
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── Medium: PII log ────────── -->
+<div class="card">
+  <header>
+    <span class="badge b-med">Medium</span>
+    <h2>4. 氏名 hex を常時 <code class="inline">console.log</code> 出力（PII）</h2>
+    <span class="path">app/sessions/[id]/actions.ts · lib/storage.ts</span>
+  </header>
+  <div class="body">
+    <div class="reason">
+      <strong>問題:</strong> 複製操作のたびに候補者氏名が hex 列で console に残り、
+      PowerShell のスクロールバッファ等に永続化。
+      <strong>対応:</strong> <code class="inline">DEBUG_DUPLICATE_HEX=1</code> / <code class="inline">DEBUG_DUPLICATE=1</code>
+      の env が立った時のみ出力。通常時は氏名を一切ログに出さない。
+    </div>
+    <div class="diff">
+      <div class="pane before">
+        <header>Before</header>
+<pre>if (name !== undefined) {
+  console.log(
+    "[duplicateSessionAction] name hex=",
+    Buffer.from(name, "utf-8").toString("hex"),
+    "raw=",
+    JSON.stringify(name),
+  );
+}
+console.log("[duplicateSessionAction] start",
+  { id, name, role });
+
+// storage.ts
+console.log("[duplicateSession] step:start",
+  { srcId, opts });
+console.log("[duplicateSession] step:before-createSession",
+  { 氏名, 役割, roleChanged });
+…</pre>
+      </div>
+      <div class="pane after">
+        <header>After</header>
+<pre>if (name !== undefined
+    && process.env.DEBUG_DUPLICATE_HEX === "1") {
+  console.log(
+    "[duplicateSessionAction] name hex=",
+    Buffer.from(name, "utf-8").toString("hex"),
+    "raw=",
+    JSON.stringify(name),
+  );
+}
+console.log("[duplicateSessionAction] start",
+  { id, role }); // 氏名を除外
+
+// storage.ts
+const dbg = process.env.DEBUG_DUPLICATE === "1";
+if (dbg) console.log("[duplicateSession] step:start",
+  { srcId });
+if (dbg) console.log(
+  "[duplicateSession] step:before-createSession",
+  { 役割, roleChanged }); // 氏名を除外
+…</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── Medium: backup password required ────────── -->
+<div class="card">
+  <header>
+    <span class="badge b-med">Medium</span>
+    <h2>5. <code class="inline">createBackup()</code> で平文バックアップ生成可能</h2>
+    <span class="path">lib/backup.ts</span>
+  </header>
+  <div class="body">
+    <div class="reason">
+      <strong>問題:</strong> <code class="inline">opts?.password</code> が optional で、
+      未指定なら無暗号化の <code class="inline">.tar.gz</code> を出力する分岐が残っていた。
+      Route Handler は password 必須化済だが、他経路から直接呼ばれると平文 PII を吐く。
+      <strong>対応:</strong> 引数を必須化 + 空文字なら throw、出力 suffix を
+      <code class="inline">.enc.tar.gz</code> に固定。
+    </div>
+    <div class="diff">
+      <div class="pane before">
+        <header>Before</header>
+<pre>export async function createBackup(opts?: {
+  password?: string;
+}): Promise&lt;…&gt; {
+  …
+  const password = opts?.password?.trim();
+  const encrypted = !!password;
+  const fileName = `backup-${ts}${encrypted ? ".enc" : ""}.tar.gz`;
+
+  if (encrypted && password) {
+    // AES-256-GCM で暗号化
+  } else {
+    fs.writeFileSync(outPath, gz);   // ← 平文出力経路
+  }
+  …
+}</pre>
+      </div>
+      <div class="pane after">
+        <header>After</header>
+<pre>export async function createBackup(opts: {
+  password: string;   // 必須化
+}): Promise&lt;…&gt; {
+  const password = opts.password.trim();
+  if (!password) {
+    throw new Error(
+      "暗号化パスワードは必須です（設計書 §11 / " +
+      "平文バックアップは禁止）",
+    );
+  }
+  …
+  const fileName = `backup-${ts}.enc.tar.gz`; // 固定
+  // AES-256-GCM で必ず暗号化
+  …
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── Medium: Origin check ────────── -->
+<div class="card">
+  <header>
+    <span class="badge b-med">Medium</span>
+    <h2>6. <code class="inline">/api/backup</code> に Origin チェック無し（CSRF 余地）</h2>
+    <span class="path">app/api/backup/route.ts</span>
+  </header>
+  <div class="body">
+    <div class="reason">
+      <strong>問題:</strong> 認証なしのローカル運用なので、ブラウザ拡張や別タブからの
+      <code class="inline">fetch('http://localhost:3939/api/backup', {method:'DELETE', …})</code>
+      で破壊操作を実行できる余地があった。
+      <strong>対応:</strong> POST / DELETE に <code class="inline">ensureLocalOrigin()</code> を入れ、
+      <code class="inline">localhost:3939 / 127.0.0.1:3939 / [::1]:3939</code> 以外を 403 で拒否。
+    </div>
+    <div class="pane after">
+      <header>新規追加</header>
+<pre>function ensureLocalOrigin(req: Request): void {
+  const origin = req.headers.get("origin")
+    ?? req.headers.get("referer") ?? "";
+  if (!origin) return; // same-origin は Origin が無い場合あり
+
+  let host = "";
+  try { host = new URL(origin).host; }
+  catch {
+    throw new ApiError("FORBIDDEN_ORIGIN",
+      "不正な Origin ヘッダです", 403);
+  }
+  const allowed = new Set([
+    "localhost:3939",
+    "127.0.0.1:3939",
+    "[::1]:3939",
+  ]);
+  if (!allowed.has(host)) {
+    throw new ApiError("FORBIDDEN_ORIGIN",
+      "ローカル以外からの破壊的操作は許可されていません", 403);
+  }
+}
+
+export async function POST(req)   { ensureLocalOrigin(req); … }
+export async function DELETE(req) { ensureLocalOrigin(req); … }
+// GET は据え置き（listBackups は影響小）</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ────────── Low: dead code ────────── -->
+<div class="card">
+  <header>
+    <span class="badge b-low">Low</span>
+    <h2>7. <code class="inline">lib/claudeApi.ts</code> のデッドコード削除</h2>
+    <span class="path">lib/claudeApi.ts</span>
+  </header>
+  <div class="body">
+    <div class="reason">
+      <strong>問題:</strong> 既に <code class="inline">@/lib/llm/provider</code> に統一済だが
+      互換のため残っていた薄ラッパ。<code class="inline">hasApiKey()</code> が
+      <code class="inline">hasAnyKey()</code> を返すため、Anthropic 以外しか設定していない場合に
+      <code class="inline">getApiKey()</code> が空のまま <code class="inline">callClaude</code> を呼んで 401 ループ → デバッグ中にキーを足す改変を誘発するリスク。
+      <strong>対応:</strong> 呼び出し元 0 件を grep 確認後、ファイル削除。
+    </div>
+  </div>
+</div>
+
+<!-- ────────── Pending ────────── -->
+<div class="pending">
+  <h2>⚠ 残（要相談）</h2>
+  <ul>
+    <li><strong>Critical 2 の本格対応</strong> — <code class="inline">keytar</code>（OS Credential Store）or Windows DPAPI 導入。ネイティブ依存が増えるので別途相談。現状は <code class="inline">0o600</code> + env 誘導で暫定対応。</li>
+    <li><strong>High 4 — Server Action 直叩きへの追加ガード</strong> — 現状の <code class="inline">hasKey()</code> 検査で実害は無し。完全閉鎖したい場合は <code class="inline">FEATURE_API_MODE=off</code> 等の env を追加可能。</li>
+    <li><strong>Low — LLM 出力のキー文字列が <code class="inline">evaluation.json</code> 経由で xlsx 保存</strong> — prompt-injection 由来。<code class="inline">saveCandidate</code>/<code class="inline">saveEvaluation</code> 入口で REDACT hook 追加が候補（根拠文章を改変するので副作用注意）。</li>
+  </ul>
+</div>
+
+<footer class="bottom">
+  generated <span id="ts"></span> · <code>npx tsc --noEmit</code> 0 errors / lint 0 errors
+</footer>
+</div>
+<script>
+  document.getElementById("ts").textContent = new Date().toLocaleString("ja-JP");
+</script>
+</body>
+</html>

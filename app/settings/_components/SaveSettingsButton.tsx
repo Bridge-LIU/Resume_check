@@ -32,11 +32,19 @@ export function SaveSettingsButton() {
 
   return (
     <div className="flex items-center gap-3">
-      {showSaved && (
-        <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
-          ✓ 保存しました
-        </span>
-      )}
+      {/* スクリーンリーダー通知用の live region。要素は常に DOM 上に残し、テキストの増減のみで announce する */}
+      <span
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className={
+          showSaved
+            ? "text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1"
+            : "sr-only"
+        }
+      >
+        {showSaved ? "✓ 保存しました" : ""}
+      </span>
       <Button type="submit" size="sm" disabled={pending}>
         {pending ? "保存中…" : "保存"}
       </Button>

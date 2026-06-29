@@ -1,7 +1,13 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { loadSettings, saveSettings } from "@/lib/storage";
-import type { LlmStage, ProviderConfig, ProviderId, Settings } from "@/lib/types";
+import type {
+  LlmStage,
+  ProviderConfig,
+  ProviderId,
+  ProviderSafeStatus,
+  Settings,
+} from "@/lib/types";
 import { AuditLogViewer } from "./_components/AuditLogViewer";
 import { DataRootField } from "./_components/DataRootField";
 import { RetentionManager } from "./_components/RetentionManager";
@@ -111,6 +117,23 @@ export default async function Page() {
       (process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY ?? "").trim()
     ),
   };
+  // ⚠ providers をそのまま client component に渡すと RSC payload に
+  // API キー文字列がそのまま乗ってブラウザに送られる。boolean + モデル名だけに
+  // 詰め替えてから渡す（Critical: 設定画面からのキー漏洩防止）。
+  const providersSafe: Record<ProviderId, ProviderSafeStatus> = {
+    anthropic: {
+      hasFileKey: !!s.providers.anthropic.key.trim(),
+      defaultModel: s.providers.anthropic.defaultModel,
+    },
+    openai: {
+      hasFileKey: !!s.providers.openai.key.trim(),
+      defaultModel: s.providers.openai.defaultModel,
+    },
+    google: {
+      hasFileKey: !!s.providers.google.key.trim(),
+      defaultModel: s.providers.google.defaultModel,
+    },
+  };
 
   return (
     <div className="space-y-4">
@@ -124,7 +147,7 @@ export default async function Page() {
 
             <ProvidersField
               defaultProvider={s.defaultProvider}
-              providers={s.providers}
+              providers={providersSafe}
               envStatus={envStatus}
             />
 

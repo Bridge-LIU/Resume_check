@@ -179,9 +179,16 @@ function backupsDirPath(): string {
  *   [ salt(16) ][ iv(12) ][ ciphertext(...) ][ tag(16) ]
  *   key = PBKDF2-SHA256(password, salt, 200_000, 32)
  */
-export async function createBackup(opts?: {
-  password?: string;
+export async function createBackup(opts: {
+  password: string;
 }): Promise<{ path: string; size: number; encrypted: boolean }> {
+  const password = opts.password.trim();
+  if (!password) {
+    throw new Error(
+      "暗号化パスワードは必須です（設計書 §11 / 平文バックアップは禁止）",
+    );
+  }
+
   const dataRoot = getDataRoot();
   const backupsDir = backupsDirPath();
   fs.mkdirSync(backupsDir, { recursive: true });
@@ -198,25 +205,19 @@ export async function createBackup(opts?: {
   const tarBuf = buildTar(entries);
   const gz = await gzipAsync(tarBuf);
 
-  const password = opts?.password?.trim();
-  const encrypted = !!password;
-  const fileName = `backup-${timestampStamp()}${encrypted ? ".enc" : ""}.tar.gz`;
+  const fileName = `backup-${timestampStamp()}.enc.tar.gz`;
   const outPath = path.join(backupsDir, fileName);
 
-  if (encrypted && password) {
-    const salt = crypto.randomBytes(SALT_BYTES);
-    const iv = crypto.randomBytes(IV_BYTES);
-    const key = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, KEY_BYTES, "sha256");
-    const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-    const ciphertext = Buffer.concat([cipher.update(gz), cipher.final()]);
-    const tag = cipher.getAuthTag();
-    fs.writeFileSync(outPath, Buffer.concat([salt, iv, ciphertext, tag]));
-  } else {
-    fs.writeFileSync(outPath, gz);
-  }
+  const salt = crypto.randomBytes(SALT_BYTES);
+  const iv = crypto.randomBytes(IV_BYTES);
+  const key = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, KEY_BYTES, "sha256");
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const ciphertext = Buffer.concat([cipher.update(gz), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  fs.writeFileSync(outPath, Buffer.concat([salt, iv, ciphertext, tag]));
 
   const size = fs.statSync(outPath).size;
-  return { path: outPath, size, encrypted };
+  return { path: outPath, size, encrypted: true };
 }
 
 export function listBackups(): {

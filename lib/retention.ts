@@ -20,7 +20,13 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { getDataRoot, getEvaluation, getSessionMeta, loadSettings } from "./storage";
+import {
+  assertSessionId,
+  getDataRoot,
+  getEvaluation,
+  getSessionMeta,
+  loadSettings,
+} from "./storage";
 import type { SessionMeta, Settings } from "./types";
 import { writeAudit } from "./auditLog";
 
@@ -100,6 +106,7 @@ function getCfg(override?: Settings["retention"]): Settings["retention"] {
  * 復元は restoreFromTrash(id)、完全削除は purgeFromTrash(id) または猶予超過後の sweep。
  */
 export function softDeleteSession(id: string): void {
+  assertSessionId(id);
   const sessions = sessionsDir();
   const trash = trashDir();
   const from = path.join(sessions, id);
@@ -274,6 +281,7 @@ export function listTrash(now = new Date(), overrideCfg?: Settings["retention"])
 
 /** ゴミ箱から sessions/ に復元 */
 export function restoreFromTrash(id: string): void {
+  assertSessionId(id);
   const from = path.join(trashDir(), id);
   const to = path.join(sessionsDir(), id);
   if (!fs.existsSync(from)) throw new Error(`ゴミ箱に ${id} が見つかりません`);
@@ -286,6 +294,7 @@ export function restoreFromTrash(id: string): void {
 
 /** ゴミ箱から完全削除（手動・即時） */
 export function purgeFromTrash(id: string): void {
+  assertSessionId(id);
   const dir = path.join(trashDir(), id);
   if (!fs.existsSync(dir)) throw new Error(`ゴミ箱に ${id} が見つかりません`);
   fs.rmSync(dir, { recursive: true, force: true });

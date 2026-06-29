@@ -132,7 +132,19 @@ export function loadSettings(): Settings {
 
 export function saveSettings(s: Settings): void {
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true });
-  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(s, null, 2), "utf-8");
+  // ⚠ settings.json には API キーが平文で書かれる。最低限本人のみ
+  // 読めるようパーミッションを絞る。Windows では POSIX bit は無視されるが、
+  // WSL / Linux / macOS では実効的に rw------- になる。
+  // 真に安全にしたいなら環境変数 (ANTHROPIC_API_KEY 等) を使うこと。
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(s, null, 2), {
+    encoding: "utf-8",
+    mode: 0o600,
+  });
+  try {
+    fs.chmodSync(SETTINGS_PATH, 0o600);
+  } catch {
+    // Windows では noop。失敗しても運用上の支障は無いので握りつぶす。
+  }
 }
 
 /** settings.dataRoot を絶対パスで返す（相対パスはプロジェクトルート基準） */
@@ -161,6 +173,37 @@ function writeJson(filePath: string, data: unknown): void {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
 }
 
+/**
+ * fs.cpSync の代わりに使う、再帰ディレクトリコピー。
+ * Windows + Node.js で、ディレクトリ／ファイル名に日本語が混在すると
+ * `fs.cpSync` がネイティブクラッシュ（プロセスごと死亡）する事象を回避するために用意。
+ * 1 ファイルずつ copyFileSync する素直な実装。失敗ファイルは警告して continue（中断しない）。
+ */
+function copyDirRecursiveSafe(srcDir: string, dstDir: string): void {
+  ensureDir(dstDir);
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(srcDir, { withFileTypes: true });
+  } catch (e) {
+    console.warn("[copyDirRecursiveSafe] readdir 失敗:", srcDir, e);
+    return;
+  }
+  for (const ent of entries) {
+    const sp = path.join(srcDir, ent.name);
+    const dp = path.join(dstDir, ent.name);
+    try {
+      if (ent.isDirectory()) {
+        copyDirRecursiveSafe(sp, dp);
+      } else if (ent.isFile()) {
+        fs.copyFileSync(sp, dp);
+      }
+      // symlink 等はスキップ（uploads/ には基本入らない想定）
+    } catch (e) {
+      console.warn("[copyDirRecursiveSafe] コピー失敗:", sp, "→", dp, e);
+    }
+  }
+}
+
 /* ───────────── Excel ミラー（fire-and-forget） ───────────── */
 
 /**
@@ -184,6 +227,17 @@ function fireSessionsMirror(): void {
 
 const rolesDir = () => dataPath("master", "roles");
 
+/** role ID として安全な文字種（半角英数字・ハイフン・アンダースコア）。
+ * URL 段の検証 (validateRoleMasterId) と二重防御で、将来別の呼び出し元が
+ * 増えた場合に path traversal が storage 層を素通りしないようにする。 */
+const ROLE_ID_SAFE = /^[a-zA-Z0-9_-]+$/;
+
+function assertRoleId(id: string): void {
+  if (typeof id !== "string" || !ROLE_ID_SAFE.test(id)) {
+    throw new Error(`invalid role id: ${id}`);
+  }
+}
+
 export function listRoleIds(): string[] {
   const dir = rolesDir();
   if (!fs.existsSync(dir)) return [];
@@ -200,15 +254,18 @@ export function listRoles(): Role[] {
 }
 
 export function getRole(id: string): Role | null {
+  assertRoleId(id);
   return readJson<Role>(path.join(rolesDir(), `${id}.json`));
 }
 
 export function saveRole(role: Role): void {
+  assertRoleId(role.id);
   writeJson(path.join(rolesDir(), `${role.id}.json`), role);
   fireMasterMirror();
 }
 
 export function deleteRole(id: string): void {
+  assertRoleId(id);
   const p = path.join(rolesDir(), `${id}.json`);
   if (fs.existsSync(p)) fs.rmSync(p);
   fireMasterMirror();
@@ -509,13 +566,44 @@ export function importMaster(json: string): { roles: number; evalAxes: number } 
 /* ───────────── セッション ───────────── */
 
 const sessionsDir = () => dataPath("sessions");
+
+/**
+ * Path traversal 防御。session ID は user-controlled な値が
+ * `fs.rmSync(..., { recursive: true })` まで到達するため、id に
+ * `..\\..\\config` のような細工があると外部の任意ディレクトリを破壊できる。
+ *
+ * 厳密な YYYYMMDD_HHMMSS_<氏名>_<役割> 形式は強制しない:
+ *   - 旧データには YYYYMMDD_HHMM_... (4 桁時刻) が存在する
+ *   - 氏名にはモジバケ含む任意の non-ASCII が入りうる
+ * セキュリティ目的としては、id が sessions/ から脱出できないことが必要十分。
+ * したがって path separator・NUL・制御文字・`.`/`..` のみブロックする。
+ */
+const SESSION_ID_FORBIDDEN = /[\\/\x00-\x1f]/;
+
+export function isValidSessionId(id: unknown): id is string {
+  if (typeof id !== "string" || id.length === 0) return false;
+  if (id === "." || id === "..") return false;
+  if (SESSION_ID_FORBIDDEN.test(id)) return false;
+  return true;
+}
+
+export function assertSessionId(id: string): void {
+  if (!isValidSessionId(id)) {
+    throw new Error(`invalid session id: ${id}`);
+  }
+}
+
 const sessionDir = (id: string) => path.join(sessionsDir(), id);
 
-/** ID 生成: YYYYMMDD_HHMM_<氏名>_<役割>（ユーザ希望により日本語フォルダ名を維持） */
+/**
+ * ID 生成: YYYYMMDD_HHMMSS_<氏名>_<役割>（ユーザ希望により日本語フォルダ名を維持）。
+ * 秒まで含めることで、同一分内の連続複製による ID 衝突＝既存セッション上書きを防ぐ。
+ * 旧形式 (YYYYMMDD_HHMM_...) のディレクトリはそのまま読み書き可（ID は単なる文字列）。
+ */
 export function generateSessionId(氏名: string, 役割: string, when = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const date = `${when.getFullYear()}${pad(when.getMonth() + 1)}${pad(when.getDate())}`;
-  const time = `${pad(when.getHours())}${pad(when.getMinutes())}`;
+  const time = `${pad(when.getHours())}${pad(when.getMinutes())}${pad(when.getSeconds())}`;
   return `${date}_${time}_${氏名}_${役割}`;
 }
 
@@ -531,10 +619,12 @@ export function listSessions(): SessionMeta[] {
 }
 
 export function getSessionMeta(id: string): SessionMeta | null {
+  if (!isValidSessionId(id)) return null;
   return readJson<SessionMeta>(path.join(sessionDir(id), "session.json"));
 }
 
 export function saveSessionMeta(meta: SessionMeta): void {
+  assertSessionId(meta.id);
   writeJson(path.join(sessionDir(meta.id), "session.json"), meta);
   fireSessionsMirror();
 }
@@ -542,6 +632,7 @@ export function saveSessionMeta(meta: SessionMeta): void {
 export function createSession(氏名: string, 役割: string): SessionMeta {
   const now = new Date();
   const id = generateSessionId(氏名, 役割, now);
+  assertSessionId(id);
   ensureDir(sessionDir(id));
   ensureDir(path.join(sessionDir(id), "uploads"));
   const meta: SessionMeta = {
@@ -559,6 +650,7 @@ export function createSession(氏名: string, 役割: string): SessionMeta {
 }
 
 export function deleteSession(id: string): void {
+  assertSessionId(id);
   const dir = sessionDir(id);
   if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
   fireSessionsMirror();
@@ -579,12 +671,26 @@ export function duplicateSession(
   srcId: string,
   opts: { 氏名?: string; 役割?: string } = {},
 ): SessionMeta | null {
+  assertSessionId(srcId);
+  // ステップログは PII を含むため、デバッグ環境変数下のみ出力。
+  const dbg = process.env.DEBUG_DUPLICATE === "1";
+  if (dbg) console.log("[duplicateSession] step:start", { srcId });
   const src = getSessionMeta(srcId);
-  if (!src) return null;
+  if (!src) {
+    if (dbg) console.log("[duplicateSession] step:src-not-found");
+    return null;
+  }
   const 氏名 = (opts.氏名?.trim() || src.氏名).trim();
   const 役割 = (opts.役割?.trim() || src.役割).trim();
   const roleChanged = 役割 !== src.役割;
+  if (dbg) {
+    console.log("[duplicateSession] step:before-createSession", {
+      役割,
+      roleChanged,
+    });
+  }
   const meta = createSession(氏名, 役割);
+  if (dbg) console.log("[duplicateSession] step:after-createSession", { newId: meta.id });
   const srcDir = sessionDir(srcId);
   const dstDir = sessionDir(meta.id);
 
@@ -592,57 +698,82 @@ export function duplicateSession(
   const filesToCopy = roleChanged
     ? ["candidate.json"]
     : ["candidate.json", "conditions_snapshot.json", "questions.json"];
+  if (dbg) console.log("[duplicateSession] step:copying-files", filesToCopy);
   for (const name of filesToCopy) {
     const f = path.join(srcDir, name);
-    if (fs.existsSync(f)) fs.copyFileSync(f, path.join(dstDir, name));
+    if (fs.existsSync(f)) {
+      if (dbg) console.log("[duplicateSession] step:copy", name);
+      fs.copyFileSync(f, path.join(dstDir, name));
+    }
   }
   const srcUploads = path.join(srcDir, "uploads");
   if (fs.existsSync(srcUploads)) {
-    fs.cpSync(srcUploads, path.join(dstDir, "uploads"), { recursive: true });
+    if (dbg) console.log("[duplicateSession] step:copy-uploads");
+    // fs.cpSync は Windows + Node.js で日本語フォルダ／ファイル名混在時に
+    // ネイティブクラッシュ（プロセスごと死亡）する事象あり。手動再帰コピーに置換。
+    copyDirRecursiveSafe(srcUploads, path.join(dstDir, "uploads"));
+    if (dbg) console.log("[duplicateSession] step:copy-uploads-done");
   }
+  if (dbg) console.log("[duplicateSession] step:before-mirror", { roleChanged });
   if (!roleChanged && getConditionsSnapshot(meta.id)) {
     saveSessionMeta({ ...meta, status: "質問公開" });
   } else {
     // saveSessionMeta を通らない経路でも面談者一覧シートを必ず追従させる
     fireSessionsMirror();
   }
-  return getSessionMeta(meta.id);
+  const result = getSessionMeta(meta.id);
+  if (dbg) console.log("[duplicateSession] step:done", { ok: !!result });
+  return result;
 }
 
 /* ───────────── セッション内の各セクション ───────────── */
 
 const sectionPath = (id: string, file: string) => path.join(sessionDir(id), file);
 
+/** read 系: 不正 id は null を返す（既存 API 契約「ファイル無し = null」を維持） */
+function readSection<T>(id: string, file: string): T | null {
+  if (!isValidSessionId(id)) return null;
+  return readJson<T>(sectionPath(id, file));
+}
+
 export const getCandidate = (id: string) =>
-  readJson<Candidate>(sectionPath(id, "candidate.json"));
+  readSection<Candidate>(id, "candidate.json");
 export const saveCandidate = (id: string, data: Candidate) => {
+  assertSessionId(id);
   writeJson(sectionPath(id, "candidate.json"), data);
   fireSessionsMirror();
 };
 
 export const getConditionsSnapshot = (id: string) => {
-  const raw = readJson<ConditionsSnapshot>(sectionPath(id, "conditions_snapshot.json"));
+  const raw = readSection<ConditionsSnapshot>(id, "conditions_snapshot.json");
   if (!raw) return null;
   const evalNorm = normalizeEvalCriteria(raw.eval);
   if (evalNorm) raw.eval = evalNorm;
   return raw;
 };
-export const saveConditionsSnapshot = (id: string, data: ConditionsSnapshot) =>
+export const saveConditionsSnapshot = (id: string, data: ConditionsSnapshot) => {
+  assertSessionId(id);
   writeJson(sectionPath(id, "conditions_snapshot.json"), data);
+};
 
 export const getQuestions = (id: string) =>
-  readJson<Questions>(sectionPath(id, "questions.json"));
-export const saveQuestions = (id: string, data: Questions) =>
+  readSection<Questions>(id, "questions.json");
+export const saveQuestions = (id: string, data: Questions) => {
+  assertSessionId(id);
   writeJson(sectionPath(id, "questions.json"), data);
+};
 
 export const getMinutes = (id: string) =>
-  readJson<Minutes>(sectionPath(id, "minutes.json"));
-export const saveMinutes = (id: string, data: Minutes) =>
+  readSection<Minutes>(id, "minutes.json");
+export const saveMinutes = (id: string, data: Minutes) => {
+  assertSessionId(id);
   writeJson(sectionPath(id, "minutes.json"), data);
+};
 
 export const getEvaluation = (id: string) =>
-  readJson<Evaluation>(sectionPath(id, "evaluation.json"));
+  readSection<Evaluation>(id, "evaluation.json");
 export const saveEvaluation = (id: string, data: Evaluation) => {
+  assertSessionId(id);
   writeJson(sectionPath(id, "evaluation.json"), data);
   fireSessionsMirror();
 };

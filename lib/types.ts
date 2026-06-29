@@ -142,6 +142,18 @@ export interface ProviderConfig {
   models: Partial<Record<LlmStage, string>>;
 }
 
+/**
+ * Client Component に渡してよい安全な抜粋。
+ * `ProviderConfig.key` をそのまま渡すと RSC payload にキー文字列が乗ってしまうため、
+ * Server Component 側で boolean + モデル名にだけ詰め替えてから渡すこと。
+ */
+export interface ProviderSafeStatus {
+  /** ローカル保存のキーが入っているか */
+  hasFileKey: boolean;
+  /** UI 表示用の既定モデル */
+  defaultModel: string;
+}
+
 /** ⑤質問生成時の問数設定。prompt 文と maxTokens が両方この値から動的に決まる。 */
 export interface QuestionCounts {
   /** 非技術質問の数（既定 7） */

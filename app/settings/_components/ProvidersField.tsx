@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Lock, LockOpen } from "lucide-react";
-import type { ProviderConfig, ProviderId } from "@/lib/types";
+import type { ProviderId, ProviderSafeStatus } from "@/lib/types";
 import { PROVIDERS, TIER_ICON } from "@/lib/llm/registry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,12 @@ import { useConfirm } from "@/components/ui/use-confirm";
 
 interface Props {
   defaultProvider: ProviderId;
-  providers: Record<ProviderId, ProviderConfig>;
+  /**
+   * ⚠ 必ず `ProviderSafeStatus` を渡すこと（API キー文字列を含まない）。
+   * page.tsx で `providersSafe` を生成してから渡す。`ProviderConfig` を
+   * そのまま渡すと RSC payload にキーが漏れる。
+   */
+  providers: Record<ProviderId, ProviderSafeStatus>;
   envStatus: Record<ProviderId, boolean>;
 }
 
@@ -83,12 +88,12 @@ function ProviderCard({
 }: {
   id: ProviderId;
   info: (typeof PROVIDERS)[ProviderId];
-  config: ProviderConfig;
+  config: ProviderSafeStatus;
   isDefault: boolean;
   hasEnvKey: boolean;
   confirm: ReturnType<typeof useConfirm>["confirm"];
 }) {
-  const hasFileKey = !!config.key.trim();
+  const hasFileKey = config.hasFileKey;
   const isConfigured = hasFileKey || hasEnvKey;
   // 未設定なら最初から編集可、設定済ならロック状態が既定
   const [editing, setEditing] = useState(!hasFileKey);

@@ -28,6 +28,29 @@ export interface LlmAdapter {
   call(opts: Omit<LlmCallOptions, "provider">): Promise<string>;
 }
 
+/**
+ * LLM レスポンス本文や HTTP ヘッダから漏れる可能性のある秘密値をマスクする。
+ * `LlmCallError.message` はそのまま actions の戻り値として client に渡るため、
+ * 必ずここを通してから super() に渡す。
+ */
+const SECRET_PATTERNS: RegExp[] = [
+  /sk-(?:ant|proj|live|test)[-_][A-Za-z0-9_-]{8,}/g, // Anthropic / OpenAI
+  /sk-[A-Za-z0-9_-]{20,}/g, // 汎用 sk- 接頭辞
+  /AIza[0-9A-Za-z_-]{20,}/g, // Google
+  /Bearer\s+[A-Za-z0-9._-]{16,}/gi,
+  /key=[A-Za-z0-9_-]{16,}/g,
+  /x-api-key:\s*[^\s,;]+/gi,
+  /x-goog-api-key:\s*[^\s,;]+/gi,
+];
+
+export function redactSecrets(input: string): string {
+  let out = input;
+  for (const pat of SECRET_PATTERNS) out = out.replace(pat, "[REDACTED]");
+  // 長すぎる HTML エラーページ等を切り詰める（漏洩の二次予防）
+  if (out.length > 500) out = out.slice(0, 500) + "…";
+  return out;
+}
+
 export class LlmKeyError extends Error {
   constructor(public provider: ProviderId) {
     super(`APIキーが設定されていません（${provider}）。/settings で設定してください。`);
@@ -41,7 +64,7 @@ export class LlmCallError extends Error {
     public status: number,
     message: string,
   ) {
-    super(`${provider} API error ${status}: ${message}`);
+    super(`${provider} API error ${status}: ${redactSecrets(message)}`);
     this.name = "LlmCallError";
   }
 }

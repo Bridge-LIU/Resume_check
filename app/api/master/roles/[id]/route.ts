@@ -46,9 +46,23 @@ function validate(body: unknown): Role {
   };
 }
 
+/**
+ * URL セグメントの `[id]` を検証する。未検証で getRole/deleteRole に渡すと
+ * `..%2F..%2Fconfig%2Fsettings` のような細工で sensitive ファイル
+ * （config/settings.json には API キーが平文で入る）を読み書き／削除できる。
+ */
+function assertUrlId(id: string): string {
+  const v = validateRoleMasterId(id);
+  if (!v.ok) {
+    throw new ApiError("VALIDATION_ERROR", v.error, 400);
+  }
+  return v.value;
+}
+
 export async function GET(_req: Request, ctx: RouteContext<"/api/master/roles/[id]">) {
   try {
-    const { id } = await ctx.params;
+    const { id: rawId } = await ctx.params;
+    const id = assertUrlId(rawId);
     const role = getRole(id);
     if (!role) {
       throw new ApiError("ROLE_NOT_FOUND", `ID「${id}」が存在しません`, 404);
@@ -61,7 +75,8 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/master/roles/[i
 
 export async function PUT(req: Request, ctx: RouteContext<"/api/master/roles/[id]">) {
   try {
-    const { id: originalId } = await ctx.params;
+    const { id: rawOriginalId } = await ctx.params;
+    const originalId = assertUrlId(rawOriginalId);
     const body = await req.json().catch(() => {
       throw new ApiError("JSON_PARSE_FAILED", "JSON を解析できませんでした", 400);
     });
@@ -95,7 +110,8 @@ export async function PUT(req: Request, ctx: RouteContext<"/api/master/roles/[id
 
 export async function DELETE(_req: Request, ctx: RouteContext<"/api/master/roles/[id]">) {
   try {
-    const { id } = await ctx.params;
+    const { id: rawId } = await ctx.params;
+    const id = assertUrlId(rawId);
     if (!getRole(id)) {
       throw new ApiError("ROLE_NOT_FOUND", `ID「${id}」が存在しません`, 404);
     }
