@@ -54,7 +54,7 @@ export function MaxPromptCopy({
         >
           {isPending ? "生成中…" : state === "copied" ? "コピー済 ✓" : label}
         </Button>
-        {error && <span className="text-red-600 text-[10px]">{error}</span>}
+        {error && <span className="text-red-600 text-2xs">{error}</span>}
       </div>
     </div>
   );

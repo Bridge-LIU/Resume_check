@@ -5,26 +5,26 @@
 
 export type ResumeKind = "pdf" | "docx" | "xlsx";
 
+// .xls (BIFF 形式) は廃止。lib/documentExtract.ts は ExcelJS に移行しており、
+// ExcelJS は OOXML (.xlsx) のみ対応する。ユーザは .xls を Excel で開いて
+// .xlsx 形式として保存し直す必要がある（モダン Excel での操作は1回）。
 const EXT_TO_KIND: Record<string, ResumeKind> = {
   pdf: "pdf",
   docx: "docx",
   xlsx: "xlsx",
-  xls: "xlsx",
 };
 
 const MIME_TO_KIND: Record<string, ResumeKind> = {
   "application/pdf": "pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-  "application/vnd.ms-excel": "xlsx",
 };
 
 /** ファイル入力の accept 属性に渡す MIME + 拡張子 */
 export const RESUME_FILE_ACCEPT =
-  ".pdf,.docx,.xlsx,.xls,application/pdf," +
+  ".pdf,.docx,.xlsx,application/pdf," +
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document," +
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet," +
-  "application/vnd.ms-excel";
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export function detectResumeKind(
   mimeType: string,

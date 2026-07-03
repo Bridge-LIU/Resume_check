@@ -88,7 +88,7 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
           </div>
         ) : (
           <div id="new-session-name-help" className="text-xs text-zinc-500">
-            フォルダ名と一覧表示に使われます（60文字以内・記号 / \ : * ? " &lt; &gt; | は不可）。
+            フォルダ名と一覧表示に使われます（60文字以内・記号 / \ : * ? &quot; &lt; &gt; | は不可）。
           </div>
         )}
       </div>

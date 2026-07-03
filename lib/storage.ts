@@ -9,6 +9,7 @@
  */
 
 import "server-only";
+import { cache } from "react";
 import fs from "node:fs";
 import path from "node:path";
 import type {
@@ -22,10 +23,13 @@ import type {
   ProviderId,
   Questions,
   Role,
-  RoleEvalOverride,
   SessionMeta,
   Settings,
 } from "./types";
+import {
+  validateEvalCriteriaObject,
+  validateRoleObject,
+} from "./validation";
 
 const PROJECT_ROOT = process.cwd();
 const SETTINGS_PATH = path.join(PROJECT_ROOT, "config", "settings.json");
@@ -125,12 +129,129 @@ function migrateSettings(raw: unknown): Settings {
   };
 }
 
-export function loadSettings(): Settings {
+/**
+ * settings.json を読み込み、新形式に正規化して返す。
+ * `react.cache` でリクエスト単位にメモ化されるため、同一リクエストで何度呼んでも
+ * fs アクセスは1回。書き込み（saveSettings）と同一リクエスト内で再読しない前提。
+ */
+export const loadSettings = cache((): Settings => {
   const raw = fs.readFileSync(SETTINGS_PATH, "utf-8");
+  // 旧バージョンで作成された settings.json は 0o600 が付いていない可能性がある。
+  // API キーの機密性を守るため、読み込むたびに chmod で締め直す（Windows では noop）。
+  try {
+    fs.chmodSync(SETTINGS_PATH, 0o600);
+  } catch {
+    // Windows / 権限不足で失敗するのは想定内、握りつぶす。
+  }
   return migrateSettings(JSON.parse(raw));
+});
+
+/**
+ * dataRoot として受け入れられる値かを検証し、保存に使うべき文字列を返す。
+ *
+ * 防御の意図: settings 経路はユーザ入力をそのまま fs パスに採用するため、
+ * 以下のような destructive な値を弾く必要がある:
+ *   - システムディレクトリ（C:\Windows, /etc 等）── アプリは dataRoot 配下を
+ *     `fs.rmSync(..., { recursive: true, force: true })` する経路を持つため、
+ *     ここを誤指定すると OS そのものを破壊しうる
+ *   - ファイルシステム/ドライブのルート（C:\, /）
+ *   - 通常ファイル（ディレクトリでない）
+ *   - 設定ファイル自身が住む config/ ── settings.json を巻き込むため
+ *
+ * 戻り値: 保存時の dataRoot 文字列（入力フォーマット — 相対 or 絶対 — は保つ）。
+ * 不正なら Error を投げる（呼び出し側で UI に出すなりキャッチするなり）。
+ */
+function isFilesystemRoot(abs: string): boolean {
+  const parsed = path.parse(abs);
+  return parsed.root === abs;
+}
+
+function isSystemPath(abs: string): boolean {
+  const sep = path.sep;
+  if (process.platform === "win32") {
+    const parsed = path.parse(abs);
+    const drive = parsed.root.toLowerCase(); // 例: "c:\\"
+    const FORBIDDEN_WIN = [
+      "windows",
+      "program files",
+      "program files (x86)",
+      "programdata",
+      "system volume information",
+      "$recycle.bin",
+    ];
+    const norm = abs.toLowerCase();
+    for (const sys of FORBIDDEN_WIN) {
+      const blocked = (drive + sys).toLowerCase();
+      if (norm === blocked || norm.startsWith(blocked + sep.toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
+  }
+  // POSIX
+  const FORBIDDEN_POSIX = [
+    "/etc",
+    "/usr",
+    "/bin",
+    "/sbin",
+    "/var",
+    "/boot",
+    "/dev",
+    "/proc",
+    "/sys",
+    "/System",
+    "/Library/System",
+  ];
+  for (const sys of FORBIDDEN_POSIX) {
+    if (abs === sys || abs.startsWith(sys + "/")) return true;
+  }
+  return false;
+}
+
+export function validateDataRoot(input: unknown): string {
+  if (typeof input !== "string") {
+    throw new Error("dataRoot は文字列で指定してください");
+  }
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error("dataRoot は空にできません");
+  }
+  // 制御文字（NUL 等）を含むパスは拒否
+  if (/[\x00-\x1f]/.test(trimmed)) {
+    throw new Error("dataRoot に制御文字を含めることはできません");
+  }
+  const absolute = path.isAbsolute(trimmed)
+    ? path.resolve(trimmed)
+    : path.resolve(PROJECT_ROOT, trimmed);
+
+  if (isFilesystemRoot(absolute)) {
+    throw new Error(
+      `dataRoot にファイルシステムのルートは指定できません: ${absolute}`,
+    );
+  }
+  if (isSystemPath(absolute)) {
+    throw new Error(
+      `dataRoot にシステムディレクトリは指定できません: ${absolute}`,
+    );
+  }
+  // config/ 自身を巻き込まないように
+  const configDir = path.dirname(SETTINGS_PATH);
+  if (absolute === configDir || absolute.startsWith(configDir + path.sep)) {
+    throw new Error(
+      `dataRoot にアプリ設定ディレクトリ (${configDir}) は指定できません`,
+    );
+  }
+  // 既存パスが通常ファイルなら拒否（ディレクトリ作成時にエラーになる前にここで弾く）
+  if (fs.existsSync(absolute) && !fs.statSync(absolute).isDirectory()) {
+    throw new Error(`dataRoot にファイルは指定できません: ${absolute}`);
+  }
+  return trimmed;
 }
 
 export function saveSettings(s: Settings): void {
+  // 防御の最後の砦: 直接 saveSettings({...dataRoot:...}) が叩かれた場合も弾く。
+  // UI 経由のフローでは事前にも検証されている前提だが、二重防御する。
+  validateDataRoot(s.dataRoot);
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true });
   // ⚠ settings.json には API キーが平文で書かれる。最低限本人のみ
   // 読めるようパーミッションを絞る。Windows では POSIX bit は無視されるが、
@@ -147,13 +268,17 @@ export function saveSettings(s: Settings): void {
   }
 }
 
-/** settings.dataRoot を絶対パスで返す（相対パスはプロジェクトルート基準） */
-export function getDataRoot(): string {
+/**
+ * settings.dataRoot を絶対パスで返す（相対パスはプロジェクトルート基準）。
+ * `react.cache` でリクエスト単位にメモ化。1リクエスト中に多数の storage 呼び出しが
+ * 重なっても settings.json の再読は発生しない。
+ */
+export const getDataRoot = cache((): string => {
   const s = loadSettings();
   return path.isAbsolute(s.dataRoot)
     ? s.dataRoot
     : path.resolve(PROJECT_ROOT, s.dataRoot);
-}
+});
 
 function dataPath(...segments: string[]): string {
   return path.join(getDataRoot(), ...segments);
@@ -170,7 +295,11 @@ function readJson<T>(filePath: string): T | null {
 
 function writeJson(filePath: string, data: unknown): void {
   ensureDir(path.dirname(filePath));
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+  // 原子書き込み: crash / power-loss で中間状態が残り、次回 JSON.parse で
+  // 全画面が落ちるのを防ぐ。同一ボリューム内での rename はほぼ atomic。
+  const tmp = `${filePath}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
+  fs.renameSync(tmp, filePath);
 }
 
 /**
@@ -345,170 +474,19 @@ export function resolveEvalForRole(
 /* ───────────── マスタ全体: import / export ───────────── */
 
 const MASTER_EXPORT_VERSION = "1.0";
-const ROLE_ID_PATTERN = /^[A-Za-z0-9_\-ぁ-んァ-ン一-龥]+$/;
 
+/** 共通バリデータ（lib/validation.ts）を import 経路で薄くラップして Error 化する。
+ * 以前は ID パターンが 2 系統に分岐していたため統一した。詳細は validation.ts コメント参照。 */
 function validateRoleForImport(raw: unknown, index: number): Role {
-  if (!raw || typeof raw !== "object") {
-    throw new Error(`roles[${index}] はオブジェクトで指定してください`);
-  }
-  const b = raw as Record<string, unknown>;
-  if (typeof b.id !== "string" || !b.id.trim()) {
-    throw new Error(`roles[${index}].id は必須です`);
-  }
-  if (!ROLE_ID_PATTERN.test(b.id)) {
-    throw new Error(`roles[${index}].id に使用できない文字が含まれています`);
-  }
-  if (typeof b.役割 !== "string" || !b.役割.trim()) {
-    throw new Error(`roles[${index}].役割 は必須です`);
-  }
-  if (typeof b.経験 !== "string") {
-    throw new Error(`roles[${index}].経験 は文字列で指定してください`);
-  }
-  if (typeof b.未経験可 !== "boolean") {
-    throw new Error(`roles[${index}].未経験可 は真偽値で指定してください`);
-  }
-  if (
-    !Array.isArray(b.条件1_基本人物像) ||
-    !b.条件1_基本人物像.every((x) => typeof x === "string")
-  ) {
-    throw new Error(`roles[${index}].条件1_基本人物像 は文字列配列で指定してください`);
-  }
-  if (
-    !Array.isArray(b.条件2_未経験者必須) ||
-    !b.条件2_未経験者必須.every((x) => typeof x === "string")
-  ) {
-    throw new Error(`roles[${index}].条件2_未経験者必須 は文字列配列で指定してください`);
-  }
-  return {
-    id: b.id.trim(),
-    役割: b.役割.trim(),
-    経験: (b.経験 as string).trim(),
-    未経験可: b.未経験可,
-    条件1_基本人物像: b.条件1_基本人物像 as string[],
-    条件2_未経験者必須: b.条件2_未経験者必須 as string[],
-  };
+  const result = validateRoleObject(raw, `roles[${index}]`);
+  if (!result.ok) throw new Error(result.error);
+  return result.value;
 }
 
 function validateEvalCriteriaForImport(raw: unknown): EvalCriteria {
-  if (!raw || typeof raw !== "object") {
-    throw new Error("evalCriteria は必須です");
-  }
-  const b = raw as Record<string, unknown>;
-  if (b.方式 !== "BARS") {
-    throw new Error('evalCriteria.方式 は "BARS" のみ対応しています');
-  }
-  if (!Array.isArray(b.評価軸)) {
-    throw new Error("evalCriteria.評価軸 は配列で指定してください");
-  }
-  if (b.評価軸.length === 0) {
-    throw new Error("evalCriteria.評価軸 は1つ以上必要です");
-  }
-  const axes: EvalAxis[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < b.評価軸.length; i++) {
-    const a = b.評価軸[i];
-    if (typeof a === "string") {
-      const 名前 = a.trim();
-      if (!名前) throw new Error(`evalCriteria.評価軸[${i}].名前 が空です`);
-      if (seen.has(名前)) throw new Error(`evalCriteria.評価軸「${名前}」が重複しています`);
-      seen.add(名前);
-      axes.push({ 名前, 重み: 1 });
-      continue;
-    }
-    if (!a || typeof a !== "object") {
-      throw new Error(`evalCriteria.評価軸[${i}] はオブジェクトで指定してください`);
-    }
-    const o = a as Record<string, unknown>;
-    if (typeof o.名前 !== "string" || !o.名前.trim()) {
-      throw new Error(`evalCriteria.評価軸[${i}].名前 は必須です`);
-    }
-    if (typeof o.重み !== "number" || !Number.isFinite(o.重み) || o.重み <= 0) {
-      throw new Error(`evalCriteria.評価軸[${i}].重み は正の数値で指定してください`);
-    }
-    const 名前 = o.名前.trim();
-    if (seen.has(名前)) throw new Error(`evalCriteria.評価軸「${名前}」が重複しています`);
-    seen.add(名前);
-    axes.push({ 名前, 重み: o.重み });
-  }
-  if (!b.スケール || typeof b.スケール !== "object") {
-    throw new Error("evalCriteria.スケール が不正です");
-  }
-  const sc = b.スケール as Record<string, unknown>;
-  if (typeof sc.最小 !== "number") throw new Error("evalCriteria.スケール.最小 は数値で指定してください");
-  if (typeof sc.最大 !== "number") throw new Error("evalCriteria.スケール.最大 は数値で指定してください");
-  if (typeof sc.刻み !== "number") throw new Error("evalCriteria.スケール.刻み は数値で指定してください");
-  if (sc.最大 <= sc.最小) throw new Error("evalCriteria.スケール.最大 は最小より大きい必要があります");
-  if (sc.刻み <= 0) throw new Error("evalCriteria.スケール.刻み は正の数で指定してください");
-  if (typeof sc.段階数 !== "number") throw new Error("evalCriteria.スケール.段階数 は数値で指定してください");
-  if (typeof b.合格ライン !== "number") throw new Error("evalCriteria.合格ライン は数値で指定してください");
-  if (typeof b.普通ライン !== "number") throw new Error("evalCriteria.普通ライン は数値で指定してください");
-  if (typeof b.自己解決レベル !== "string") {
-    throw new Error("evalCriteria.自己解決レベル は文字列で指定してください");
-  }
-  if (!Array.isArray(b.出力) || !b.出力.every((x) => typeof x === "string")) {
-    throw new Error("evalCriteria.出力 は文字列配列で指定してください");
-  }
-  const overrides: Record<string, RoleEvalOverride> | undefined = (() => {
-    if (b.ロール別 === undefined) return undefined;
-    if (!b.ロール別 || typeof b.ロール別 !== "object" || Array.isArray(b.ロール別)) {
-      throw new Error("evalCriteria.ロール別 はオブジェクトで指定してください");
-    }
-    const out: Record<string, RoleEvalOverride> = {};
-    for (const [roleId, val] of Object.entries(
-      b.ロール別 as Record<string, unknown>,
-    )) {
-      if (!val || typeof val !== "object") {
-        throw new Error(`evalCriteria.ロール別.${roleId} はオブジェクトで指定してください`);
-      }
-      const ov = val as Record<string, unknown>;
-      const entry: RoleEvalOverride = {};
-      if (ov.重み !== undefined) {
-        if (
-          !Array.isArray(ov.重み) ||
-          !ov.重み.every((n) => typeof n === "number" && Number.isFinite(n) && n > 0)
-        ) {
-          throw new Error(
-            `evalCriteria.ロール別.${roleId}.重み は正の数値配列で指定してください`,
-          );
-        }
-        if (ov.重み.length > axes.length) {
-          throw new Error(
-            `evalCriteria.ロール別.${roleId}.重み の長さ(${ov.重み.length})が評価軸数(${axes.length})を超えています`,
-          );
-        }
-        entry.重み = ov.重み as number[];
-      }
-      if (ov.合格ライン !== undefined) {
-        if (typeof ov.合格ライン !== "number" || !Number.isFinite(ov.合格ライン)) {
-          throw new Error(`evalCriteria.ロール別.${roleId}.合格ライン は数値で指定してください`);
-        }
-        entry.合格ライン = ov.合格ライン;
-      }
-      if (ov.普通ライン !== undefined) {
-        if (typeof ov.普通ライン !== "number" || !Number.isFinite(ov.普通ライン)) {
-          throw new Error(`evalCriteria.ロール別.${roleId}.普通ライン は数値で指定してください`);
-        }
-        entry.普通ライン = ov.普通ライン;
-      }
-      out[roleId] = entry;
-    }
-    return out;
-  })();
-  return {
-    方式: "BARS",
-    評価軸: axes,
-    スケール: {
-      最小: sc.最小 as number,
-      最大: sc.最大 as number,
-      刻み: sc.刻み as number,
-      段階数: sc.段階数 as number,
-    },
-    合格ライン: b.合格ライン as number,
-    普通ライン: b.普通ライン as number,
-    自己解決レベル: b.自己解決レベル as string,
-    出力: b.出力 as string[],
-    ...(overrides ? { ロール別: overrides } : {}),
-  };
+  const result = validateEvalCriteriaObject(raw);
+  if (!result.ok) throw new Error(`evalCriteria: ${result.error}`);
+  return result.value;
 }
 
 /**
@@ -578,7 +556,10 @@ const sessionsDir = () => dataPath("sessions");
  * セキュリティ目的としては、id が sessions/ から脱出できないことが必要十分。
  * したがって path separator・NUL・制御文字・`.`/`..` のみブロックする。
  */
-const SESSION_ID_FORBIDDEN = /[\\/\x00-\x1f]/;
+// Windows で予約された文字（< > : " | ? *）と ADS 用の ':' を含める。
+// path.join(sessionsDir, "foo:bar") は Windows で foo の ADS になり、
+// disc 上のプライマリファイルと別ストリームを触るオラクルになりうる。
+const SESSION_ID_FORBIDDEN = /[\\/:<>"|?*\x00-\x1f]/;
 
 export function isValidSessionId(id: unknown): id is string {
   if (typeof id !== "string" || id.length === 0) return false;
@@ -610,10 +591,11 @@ export function generateSessionId(氏名: string, 役割: string, when = new Dat
 export function listSessions(): SessionMeta[] {
   const dir = sessionsDir();
   if (!fs.existsSync(dir)) return [];
+  // withFileTypes で N 回の statSync を避ける（旧実装: readdir → 各 statSync）
   return fs
-    .readdirSync(dir)
-    .filter((id) => fs.statSync(path.join(dir, id)).isDirectory())
-    .map((id) => getSessionMeta(id))
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => getSessionMeta(d.name))
     .filter((m): m is SessionMeta => m !== null)
     .sort((a, b) => (a.作成日時 < b.作成日時 ? 1 : -1));
 }
@@ -775,5 +757,16 @@ export const getEvaluation = (id: string) =>
 export const saveEvaluation = (id: string, data: Evaluation) => {
   assertSessionId(id);
   writeJson(sectionPath(id, "evaluation.json"), data);
-  fireSessionsMirror();
+  // 一覧の N+1 を消すため、総合スコアと合否を SessionMeta にデノーマライズして保持。
+  // saveSessionMeta は fireSessionsMirror も呼ぶため、ここでは追加でミラーを焚かない。
+  const meta = getSessionMeta(id);
+  if (meta && (meta.総合スコア !== data.総合スコア || meta.合否 !== data.合否)) {
+    saveSessionMeta({
+      ...meta,
+      総合スコア: data.総合スコア,
+      合否: data.合否,
+    });
+  } else {
+    fireSessionsMirror();
+  }
 };

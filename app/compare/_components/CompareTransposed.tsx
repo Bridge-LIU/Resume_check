@@ -42,7 +42,7 @@ function rolePillClass(役割: string) {
 function passingPill(g: TransposedRow["pass"]) {
   if (g === "合格") return <span className="pill pill-pass">合格</span>;
   if (g === "不合格") return <span className="pill pill-fail">不合格</span>;
-  if (g === "普通") return <span className="pill pill-edit">普通</span>;
+  if (g === "普通") return <span className="pill pill-mid">普通</span>;
   return <span className="text-zinc-400">―</span>;
 }
 
@@ -193,7 +193,7 @@ export function CompareTransposed({
                 >
                   {ax}
                   {axisWeights[ax] != null && (
-                    <span className="ml-1 text-[10px] text-zinc-400 font-normal">
+                    <span className="ml-1 text-2xs text-zinc-400 font-normal">
                       ×{axisWeights[ax]}
                     </span>
                   )}{" "}
@@ -362,7 +362,7 @@ function FragmentRow({
           >
             {row.name}
           </Link>
-          <div className="text-[10px] text-zinc-400 tabular">{row.id}</div>
+          <div className="text-2xs text-zinc-400 tabular">{row.id}</div>
         </td>
         <td className="px-3 py-2">
           <span className={rolePillClass(row.role)}>{row.role}</span>

@@ -36,7 +36,7 @@ export function Section6Minutes({
         hasData={!!initial?.text?.trim()}
         extra={
           <>
-            <span className="text-[11px] text-zinc-500">(Teamsからコピペ)</span>
+            <span className="text-xs text-zinc-500">(Teamsからコピペ)</span>
             {summarized && (
               <Tip content="AI 要約済（過去データ）">
                 <span className="pill pill-pass">要約済</span>

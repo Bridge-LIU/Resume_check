@@ -36,7 +36,7 @@ REM 1) Top pane (Claude-1)
 REM 2) Split horizontally (-H) at 50%% -> bottom pane (Claude-2)
 REM 3) move-focus up  -> split vertically (-V) at 50%% -> Claude-3
 REM 4) move-focus down-> split vertically (-V) at 50%% -> Claude-4
-wt -w 0 new-tab -d "%WORKDIR%" --title "Claude-1" cmd /k "set CLAUDE_CODE_NO_FLICKER=1 && claude" ^
+wt -w new new-tab -d "%WORKDIR%" --title "Claude-1" cmd /k "set CLAUDE_CODE_NO_FLICKER=1 && claude" ^
   ; split-pane -H -s 0.5 -d "%WORKDIR%" --title "Claude-2" cmd /k "set CLAUDE_CODE_NO_FLICKER=1 && claude" ^
   ; move-focus up ^
   ; split-pane -V -s 0.5 -d "%WORKDIR%" --title "Claude-3" cmd /k "set CLAUDE_CODE_NO_FLICKER=1 && claude" ^

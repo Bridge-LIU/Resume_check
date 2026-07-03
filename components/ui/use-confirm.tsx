@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,8 @@ import {
 interface ConfirmOptions {
   title: string;
   description?: string;
+  /** description の代わり / 追加で使えるリッチな本文。JSX を直接渡せる */
+  body?: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
@@ -57,6 +59,7 @@ export function useConfirm() {
             <AlertDialogDescription>{state.description}</AlertDialogDescription>
           )}
         </AlertDialogHeader>
+        {state?.body}
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => handleClose(false)}>
             {state?.cancelLabel ?? "キャンセル"}

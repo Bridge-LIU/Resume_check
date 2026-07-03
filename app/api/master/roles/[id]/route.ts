@@ -1,49 +1,16 @@
 import { NextResponse } from "next/server";
 import { deleteRole, getRole, saveRole } from "@/lib/storage";
 import type { Role } from "@/lib/types";
-import { ApiError, apiErrorResponse } from "@/lib/apiError";
+import { ApiError, apiErrorResponse, ensureLocalOrigin } from "@/lib/apiError";
 import { writeAudit } from "@/lib/auditLog";
-import { validateRoleMasterId, validateRoleName } from "@/lib/validation";
+import { validateRoleMasterId, validateRoleObject } from "@/lib/validation";
 
-function validate(body: unknown): Role {
-  if (!body || typeof body !== "object") {
-    throw new ApiError("INVALID_BODY", "Invalid body", 400);
+function assertRole(body: unknown): Role {
+  const result = validateRoleObject(body);
+  if (!result.ok) {
+    throw new ApiError("VALIDATION_ERROR", result.error, 400);
   }
-  const b = body as Record<string, unknown>;
-  if (typeof b.id !== "string") {
-    throw new ApiError("VALIDATION_ERROR", "id は必須です", 400);
-  }
-  const idResult = validateRoleMasterId(b.id);
-  if (!idResult.ok) {
-    throw new ApiError("VALIDATION_ERROR", idResult.error, 400);
-  }
-  if (typeof b.役割 !== "string") {
-    throw new ApiError("VALIDATION_ERROR", "役割は必須です", 400);
-  }
-  const nameResult = validateRoleName(b.役割);
-  if (!nameResult.ok) {
-    throw new ApiError("VALIDATION_ERROR", nameResult.error, 400);
-  }
-  if (typeof b.経験 !== "string") {
-    throw new ApiError("VALIDATION_ERROR", "経験は文字列で指定してください", 400);
-  }
-  if (typeof b.未経験可 !== "boolean") {
-    throw new ApiError("VALIDATION_ERROR", "未経験可は真偽値で指定してください", 400);
-  }
-  if (!Array.isArray(b.条件1_基本人物像) || !b.条件1_基本人物像.every((x) => typeof x === "string")) {
-    throw new ApiError("VALIDATION_ERROR", "条件1_基本人物像 は文字列配列で指定してください", 400);
-  }
-  if (!Array.isArray(b.条件2_未経験者必須) || !b.条件2_未経験者必須.every((x) => typeof x === "string")) {
-    throw new ApiError("VALIDATION_ERROR", "条件2_未経験者必須 は文字列配列で指定してください", 400);
-  }
-  return {
-    id: idResult.value,
-    役割: nameResult.value,
-    経験: (b.経験 as string).trim(),
-    未経験可: b.未経験可 as boolean,
-    条件1_基本人物像: b.条件1_基本人物像 as string[],
-    条件2_未経験者必須: b.条件2_未経験者必須 as string[],
-  };
+  return result.value;
 }
 
 /**
@@ -75,12 +42,13 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/master/roles/[i
 
 export async function PUT(req: Request, ctx: RouteContext<"/api/master/roles/[id]">) {
   try {
+    ensureLocalOrigin(req);
     const { id: rawOriginalId } = await ctx.params;
     const originalId = assertUrlId(rawOriginalId);
     const body = await req.json().catch(() => {
       throw new ApiError("JSON_PARSE_FAILED", "JSON を解析できませんでした", 400);
     });
-    const result = validate(body);
+    const result = assertRole(body);
 
     const original = getRole(originalId);
     if (!original) {
@@ -108,8 +76,9 @@ export async function PUT(req: Request, ctx: RouteContext<"/api/master/roles/[id
   }
 }
 
-export async function DELETE(_req: Request, ctx: RouteContext<"/api/master/roles/[id]">) {
+export async function DELETE(req: Request, ctx: RouteContext<"/api/master/roles/[id]">) {
   try {
+    ensureLocalOrigin(req);
     const { id: rawId } = await ctx.params;
     const id = assertUrlId(rawId);
     if (!getRole(id)) {

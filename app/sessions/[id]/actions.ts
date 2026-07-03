@@ -15,6 +15,7 @@ import { redirect } from "next/navigation";
 import {
   duplicateSession,
   getCandidate,
+  isValidSessionId,
   getConditionsSnapshot,
   getEvalCriteria,
   getMinutes,
@@ -44,7 +45,13 @@ import type {
 import { writeAudit } from "@/lib/auditLog";
 import { flattenToItems, parseQuestions } from "@/lib/questionParser";
 import { softDeleteSession } from "@/lib/retention";
-import { validateName } from "@/lib/validation";
+import {
+  MAX_MINUTES_BYTES,
+  MAX_TEXT_BYTES,
+  assertResumeUpload,
+  assertTextWithinLimit,
+  validateName,
+} from "@/lib/validation";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -213,6 +220,43 @@ export async function softDeleteSessionAction(id: string): Promise<void> {
   redirect("/");
 }
 
+/**
+ * 複数セッションをまとめてゴミ箱へ移動。一覧画面の一括削除ボタンから呼ばれる。
+ * 1 件失敗しても他は継続する（呼び出し側が握るのでロールバックはしない）。
+ *
+ * DoS 対策として ids 件数と ID フォーマットを事前チェックし、
+ * `fs.rmSync` の集中発火や監査ログ肥大化を防ぐ。
+ */
+const BULK_DELETE_MAX = 500;
+export async function bulkSoftDeleteSessionsAction(
+  ids: string[],
+): Promise<{ deleted: number }> {
+  if (!Array.isArray(ids)) {
+    throw new Error("ids は配列で指定してください");
+  }
+  if (ids.length === 0) return { deleted: 0 };
+  if (ids.length > BULK_DELETE_MAX) {
+    throw new Error(
+      `一括削除は ${BULK_DELETE_MAX} 件までです（受信: ${ids.length}）`,
+    );
+  }
+  // 不正な ID を先に落とす（storage 側の assert で throw させると
+  // 途中まで削除された歯抜け状態が残る）
+  const valid = Array.from(new Set(ids.filter((id) => isValidSessionId(id))));
+  let deleted = 0;
+  for (const id of valid) {
+    try {
+      softDeleteSession(id);
+      deleted += 1;
+    } catch (e) {
+      console.error("[bulkSoftDeleteSessions] skip", id, e);
+    }
+  }
+  revalidatePath("/");
+  revalidatePath("/trash");
+  return { deleted };
+}
+
 /* ─────────── ② 面談者情報 ─────────── */
 
 export async function saveCandidateAction(
@@ -220,6 +264,8 @@ export async function saveCandidateAction(
   mode: Mode,
   要約: string,
 ): Promise<void> {
+  // Server Action は UI を経由せず直接呼ばれうるため Server 側でも上限を弾く。
+  assertTextWithinLimit(要約, MAX_TEXT_BYTES, "候補者要約");
   // 構造化 3 フィールドは保存しない方針に統一（Excel 出力時に 要約 を見出しでパースして分解）
   const data: Candidate = {
     mode,
@@ -293,6 +339,14 @@ export async function summarizeCandidateApiAction(
   error?: string;
   summary?: string;
 }> {
+  // Server 側ガード: Client の 3.7MB 制約は ad-hoc 呼び出しでは無効。
+  try {
+    assertResumeUpload(fileBase64, fileMime);
+    assertTextWithinLimit(fallbackText, MAX_TEXT_BYTES, "貼付テキスト");
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+
   const { provider, model } = resolveLlm("summary", override);
   if (!hasKey(provider)) return noKeyError(provider);
 
@@ -414,6 +468,7 @@ export async function saveQuestionsAction(
   mode: Mode,
   rawText: string,
 ): Promise<void> {
+  assertTextWithinLimit(rawText, MAX_TEXT_BYTES, "質問テキスト");
   // 設計書 §5 ⑤: 構造化パーサーで items も自動生成して保存
   const { nonTech, tech } = parseQuestions(rawText);
   const items = flattenToItems(nonTech, tech).map((q) => ({
@@ -624,6 +679,7 @@ export async function saveMinutesAction(
   id: string,
   text: string,
 ): Promise<void> {
+  assertTextWithinLimit(text, MAX_MINUTES_BYTES, "議事録");
   const data: Minutes = { text, updatedAt: nowIso() };
   saveMinutes(id, data);
   // 設計書 §9：⑥議事録を登録（テキストが空でないとき）で 質問公開 → 面談済 へ
@@ -727,6 +783,22 @@ function stripCodeFenceAndPreamble(raw: string): string {
   return t;
 }
 
+/**
+ * AI が返す 合否 文字列を正規化する。
+ * 「合格（条件付き）」「不合格・見送り」など装飾が付いていても
+ * 3値（合格 / 普通 / 不合格）に丸めて受け入れる。
+ * 判定順は「不合格」を先に見る（"合格" を部分文字列として含むため）。
+ */
+function normalizeVerdict(raw: unknown): "合格" | "普通" | "不合格" | null {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (!s) return null;
+  if (s.includes("不合格")) return "不合格";
+  if (s.includes("合格")) return "合格";
+  if (s.includes("普通")) return "普通";
+  return null;
+}
+
 function parseEvaluationJson(rawText: string, mode: Mode): EvaluationParseResult {
   const cleaned = stripCodeFenceAndPreamble(rawText);
   let parsed: unknown;
@@ -773,8 +845,8 @@ function parseEvaluationJson(rawText: string, mode: Mode): EvaluationParseResult
   if (typeof p["総合スコア"] !== "number") {
     return { ok: false, error: "「総合スコア」が数値ではありません" };
   }
-  const 合否Raw = p["合否"];
-  if (合否Raw !== "合格" && 合否Raw !== "普通" && 合否Raw !== "不合格") {
+  const 合否 = normalizeVerdict(p["合否"]);
+  if (!合否) {
     return {
       ok: false,
       error: "「合否」は \"合格\" / \"普通\" / \"不合格\" のいずれかにしてください",
@@ -786,7 +858,7 @@ function parseEvaluationJson(rawText: string, mode: Mode): EvaluationParseResult
     軸評価,
     自己解決レベル: p["自己解決レベル"] as number,
     総合スコア: p["総合スコア"] as number,
-    合否: 合否Raw,
+    合否,
     良い点: typeof p["良い点"] === "string" ? (p["良い点"] as string) : "",
     懸念点: typeof p["懸念点"] === "string" ? (p["懸念点"] as string) : "",
     updatedAt: nowIso(),
@@ -896,10 +968,15 @@ export async function buildEvaluationPromptAction(id: string): Promise<PromptRes
 
 // 設計書 v1.0 の文言。短く、JSON のみ返させる最小ルールに揃える。
 const EVAL_SYSTEM_PROMPT =
-  "あなたは採用評価の専門家です。BARS（行動基準評価）で厳正に採点し、説明文や前置きなしに、指定スキーマのJSONのみを出力してください。";
+  "あなたは採用評価の専門家です。BARS（行動基準評価）で厳正に採点し、説明文や前置きなしに、指定スキーマのJSONのみを出力してください。\n" +
+  "重要ルール:\n" +
+  "- 「合否」は必ず \"合格\" / \"普通\" / \"不合格\" のいずれか1つの完全一致文字列で返すこと。\n" +
+  "  （\"合格（条件付き）\" のような修飾は禁止。条件やニュアンスは「良い点」「懸念点」に書く）\n" +
+  "- スコアは数値のみ（文字列不可）。小数第1位まで。\n" +
+  "- コードフェンスは付けない。";
 
 const EVAL_OUTPUT_SCHEMA =
-  '{"軸評価":[{"軸":"","スコア":0,"根拠":""}],"自己解決レベル":0,"総合スコア":0,"合否":"","良い点":"","懸念点":""}';
+  '{"軸評価":[{"軸":"","スコア":0,"根拠":""}],"自己解決レベル":0,"総合スコア":0,"合否":"合格|普通|不合格 のいずれか1つ","良い点":"","懸念点":""}';
 
 export async function evaluateInterviewApiAction(
   id: string,

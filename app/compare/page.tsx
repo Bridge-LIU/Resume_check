@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Tip } from "@/components/ui/tooltip";
+import { PageHeader } from "@/app/_components/PageHeader";
 import {
   getConditionsSnapshot,
   getEvalCriteria,
@@ -60,10 +59,10 @@ function rolePillClass(役割: string) {
   return "pill bg-zinc-100 text-zinc-700";
 }
 
-function passingPill(g: Evaluation["合否"] | null) {
+function passingPill(g: Evaluation["合否"] | null | undefined) {
   if (g === "合格") return <span className="pill pill-pass">合格</span>;
   if (g === "不合格") return <span className="pill pill-fail">不合格</span>;
-  if (g === "普通") return <span className="pill pill-edit">普通</span>;
+  if (g === "普通") return <span className="pill pill-mid">普通</span>;
   return <span className="text-zinc-400">―</span>;
 }
 
@@ -109,7 +108,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
   if (ids.length < 2) {
     return (
       <div className="bg-white rounded-xl border shadow-sm">
-        <CompareHeader title="横断比較" />
+        <PageHeader title="横断比較" />
         <div className="p-6 space-y-3">
           <p className="text-sm text-zinc-600">
             比較するには 2 件以上のセッションが必要です。
@@ -141,7 +140,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
   if (cols.length === 0) {
     return (
       <div className="bg-white rounded-xl border shadow-sm">
-        <CompareHeader title="横断比較" />
+        <PageHeader title="横断比較" />
         <div className="p-6 space-y-3">
           <p className="text-sm text-red-700">
             指定された ID のセッションが見つかりませんでした。
@@ -210,7 +209,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
 
   return (
     <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-      <CompareHeader
+      <PageHeader
         title="横断比較"
         count={cols.length}
         suffix={
@@ -263,7 +262,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                       </Link>
                       <span className={rolePillClass(c.meta.役割)}>{c.meta.役割}</span>
                     </div>
-                    <div className="text-[10px] text-zinc-400 tabular mt-0.5">
+                    <div className="text-2xs text-zinc-400 tabular mt-0.5">
                       {c.meta.id}
                     </div>
                   </th>
@@ -275,7 +274,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
               <tr className="bg-zinc-50/50">
                 <td className="px-4 py-2 font-medium sticky left-0 bg-zinc-50/50">
                   総合スコア
-                  <div className="text-[10px] text-zinc-400 font-normal">Max 出力</div>
+                  <div className="text-2xs text-zinc-400 font-normal">Max 出力</div>
                 </td>
                 {cols.map((c, i) => {
                   const v = totals[i];
@@ -307,7 +306,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
               <tr className="bg-blue-50/30">
                 <td className="px-4 py-2 font-medium sticky left-0 bg-blue-50/30">
                   重み付き総合
-                  <div className="text-[10px] text-zinc-400 font-normal">凍結重みで再計算</div>
+                  <div className="text-2xs text-zinc-400 font-normal">凍結重みで再計算</div>
                 </td>
                 {cols.map((c, i) => {
                   const v = weightedTotals[i];
@@ -336,7 +335,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                           {driftSignificant && delta != null && (
                             <Tip content="Max が出した総合スコアと、凍結重みでの再計算値の差。0.1 以上で表示。Max が重みを無視した可能性あり。">
                               <span
-                                className={`text-[10px] tabular ${
+                                className={`text-2xs tabular ${
                                   delta > 0 ? "text-emerald-600" : "text-red-600"
                                 }`}
                               >
@@ -373,7 +372,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                     <td className="px-4 py-2 font-medium sticky left-0 bg-white">
                       {axis}
                       {weight != null && (
-                        <span className="ml-2 text-[10px] text-zinc-400 font-normal tabular">
+                        <span className="ml-2 text-2xs text-zinc-400 font-normal tabular">
                           重み {weight}
                         </span>
                       )}
@@ -422,7 +421,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                             </div>
                           </div>
                           {cell.根拠 && (
-                            <div className="text-[11px] text-zinc-500 mt-1 line-clamp-3">
+                            <div className="text-xs text-zinc-500 mt-1 line-clamp-3">
                               {cell.根拠}
                             </div>
                           )}
@@ -491,36 +490,3 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
   );
 }
 
-function CompareHeader({
-  title,
-  count,
-  suffix,
-}: {
-  title: string;
-  count?: number;
-  suffix?: React.ReactNode;
-}) {
-  return (
-    <header className="px-4 py-2.5 border-b flex items-center gap-3 text-sm">
-      <Tip content="一覧へ戻る">
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="group h-8 pl-2 pr-3 gap-1.5 rounded-full text-xs font-medium text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
-        >
-          <Link href="/" aria-label="一覧へ戻る">
-            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-            一覧
-          </Link>
-        </Button>
-      </Tip>
-      <div className="h-5 w-px bg-zinc-200" aria-hidden="true" />
-      <div className="font-bold whitespace-nowrap">{title}</div>
-      {count != null && (
-        <span className="text-xs text-zinc-500">{count} 件</span>
-      )}
-      {suffix}
-    </header>
-  );
-}

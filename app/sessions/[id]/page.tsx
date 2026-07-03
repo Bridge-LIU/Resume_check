@@ -107,9 +107,9 @@ export default async function SessionPage({
           </Button>
         </Tip>
         <div className="h-5 w-px bg-zinc-200" aria-hidden="true" />
-        <div className="font-bold whitespace-nowrap" title={meta.id}>
+        <h1 className="font-bold whitespace-nowrap m-0 text-sm truncate max-w-[16ch]" title={meta.id}>
           {meta.氏名}
-        </div>
+        </h1>
         <span className={`pill ${rolePill}`}>{meta.役割}</span>
         <span className={`pill ${statusPill}`}>{meta.status}</span>
         <div className="flex-1" />

@@ -24,4 +24,12 @@ export async function register(): Promise<void> {
   } catch (e) {
     console.error("[instrumentation] retentionScheduler start failed:", e);
   }
+
+  // ブラウザ閉じ検知 → 自動シャットダウン。AUTO_SHUTDOWN=1 のときのみ動作
+  try {
+    const mod = await import("@/lib/heartbeat");
+    mod.startAutoShutdownWatcher();
+  } catch (e) {
+    console.error("[instrumentation] heartbeat watcher start failed:", e);
+  }
 }

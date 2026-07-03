@@ -1,13 +1,11 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tip } from "@/components/ui/tooltip";
+import { PageHeader } from "@/app/_components/PageHeader";
 import {
   aggregateByAxis,
   aggregateByMonth,
   aggregateByRole,
   listAnonymizedSummaries,
 } from "@/lib/analytics";
+import { DetailTable } from "./_components/DetailTable";
 
 export const dynamic = "force-dynamic";
 
@@ -165,7 +163,7 @@ export default async function AnalyticsPage() {
                           title={`不合格 ${m.fail}`}
                         />
                       </div>
-                      <div className="text-[10px] text-zinc-400 mt-0.5 tabular">
+                      <div className="text-2xs text-zinc-400 mt-0.5 tabular">
                         合格 {m.pass} / 普通 {m.mid} / 不合格 {m.fail}
                       </div>
                     </td>
@@ -251,10 +249,16 @@ export default async function AnalyticsPage() {
         </div>
       </div>
 
+      {/* 明細（匿名 1 件ずつ） */}
+      <DetailTable items={items} axes={byAxis} />
+
       <div className="text-xs text-zinc-500 leading-relaxed">
         ⚠️ 匿名サマリは <code>data/analytics/&lt;idHash&gt;.json</code> に保存。
         氏名・履歴書・議事録は含みません（設計書 §7.5）。元セッションが完全削除されても
-        統計だけは長期保持できます。
+        統計だけは長期保持できます。<br />
+        <span className="text-amber-700">
+          ※ 役割名が <code>[FAKE]</code> で始まる行はダミーデータ（開発用）。/settings 末尾で削除できます。
+        </span>
       </div>
     </div>
   );
@@ -282,25 +286,3 @@ function KpiCard({
   );
 }
 
-function PageHeader({ title, meta }: { title: string; meta?: string }) {
-  return (
-    <header className="px-4 py-2.5 border-b flex items-center gap-3 text-sm">
-      <Tip content="一覧へ戻る">
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="group h-8 pl-2 pr-3 gap-1.5 rounded-full text-xs font-medium text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
-        >
-          <Link href="/" aria-label="一覧へ戻る">
-            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-            一覧
-          </Link>
-        </Button>
-      </Tip>
-      <div className="h-5 w-px bg-zinc-200" aria-hidden="true" />
-      <div className="font-bold whitespace-nowrap">{title}</div>
-      {meta && <span className="text-xs text-zinc-500">{meta}</span>}
-    </header>
-  );
-}

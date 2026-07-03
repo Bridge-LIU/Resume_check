@@ -21,6 +21,8 @@ const EVENT_LABEL: Record<AuditEvent, string> = {
   "session.questionsGenerate": "⑤質問 API 生成",
   "session.questionsReformat": "⑤質問 API 整形",
   "session.minutesSummarize": "⑥議事録 API 要約",
+  "analytics.fake.generate": "ダミー匿名サマリ生成",
+  "analytics.fake.clear": "ダミー匿名サマリ削除",
 };
 
 const EVENT_PILL: Partial<Record<AuditEvent, string>> = {
@@ -122,14 +124,14 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
                       </td>
                       <td className="px-3 py-1.5">
                         <span
-                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
+                          className={`inline-block px-2 py-0.5 rounded text-2xs font-medium ${
                             EVENT_PILL[e.event] ?? "bg-zinc-100 text-zinc-700"
                           }`}
                         >
                           {EVENT_LABEL[e.event] ?? e.event}
                         </span>
                       </td>
-                      <td className="px-3 py-1.5 font-mono text-[11px] text-zinc-700 break-all">
+                      <td className="px-3 py-1.5 font-mono text-xs text-zinc-700 break-all">
                         {e.sessionId ?? "—"}
                       </td>
                       <td className="px-3 py-1.5 text-zinc-600 break-all">

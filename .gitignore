@@ -49,6 +49,9 @@ yarn-error.log*
 # 機密：設計書・サンプル面談データ・履歴書チェック実データ。ローカル限定で git には上げない
 /files/
 
+# superpowers brainstorming セッション（ローカル一時ファイル）
+/.superpowers/
+
 # vercel
 .vercel
 

@@ -202,7 +202,9 @@ export function Section8Evaluation({
   );
 }
 
-function passingClass(g: Evaluation["合否"]): { text: string; ring: string } {
+function passingClass(g: Evaluation["合否"] | string | undefined): { text: string; ring: string } {
+  // 型的には合格/普通/不合格 の 3 択だが、旧データや解析ゆらぎで想定外文字列が
+  // 入ることがあるので、defensive に既定値を返す（画面が真っ白になるより見えたほうが良い）
   switch (g) {
     case "合格":
       return { text: "text-emerald-700", ring: "from-emerald-50 to-blue-50" };
@@ -210,6 +212,8 @@ function passingClass(g: Evaluation["合否"]): { text: string; ring: string } {
       return { text: "text-amber-700", ring: "from-amber-50 to-zinc-50" };
     case "不合格":
       return { text: "text-red-700", ring: "from-red-50 to-zinc-50" };
+    default:
+      return { text: "text-zinc-700", ring: "from-zinc-50 to-zinc-100" };
   }
 }
 

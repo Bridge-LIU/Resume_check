@@ -1,31 +1,15 @@
 import { NextResponse } from "next/server";
 import { getRole, saveRole } from "@/lib/storage";
 import type { Role } from "@/lib/types";
-import { ApiError, apiErrorResponse } from "@/lib/apiError";
+import { ApiError, apiErrorResponse, ensureLocalOrigin } from "@/lib/apiError";
 import { writeAudit } from "@/lib/auditLog";
+import { validateRoleObject } from "@/lib/validation";
 
-const ID_PATTERN = /^[A-Za-z0-9_\-ぁ-んァ-ン一-龥]+$/;
-
+// 共通バリデータに委譲。以前は ID パターンが ASCII+日本語混在で、
+// storage.ts:assertRoleId の ASCII 限定と食い違っていた（次回 get で throw する不整合）。
 function validateRole(body: unknown): Role | string {
-  if (!body || typeof body !== "object") return "オブジェクトではありません";
-  const b = body as Record<string, unknown>;
-  if (typeof b.id !== "string" || !b.id.trim()) return "id は必須です";
-  if (!ID_PATTERN.test(b.id)) return "id に使用できない文字が含まれています";
-  if (typeof b.役割 !== "string" || !b.役割.trim()) return "役割は必須です";
-  if (typeof b.経験 !== "string") return "経験は文字列で指定してください";
-  if (typeof b.未経験可 !== "boolean") return "未経験可は真偽値で指定してください";
-  if (!Array.isArray(b.条件1_基本人物像) || !b.条件1_基本人物像.every((x) => typeof x === "string"))
-    return "条件1_基本人物像 は文字列配列で指定してください";
-  if (!Array.isArray(b.条件2_未経験者必須) || !b.条件2_未経験者必須.every((x) => typeof x === "string"))
-    return "条件2_未経験者必須 は文字列配列で指定してください";
-  return {
-    id: b.id.trim(),
-    役割: b.役割.trim(),
-    経験: (b.経験 as string).trim(),
-    未経験可: b.未経験可 as boolean,
-    条件1_基本人物像: b.条件1_基本人物像 as string[],
-    条件2_未経験者必須: b.条件2_未経験者必須 as string[],
-  };
+  const result = validateRoleObject(body);
+  return result.ok ? result.value : result.error;
 }
 
 /**
@@ -35,11 +19,39 @@ function validateRole(body: unknown): Role | string {
  *   - Role[]  （後方互換）
  * overwrite=false（既定）のとき、既存 ID は skipped に積む。
  */
+// 通常数十 KB のマスタ JSON。10 MB を超える入力は明らかに異常 / 攻撃。
+const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => {
+    ensureLocalOrigin(req);
+    // Content-Length での先制チェック（Body 全体を読まずに弾く）
+    const lenHeader = req.headers.get("content-length");
+    if (lenHeader) {
+      const len = Number(lenHeader);
+      if (Number.isFinite(len) && len > MAX_IMPORT_BYTES) {
+        throw new ApiError(
+          "PAYLOAD_TOO_LARGE",
+          `本文が大きすぎます（${len.toLocaleString()} バイト > 上限 ${MAX_IMPORT_BYTES.toLocaleString()}）`,
+          413,
+        );
+      }
+    }
+
+    const rawText = await req.text();
+    if (rawText.length > MAX_IMPORT_BYTES) {
+      throw new ApiError(
+        "PAYLOAD_TOO_LARGE",
+        `本文が大きすぎます（${rawText.length.toLocaleString()} 文字 > 上限 ${MAX_IMPORT_BYTES.toLocaleString()}）`,
+        413,
+      );
+    }
+    let body: unknown;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
       throw new ApiError("JSON_PARSE_FAILED", "JSON を解析できませんでした", 400);
-    });
+    }
 
     let rolesRaw: unknown;
     let overwrite = false;

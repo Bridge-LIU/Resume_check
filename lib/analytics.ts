@@ -35,17 +35,23 @@ export function listAnonymizedSummaries(): AnonymizedSummary[] {
   const dir = analyticsDir();
   if (!fs.existsSync(dir)) return [];
   const out: AnonymizedSummary[] = [];
-  for (const f of fs.readdirSync(dir)) {
-    if (!f.endsWith(".json")) continue;
-    try {
-      const data = JSON.parse(
-        fs.readFileSync(path.join(dir, f), "utf-8"),
-      ) as AnonymizedSummary;
-      out.push(data);
-    } catch {
-      // 壊れた JSON はスキップ
+
+  function readJsonInto(absDir: string) {
+    for (const f of fs.readdirSync(absDir)) {
+      if (!f.endsWith(".json")) continue;
+      try {
+        const data = JSON.parse(
+          fs.readFileSync(path.join(absDir, f), "utf-8"),
+        ) as AnonymizedSummary;
+        out.push(data);
+      } catch {
+        // 壊れた JSON はスキップ
+      }
     }
   }
+
+  readJsonInto(dir);
+
   return out;
 }
 

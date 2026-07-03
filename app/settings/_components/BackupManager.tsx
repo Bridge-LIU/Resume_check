@@ -256,7 +256,7 @@ export function BackupManager({
         </Button>
       </div>
 
-      <div className="text-[11px] text-zinc-500">
+      <div className="text-xs text-zinc-500">
         現在の世代ルール: <span className="font-medium text-zinc-700">{sweepRuleLabel}</span>
       </div>
 

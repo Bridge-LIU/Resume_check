@@ -65,13 +65,13 @@ export function Section4Conditions({
         <div className="border-l-4 border-emerald-500 bg-emerald-50/40 pl-3 pr-2 py-2 rounded-r-md mb-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-bold text-zinc-800">② 求める人材条件</h3>
-            <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
               {snapshot.role.役割}
             </span>
-            <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-zinc-50 text-zinc-600 border border-zinc-200">
+            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-50 text-zinc-600 border border-zinc-200">
               経験 {snapshot.role.経験}
             </span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M5 13l4 4L19 7" />
               </svg>
@@ -241,7 +241,7 @@ function EditableConditions({
         hasData={false}
         extra={
           revising ? (
-            <span className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
               修正中
             </span>
           ) : null

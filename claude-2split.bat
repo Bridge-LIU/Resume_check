@@ -34,7 +34,7 @@ REM CLAUDE_CODE_NO_FLICKER=1: enables mouse-click cursor positioning, text selec
 REM and click-to-expand tool results inside Claude Code
 REM 1) Left pane  (Claude-1)
 REM 2) Split vertically (-V) at 50%% -> right pane (Claude-2)
-wt -w 0 new-tab -d "%WORKDIR%" --title "Claude-1" cmd /k "set CLAUDE_CODE_NO_FLICKER=1 && claude" ^
+wt -w new new-tab -d "%WORKDIR%" --title "Claude-1" cmd /k "set CLAUDE_CODE_NO_FLICKER=1 && claude" ^
   ; split-pane -V -s 0.5 -d "%WORKDIR%" --title "Claude-2" cmd /k "set CLAUDE_CODE_NO_FLICKER=1 && claude"
 
 endlocal

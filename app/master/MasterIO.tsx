@@ -23,14 +23,7 @@ export default function MasterIO() {
       const pad = (n: number) => String(n).padStart(2, "0");
       const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
       const filename = m?.[1] ?? `master-${stamp}.json`;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerDownload(blob, filename);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -47,20 +40,12 @@ export default function MasterIO() {
       if (!res.ok) throw new Error(`Excel エクスポートに失敗しました (${res.status})`);
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") ?? "";
-      // filename*=UTF-8''<encoded> 優先、無ければ filename=
       const utf8 = /filename\*=UTF-8''([^;]+)/.exec(disposition);
       const ascii = /filename="?([^";]+)"?/.exec(disposition);
       const filename = utf8
         ? decodeURIComponent(utf8[1])
         : ascii?.[1] ?? "マスタ.xlsx";
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      triggerDownload(blob, filename);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -114,4 +99,15 @@ export default function MasterIO() {
       )}
     </section>
   );
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

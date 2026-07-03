@@ -194,7 +194,7 @@ export function Section2Candidate({
                 <>
                   <span className="text-xs text-zinc-700 truncate max-w-xs">
                     {kindIcon(resumeKind)} {resumeFile.name}{" "}
-                    <span className="pill pill-eval ml-1 text-[10px]">
+                    <span className="pill pill-eval ml-1">
                       {kindLabel(resumeKind)}
                     </span>{" "}
                     <span className="text-zinc-400">
@@ -281,7 +281,7 @@ export function Section2Candidate({
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <div className="text-[11px] text-zinc-400 mt-1">
+      <div className="text-xs text-zinc-400 mt-1">
         ※ Excel 出力時、「経歴サマリ」「主要スキル」「強み」の見出しで 3 列に自動分割されます。
       </div>
       <div className="flex items-center gap-3 mt-2">

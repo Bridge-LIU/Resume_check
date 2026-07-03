@@ -29,7 +29,7 @@ export function SectionHeaderBar({
         <h3 className="font-bold text-zinc-800 whitespace-nowrap">{title}</h3>
         {extra}
         {hasData && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
             <svg
               className="w-3 h-3"
               viewBox="0 0 24 24"

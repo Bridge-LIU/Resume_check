@@ -15,6 +15,7 @@ export function DataRootField({ defaultValue }: { defaultValue: string }) {
   const [custom, setCustom] = useState(isDefault ? "" : defaultValue);
 
   const submittedValue = mode === "project" ? DEFAULT_PROJECT_ROOT : custom;
+  const customIsEmpty = mode === "custom" && custom.trim() === "";
 
   return (
     <section className="space-y-2">
@@ -53,12 +54,22 @@ export function DataRootField({ defaultValue }: { defaultValue: string }) {
               value={custom}
               onChange={(e) => setCustom(e.target.value)}
               disabled={mode !== "custom"}
+              // mode=custom のときだけ ブラウザネイティブの required バリデーションを
+              // 有効化して、空のまま保存ボタンを押すと フォーム送信を阻止する
+              required={mode === "custom"}
+              aria-invalid={customIsEmpty}
               placeholder={`例: C:\\Users\\admin\\面談AI評価ツール`}
-              className="font-mono mt-1"
+              className={`font-mono mt-1 ${customIsEmpty ? "border-red-400 focus-visible:ring-red-400" : ""}`}
             />
-            <div className="text-xs text-zinc-500 mt-1">
-              ネットワークドライブや別パーティション等。絶対パス推奨。
-            </div>
+            {customIsEmpty ? (
+              <div className="text-xs text-red-600 mt-1">
+                カスタムパスを入力してください（空のまま保存できません）
+              </div>
+            ) : (
+              <div className="text-xs text-zinc-500 mt-1">
+                ネットワークドライブや別パーティション等。絶対パス推奨。
+              </div>
+            )}
           </div>
         </div>
       </RadioGroup>

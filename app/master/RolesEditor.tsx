@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import type { Role } from "@/lib/types";
@@ -74,23 +74,14 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
   const [error, setError] = useState<string | null>(null);
   const { confirm, ConfirmDialog } = useConfirm();
 
-  // textarea の生テキスト。editing.条件* は正規化された配列を保持し、
-  // controlled な textarea でも空行・行頭「- 」入力中の改行が消えないようにする。
-  const [text1, setText1] = useState<string>("");
-  const [text2, setText2] = useState<string>("");
+  // textarea の生テキストは編集フォーム子コンポーネント側で保持し、
+  // key={editingKey} で編集対象切替時に再マウントして初期化する。
+  // 旧実装は useEffect 内で setText を呼び set-state-in-effect ルールに抵触していた。
   const editingKey = editing
     ? editing._isNew
       ? "__new__"
       : editing._originalId ?? editing.id
     : null;
-  useEffect(() => {
-    if (editing) {
-      setText1(arrayToLines(editing.条件1_基本人物像));
-      setText2(arrayToLines(editing.条件2_未経験者必須));
-    }
-    // 編集対象が切り替わったタイミングだけ生テキストを再初期化
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingKey]);
 
   function beginEdit(role: Role) {
     setError(null);
@@ -310,114 +301,151 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
           </tbody>
         </table>
 
-        {editing && (
-          <div className="border rounded-lg p-4 bg-zinc-50 space-y-3">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm">
-                {editing._isNew ? "新規役割を追加" : `編集: ${editing._originalId}`}
-              </h3>
-              <div className="flex-1" />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={cancel}
-                disabled={isPending}
-              >
-                キャンセル
-              </Button>
-              <Button
-                type="button"
-                onClick={save}
-                disabled={isPending}
-              >
-                保存
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-12 gap-3">
-              <label className="col-span-3 text-sm">
-                <div className="text-xs text-zinc-500 mb-1">ID（ファイル名）</div>
-                <Input
-                  value={editing.id}
-                  onChange={(e) => setEditing({ ...editing, id: e.target.value })}
-                  placeholder="NW / Server など"
-                  className="w-full bg-white"
-                />
-              </label>
-              <label className="col-span-6 text-sm">
-                <div className="text-xs text-zinc-500 mb-1">役割名</div>
-                <Input
-                  value={editing.役割}
-                  onChange={(e) => setEditing({ ...editing, 役割: e.target.value })}
-                  placeholder="NW（ネットワーク） など"
-                  className="w-full bg-white"
-                />
-              </label>
-              <label className="col-span-3 text-sm">
-                <div className="text-xs text-zinc-500 mb-1">経験</div>
-                <Input
-                  value={editing.経験}
-                  onChange={(e) => setEditing({ ...editing, 経験: e.target.value })}
-                  placeholder="3年以上 など"
-                  className="w-full bg-white"
-                />
-              </label>
-            </div>
-
-            <Label
-              htmlFor="role-mikeiken-ka"
-              className="inline-flex items-center gap-2 text-sm font-normal cursor-pointer"
-            >
-              <Checkbox
-                id="role-mikeiken-ka"
-                checked={editing.未経験可}
-                onCheckedChange={(v) => setEditing({ ...editing, 未経験可: v === true })}
-              />
-              未経験可（OFF のとき条件②は評価対象外）
-            </Label>
-
-            <div>
-              <div className="text-xs text-zinc-500 mb-1">
-                条件①: 基本人物像（常に評価）— 1 行 1 項目（先頭の「- 」は任意）
-              </div>
-              <Textarea
-                rows={8}
-                value={text1}
-                onChange={(e) => {
-                  const t = e.target.value;
-                  setText1(t);
-                  setEditing({ ...editing, 条件1_基本人物像: linesToArray(t) });
-                }}
-                className="w-full bg-white font-mono"
-              />
-              <div className="text-xs text-zinc-500 mt-1">
-                {editing.条件1_基本人物像.length} 項目
-              </div>
-            </div>
-
-            <div className={editing.未経験可 ? "" : "opacity-60"}>
-              <div className="text-xs text-zinc-500 mb-1">
-                条件②: 未経験者必須（未経験可=ON のときだけ評価対象）
-              </div>
-              <Textarea
-                rows={6}
-                value={text2}
-                onChange={(e) => {
-                  const t = e.target.value;
-                  setText2(t);
-                  setEditing({ ...editing, 条件2_未経験者必須: linesToArray(t) });
-                }}
-                className="w-full bg-white font-mono"
-              />
-              <div className="text-xs text-zinc-500 mt-1">
-                {editing.条件2_未経験者必須.length} 項目
-              </div>
-            </div>
-          </div>
+        {editing && editingKey && (
+          <RoleEditForm
+            key={editingKey}
+            initial={editing}
+            isPending={isPending}
+            onChange={setEditing}
+            onCancel={cancel}
+            onSave={save}
+          />
         )}
       </div>
       <ConfirmDialog />
     </section>
+  );
+}
+
+/**
+ * 編集フォーム本体。text1/text2 (textarea の生テキスト) を内部 state で保持する。
+ * 親 RolesEditor 側で key={editingKey} を付けて、編集対象切替時に再マウントすることで
+ * 初期値を新 editing から取り直す（旧 useEffect+setState 同期パターンの代替）。
+ */
+function RoleEditForm({
+  initial,
+  isPending,
+  onChange,
+  onCancel,
+  onSave,
+}: {
+  initial: DraftRole;
+  isPending: boolean;
+  onChange: (next: DraftRole) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  const [text1, setText1] = useState<string>(
+    arrayToLines(initial.条件1_基本人物像),
+  );
+  const [text2, setText2] = useState<string>(
+    arrayToLines(initial.条件2_未経験者必須),
+  );
+  // editing 本体は親の state を直接表示・編集する（フィールドごとの onChange で親へ）。
+  const editing = initial;
+
+  return (
+    <div className="border rounded-lg p-4 bg-zinc-50 space-y-3">
+      <div className="flex items-center gap-2">
+        <h3 className="font-bold text-sm">
+          {editing._isNew ? "新規役割を追加" : `編集: ${editing._originalId}`}
+        </h3>
+        <div className="flex-1" />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          disabled={isPending}
+        >
+          キャンセル
+        </Button>
+        <Button type="button" onClick={onSave} disabled={isPending}>
+          保存
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-12 gap-3">
+        <label className="col-span-3 text-sm">
+          <div className="text-xs text-zinc-500 mb-1">ID（ファイル名）</div>
+          <Input
+            value={editing.id}
+            onChange={(e) => onChange({ ...editing, id: e.target.value })}
+            placeholder="NW / Server など"
+            className="w-full bg-white"
+          />
+        </label>
+        <label className="col-span-6 text-sm">
+          <div className="text-xs text-zinc-500 mb-1">役割名</div>
+          <Input
+            value={editing.役割}
+            onChange={(e) => onChange({ ...editing, 役割: e.target.value })}
+            placeholder="NW（ネットワーク） など"
+            className="w-full bg-white"
+          />
+        </label>
+        <label className="col-span-3 text-sm">
+          <div className="text-xs text-zinc-500 mb-1">経験</div>
+          <Input
+            value={editing.経験}
+            onChange={(e) => onChange({ ...editing, 経験: e.target.value })}
+            placeholder="3年以上 など"
+            className="w-full bg-white"
+          />
+        </label>
+      </div>
+
+      <Label
+        htmlFor="role-mikeiken-ka"
+        className="inline-flex items-center gap-2 text-sm font-normal cursor-pointer"
+      >
+        <Checkbox
+          id="role-mikeiken-ka"
+          checked={editing.未経験可}
+          onCheckedChange={(v) => onChange({ ...editing, 未経験可: v === true })}
+        />
+        未経験可（OFF のとき条件②は評価対象外）
+      </Label>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div className="text-xs text-zinc-500 mb-1">
+            条件①: 基本人物像（常に評価）— 1 行 1 項目（先頭の「- 」は任意）
+          </div>
+          <Textarea
+            rows={8}
+            value={text1}
+            onChange={(e) => {
+              const t = e.target.value;
+              setText1(t);
+              onChange({ ...editing, 条件1_基本人物像: linesToArray(t) });
+            }}
+            className="w-full bg-white font-mono"
+          />
+          <div className="text-xs text-zinc-500 mt-1">
+            {editing.条件1_基本人物像.length} 項目
+          </div>
+        </div>
+
+        <div className={editing.未経験可 ? "" : "opacity-60"}>
+          <div className="text-xs text-zinc-500 mb-1">
+            条件②: 未経験者必須（未経験可=ON のときだけ評価対象）
+          </div>
+          <Textarea
+            rows={8}
+            value={text2}
+            onChange={(e) => {
+              const t = e.target.value;
+              setText2(t);
+              onChange({ ...editing, 条件2_未経験者必須: linesToArray(t) });
+            }}
+            className="w-full bg-white font-mono"
+          />
+          <div className="text-xs text-zinc-500 mt-1">
+            {editing.条件2_未経験者必須.length} 項目
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { HeartbeatPing } from "./_components/HeartbeatPing";
 
 export const metadata: Metadata = {
   title: "面談AI評価ツール",
@@ -20,6 +21,7 @@ export default function RootLayout({
             <Header />
             <main className="mt-4">{children}</main>
           </div>
+          <HeartbeatPing />
         </TooltipProvider>
       </body>
     </html>

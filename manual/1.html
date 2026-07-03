@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>Vue風 3カラム — 右ペイン 4案</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:32px; background:#f4f4f5; color:#18181b;
+    font-family:-apple-system,"Hiragino Sans","Yu Gothic","Segoe UI",sans-serif; font-size:13px; }
+  h1 { font-size:22px; margin:0 0 6px; }
+  .sub { color:#71717a; font-size:13px; margin-bottom:24px; }
+  .legend { background:#fff; border:1px solid #e4e4e7; border-radius:8px;
+    padding:12px 18px; margin-bottom:24px; font-size:12.5px; line-height:1.7; }
+  .legend strong { color:#10b981; }
+
+  .stage { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .opt { background:#fff; border:1px solid #e4e4e7; border-radius:12px;
+    overflow:hidden; }
+  .opt-head { padding:14px 18px; border-bottom:1px solid #f1f1f3;
+    display:flex; align-items:center; gap:10px; background:#fafafa; }
+  .num { display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border-radius:50%; background:#10b981; color:#fff;
+    font-weight:700; font-size:13px; }
+  .title { font-weight:700; font-size:15px; }
+  .opt-desc { padding:10px 18px 16px; font-size:12.5px; color:#52525b; line-height:1.55; }
+  .fit { color:#10b981; font-size:11.5px; margin-top:6px; font-weight:600; }
+
+  /* 3-column preview */
+  .preview { display:grid; grid-template-columns:90px 1fr 110px; height:230px;
+    border-top:1px solid #e4e4e7; font-size:10px; line-height:1.5; }
+  .preview .left { background:#fafafa; border-right:1px solid #f1f1f3; padding:10px 8px; }
+  .preview .left .grp { font-size:8px; color:#a1a1aa; text-transform:uppercase;
+    letter-spacing:0.05em; margin-top:8px; margin-bottom:2px; }
+  .preview .left .it { padding:2px 0; color:#52525b; }
+  .preview .left .on { color:#10b981; font-weight:600; padding-left:6px;
+    border-left:2px solid #10b981; background:#ecfdf5; }
+  .preview .center { padding:12px; overflow:hidden; color:#52525b; }
+  .preview .center h3 { margin:0 0 6px; font-size:13px; color:#18181b; }
+  .preview .center .line { background:#e4e4e7; height:3px; border-radius:2px; margin:2px 0; }
+  .preview .center .line.s { width:50%; }
+  .preview .center .line.m { width:80%; }
+  .preview .center .grn { background:#10b981; height:3px; width:30%; border-radius:2px; margin:6px 0; }
+  .preview .right { background:#fafafa; border-left:1px solid #f1f1f3;
+    padding:10px 8px; font-size:9px; }
+  .preview .right .h { font-size:9px; color:#a1a1aa; text-transform:uppercase;
+    margin-bottom:6px; letter-spacing:0.05em; font-weight:700; }
+
+  /* anchor list (option 1) */
+  .anchor-it { color:#52525b; padding:2px 0; border-left:2px solid transparent; padding-left:6px; }
+  .anchor-it.on { border-left-color:#10b981; color:#10b981; font-weight:600; }
+  .anchor-it.deep { padding-left:14px; font-size:8px; color:#a1a1aa; }
+
+  /* tips panel (option 2) */
+  .tip-box { background:#ecfdf5; border-left:2px solid #10b981;
+    padding:4px 6px; border-radius:0 4px 4px 0; margin-bottom:6px; font-size:8.5px; color:#064e3b; }
+  .warn-box { background:#fef3c7; border-left:2px solid #b45309;
+    padding:4px 6px; border-radius:0 4px 4px 0; margin-bottom:6px; font-size:8.5px; color:#78350f; }
+  .link-box { background:#fff; border:1px solid #e4e4e7; border-radius:4px;
+    padding:4px 6px; margin-bottom:4px; font-size:8.5px; }
+
+  /* progress (option 3) */
+  .step-dot { display:flex; align-items:center; gap:4px; margin:4px 0; }
+  .step-dot .d { width:10px; height:10px; border-radius:50%;
+    border:2px solid #d4d4d8; background:#fff; flex-shrink:0; }
+  .step-dot.done .d { background:#10b981; border-color:#10b981; }
+  .step-dot.now  .d { background:#10b981; border-color:#10b981;
+    box-shadow:0 0 0 3px #d1fae5; }
+  .step-dot .lb { font-size:8.5px; color:#52525b; }
+  .step-dot.now .lb { color:#10b981; font-weight:700; }
+  .progress-line { width:2px; height:6px; background:#d4d4d8; margin-left:4px; }
+  .progress-line.done { background:#10b981; }
+
+  /* mockup screenshot (option 4) */
+  .mini-ui { background:#fff; border:1px solid #d4d4d8; border-radius:4px;
+    padding:6px; margin-bottom:6px; }
+  .mini-ui .bar { background:#f4f4f5; height:5px; border-radius:2px; margin-bottom:4px; }
+  .mini-ui .btn { background:#10b981; color:#fff; font-size:7px; padding:1px 4px;
+    border-radius:2px; display:inline-block; margin-top:2px; }
+  .caption { color:#a1a1aa; font-size:8px; }
+</style>
+</head>
+<body>
+
+<h1>Vue 公式風 3 カラム — 右ペイン 4 案</h1>
+<p class="sub">レイアウトは「<strong>左：サイト目次</strong> / <strong>中央：単一ページ本文</strong> / <strong>右：このページの何か</strong>」で固定。<strong>右</strong>に何を置くかの 4 案を見比べてください。</p>
+
+<div class="legend">
+  色の意味：<strong>緑＝Vue 公式に近い色</strong>です（実装時は紺/青などお好みに調整可）。プレビューの本文（中央）はすべて同じダミーで、左目次 / 中央本文 / 右ペイン構成は本物と同じ縮尺感。
+</div>
+
+<div class="stage">
+
+  <!-- ─── Option A : Vue 完全同款（On this page アンカー） ─── -->
+  <div class="opt">
+    <div class="opt-head">
+      <span class="num">A</span>
+      <span class="title">On this page アンカー（Vue 完全同款）</span>
+    </div>
+    <div class="preview">
+      <div class="left">
+        <div class="grp">基本</div>
+        <div class="it">はじめに</div>
+        <div class="it on">②候補者</div>
+        <div class="it">④凍結</div>
+        <div class="it">⑤質問</div>
+        <div class="grp">設定</div>
+        <div class="it">マスタ</div>
+        <div class="it">設定</div>
+        <div class="it">ゴミ箱</div>
+      </div>
+      <div class="center">
+        <h3>② 候補者情報を貼る</h3>
+        <div class="line m"></div>
+        <div class="line"></div>
+        <div class="line s"></div>
+        <h3 style="font-size:11px;margin-top:8px;">手順</h3>
+        <div class="line m"></div>
+        <div class="line"></div>
+        <div class="grn"></div>
+        <h3 style="font-size:11px;margin-top:8px;">ヒント</h3>
+        <div class="line"></div>
+      </div>
+      <div class="right">
+        <div class="h">このページ内</div>
+        <div class="anchor-it on">概要</div>
+        <div class="anchor-it">手順</div>
+        <div class="anchor-it deep">プロンプトをコピー</div>
+        <div class="anchor-it deep">AI 要約 → 貼付</div>
+        <div class="anchor-it deep">保存</div>
+        <div class="anchor-it">ヒント</div>
+        <div class="anchor-it">関連 FAQ</div>
+      </div>
+    </div>
+    <div class="opt-desc">
+      Vue 公式と完全に同じ。本文中の h2/h3 が自動で右に並び、スクロール連動。読みながら現在地が一目。
+      <div class="fit">▸ Vue 公式の体験そのまま。ドキュメントとして最も正統</div>
+    </div>
+  </div>
+
+  <!-- ─── Option B : 関連リンク + 注意点 パネル ─── -->
+  <div class="opt">
+    <div class="opt-head">
+      <span class="num">B</span>
+      <span class="title">注意点 + 関連リンク パネル</span>
+    </div>
+    <div class="preview">
+      <div class="left">
+        <div class="grp">基本</div>
+        <div class="it">はじめに</div>
+        <div class="it on">②候補者</div>
+        <div class="it">④凍結</div>
+        <div class="it">⑤質問</div>
+        <div class="grp">設定</div>
+        <div class="it">マスタ</div>
+        <div class="it">設定</div>
+        <div class="it">ゴミ箱</div>
+      </div>
+      <div class="center">
+        <h3>② 候補者情報を貼る</h3>
+        <div class="line m"></div>
+        <div class="line"></div>
+        <div class="line s"></div>
+        <h3 style="font-size:11px;margin-top:8px;">手順</h3>
+        <div class="line m"></div>
+        <div class="line"></div>
+        <div class="grn"></div>
+        <h3 style="font-size:11px;margin-top:8px;">ヒント</h3>
+        <div class="line"></div>
+      </div>
+      <div class="right">
+        <div class="h">💡 ヒント</div>
+        <div class="tip-box">「経歴：」見出しを入れると Excel で 3 列分割</div>
+        <div class="h" style="margin-top:8px;">⚠ 注意</div>
+        <div class="warn-box">保存後は履歴書本文は表示されない</div>
+        <div class="h" style="margin-top:8px;">関連</div>
+        <div class="link-box">→ ④ 条件凍結</div>
+        <div class="link-box">→ FAQ: 履歴書</div>
+      </div>
+    </div>
+    <div class="opt-desc">
+      右ペインに「<strong>注意点 / ヒント / 関連リンク</strong>」を抜粋表示。本文を読みながら「忘れちゃダメな所」が浮き上がる。
+      <div class="fit">▸ 教材寄り。読者の見落としを防ぎたい</div>
+    </div>
+  </div>
+
+  <!-- ─── Option C : フロー進捗マップ ─── -->
+  <div class="opt">
+    <div class="opt-head">
+      <span class="num">C</span>
+      <span class="title">フロー進捗マップ</span>
+    </div>
+    <div class="preview">
+      <div class="left">
+        <div class="grp">基本</div>
+        <div class="it">はじめに</div>
+        <div class="it on">②候補者</div>
+        <div class="it">④凍結</div>
+        <div class="it">⑤質問</div>
+        <div class="grp">設定</div>
+        <div class="it">マスタ</div>
+        <div class="it">設定</div>
+        <div class="it">ゴミ箱</div>
+      </div>
+      <div class="center">
+        <h3>② 候補者情報を貼る</h3>
+        <div class="line m"></div>
+        <div class="line"></div>
+        <div class="line s"></div>
+        <h3 style="font-size:11px;margin-top:8px;">手順</h3>
+        <div class="line m"></div>
+        <div class="line"></div>
+        <div class="grn"></div>
+        <h3 style="font-size:11px;margin-top:8px;">ヒント</h3>
+        <div class="line"></div>
+      </div>
+      <div class="right">
+        <div class="h">進捗</div>
+        <div class="step-dot done"><span class="d"></span><span class="lb">① 新規作成</span></div>
+        <div class="progress-line done"></div>
+        <div class="step-dot now"><span class="d"></span><span class="lb">② 候補者貼付</span></div>
+        <div class="progress-line"></div>
+        <div class="step-dot"><span class="d"></span><span class="lb">④ 条件凍結</span></div>
+        <div class="progress-line"></div>
+        <div class="step-dot"><span class="d"></span><span class="lb">⑤ 質問</span></div>
+        <div class="progress-line"></div>
+        <div class="step-dot"><span class="d"></span><span class="lb">⑥ 議事録</span></div>
+        <div class="progress-line"></div>
+        <div class="step-dot"><span class="d"></span><span class="lb">⑧ 評価</span></div>
+      </div>
+    </div>
+    <div class="opt-desc">
+      右ペインで <strong>①→⑧ のフローを縦に表示</strong>、現在地を強調。「あと何ステップ残ってる？」が一目。
+      <div class="fit">▸ フロー学習が主目的。プロセス感を出したい</div>
+    </div>
+  </div>
+
+  <!-- ─── Option D : スクショ・関連画面 ─── -->
+  <div class="opt">
+    <div class="opt-head">
+      <span class="num">D</span>
+      <span class="title">画面ミニプレビュー</span>
+    </div>
+    <div class="preview">
+      <div class="left">
+        <div class="grp">基本</div>
+        <div class="it">はじめに</div>
+        <div class="it on">②候補者</div>
+        <div class="it">④凍結</div>
+        <div class="it">⑤質問</div>
+        <div class="grp">設定</div>
+        <div class="it">マスタ</div>
+        <div class="it">設定</div>
+        <div class="it">ゴミ箱</div>
+      </div>
+      <div class="center">
+        <h3>② 候補者情報を貼る</h3>
+        <div class="line m"></div>
+        <div class="line"></div>
+        <div class="line s"></div>
+        <h3 style="font-size:11px;margin-top:8px;">手順</h3>
+        <div class="line m"></div>
+        <div class="line"></div>
+        <div class="grn"></div>
+        <h3 style="font-size:11px;margin-top:8px;">ヒント</h3>
+        <div class="line"></div>
+      </div>
+      <div class="right">
+        <div class="h">この画面</div>
+        <div class="mini-ui">
+          <div class="bar" style="width:60%;"></div>
+          <div class="bar" style="width:90%;"></div>
+          <div class="bar" style="width:90%;height:18px;"></div>
+          <span class="btn">保存</span>
+        </div>
+        <div class="caption">② 候補者貼付フォーム</div>
+        <div class="h" style="margin-top:8px;">完了後の画面</div>
+        <div class="mini-ui">
+          <div class="bar" style="width:50%;"></div>
+          <div class="bar" style="width:80%;"></div>
+          <div class="bar" style="width:30%;background:#10b981;"></div>
+        </div>
+        <div class="caption">保存済 ステータス</div>
+      </div>
+    </div>
+    <div class="opt-desc">
+      右ペインに「<strong>その画面のミニスクショ</strong>」+ 説明。Storybook 的ビジュアル参照。
+      <div class="fit">▸ どこをクリックすれば良いか視覚で分かる</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="sub" style="margin-top:32px;">
+  A / B / C / D あるいは「A+B 組合せ」「A をベースに C 要素」など、伝えてください。
+</p>
+
+</body>
+</html>

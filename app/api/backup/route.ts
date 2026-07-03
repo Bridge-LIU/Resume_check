@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createBackup, deleteBackup, listBackups } from "@/lib/backup";
-import { ApiError, apiErrorResponse } from "@/lib/apiError";
+import { ApiError, apiErrorResponse, ensureLocalOrigin } from "@/lib/apiError";
 import { writeAudit } from "@/lib/auditLog";
 
 function basename(p: string): string {
@@ -8,33 +8,7 @@ function basename(p: string): string {
   return i >= 0 ? p.slice(i + 1) : p;
 }
 
-/**
- * ローカル端末で動かす前提のため、Origin / Referer を localhost に限定し、
- * 他オリジン（ブラウザ拡張・別タブからの fetch）からの破壊的操作を拒否する。
- * GET（listBackups）は影響が小さいので適用しない。
- */
-function ensureLocalOrigin(req: Request): void {
-  const origin = req.headers.get("origin") ?? req.headers.get("referer") ?? "";
-  if (!origin) return; // same-origin fetch では Origin が付かないこともある（許可）
-  let host = "";
-  try {
-    host = new URL(origin).host;
-  } catch {
-    throw new ApiError("FORBIDDEN_ORIGIN", "不正な Origin ヘッダです", 403);
-  }
-  const allowed = new Set([
-    "localhost:3939",
-    "127.0.0.1:3939",
-    "[::1]:3939",
-  ]);
-  if (!allowed.has(host)) {
-    throw new ApiError(
-      "FORBIDDEN_ORIGIN",
-      "ローカル以外からの破壊的操作は許可されていません",
-      403,
-    );
-  }
-}
+const MIN_PASSWORD_LEN = 8;
 
 export async function GET() {
   try {
@@ -63,6 +37,13 @@ export async function POST(req: Request) {
       throw new ApiError(
         "INVALID_PASSWORD",
         "password は文字列で指定してください",
+        400,
+      );
+    }
+    if (raw.length < MIN_PASSWORD_LEN) {
+      throw new ApiError(
+        "PASSWORD_TOO_SHORT",
+        `パスワードは ${MIN_PASSWORD_LEN} 文字以上にしてください`,
         400,
       );
     }
@@ -100,8 +81,10 @@ export async function DELETE(req: Request) {
     try {
       deleteBackup(target);
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      throw new ApiError("DELETE_FAILED", message, 400);
+      // ファイル存在オラクル防止のため、詳細メッセージはサーバログにのみ残し、
+      // クライアントには一般化した文言を返す。
+      console.error("[backup.delete] failed", target, e);
+      throw new ApiError("DELETE_FAILED", "削除できませんでした", 400);
     }
     writeAudit("backup.delete", { meta: { file: basename(target) } });
     return NextResponse.json({ ok: true });

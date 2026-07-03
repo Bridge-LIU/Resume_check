@@ -1,7 +1,4 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tip } from "@/components/ui/tooltip";
+import { PageHeader } from "@/app/_components/PageHeader";
 import {
   aggregateBy,
   aggregateTotal,
@@ -79,7 +76,7 @@ export default async function CostPage() {
           />
         </div>
 
-        <div className="px-6 pb-4 text-[11px] text-zinc-500 leading-relaxed border-t pt-3">
+        <div className="px-6 pb-4 text-xs text-zinc-500 leading-relaxed border-t pt-3">
           ⚠️ <span className="font-medium">あくまで概算</span>です。文字数 ÷ {CHARS_PER_TOKEN}
           ≈ token で換算しているため、英数比率や全角・半角の混在で誤差が出ます。
           為替は USD ¥{USD_TO_JPY} 固定。実額は各プロバイダの Console / 請求書をご確認ください。
@@ -179,12 +176,12 @@ function KpiCard({
 }) {
   return (
     <div className="border rounded-lg px-3 py-2 bg-zinc-50">
-      <div className="text-[11px] text-zinc-500">{label}</div>
+      <div className="text-xs text-zinc-500">{label}</div>
       <div className="text-xl font-bold">
         {value}
         {suffix && <span className="text-sm font-normal text-zinc-500 ml-1">{suffix}</span>}
       </div>
-      {sub && <div className="text-[11px] text-zinc-500 mt-0.5">{sub}</div>}
+      {sub && <div className="text-xs text-zinc-500 mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -216,7 +213,7 @@ function CostTable({
             <td className={`px-2 py-1.5 ${monoLabel ? "font-mono text-[12px]" : ""}`}>
               {r.label}
               {r.note && (
-                <span className="ml-2 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1">
+                <span className="ml-2 text-2xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1">
                   {r.note}
                 </span>
               )}
@@ -237,28 +234,6 @@ function CostTable({
   );
 }
 
-function PageHeader({ title, meta }: { title: string; meta?: string }) {
-  return (
-    <header className="px-4 py-2.5 border-b flex items-center gap-3 text-sm">
-      <Tip content="一覧へ戻る">
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="group h-8 pl-2 pr-3 gap-1.5 rounded-full text-xs font-medium text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
-        >
-          <Link href="/" aria-label="一覧へ戻る">
-            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-            一覧
-          </Link>
-        </Button>
-      </Tip>
-      <div className="h-5 w-px bg-zinc-200" aria-hidden="true" />
-      <div className="font-bold whitespace-nowrap">{title}</div>
-      {meta && <span className="text-xs text-zinc-500">{meta}</span>}
-    </header>
-  );
-}
 
 function RecentTable({ records }: { records: CostRecord[] }) {
   return (
@@ -277,14 +252,14 @@ function RecentTable({ records }: { records: CostRecord[] }) {
       <tbody className="divide-y">
         {records.map((r, i) => (
           <tr key={i}>
-            <td className="px-2 py-1 text-[11px] tabular-nums text-zinc-600">
+            <td className="px-2 py-1 text-xs tabular-nums text-zinc-600">
               {r.ts.replace("T", " ").slice(0, 16)}
             </td>
             <td className="px-2 py-1">{r.stage}</td>
             <td className="px-2 py-1 text-[12px]">
               {providerIcon(r.provider)} {providerLabel(r.provider)}
             </td>
-            <td className="px-2 py-1 font-mono text-[11px]">{r.model}</td>
+            <td className="px-2 py-1 font-mono text-xs">{r.model}</td>
             <td className="text-right tabular-nums text-zinc-600">
               {r.cost.inputTokens.toLocaleString()}
             </td>

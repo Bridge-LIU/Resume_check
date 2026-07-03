@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+// initial* と内部 state の同期は親側の <SessionListFilters key=...> による再マウントで行う。
+// 旧実装は useEffect で setState を呼んで同期していたが、React 19 の
+// react-hooks/set-state-in-effect ルールに抵触するため key パターンへ移行。
 import { X } from "lucide-react";
 import type { SessionMeta } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -46,13 +49,8 @@ export function SessionListFilters({
   const [result, setResult] = useState(initialResult ?? "");
   const [q, setQ] = useState(initialQ ?? "");
 
-  // 親（searchParams）から initial が変わったら同期（リセット時など）
-  useEffect(() => {
-    setState(initialState ?? "");
-    setRole(initialRole ?? "");
-    setResult(initialResult ?? "");
-    setQ(initialQ ?? "");
-  }, [initialState, initialRole, initialResult, initialQ]);
+  // 親側で key を URL パラメータに連動させているため、URL 変更時はこのコンポーネント
+  // ごと再マウントされ、上記 useState 初期値が initial* から再評価される。
 
   const push = useCallback(
     (next: { state: string; role: string; result: string; q: string }) => {
@@ -142,7 +140,7 @@ export function SessionListFilters({
         </Select>
       </FilterField>
 
-      <FilterField label="合否">
+      <FilterField label="採否">
         <Select value={result || ALL} onValueChange={handleResult}>
           <SelectTrigger className="h-9 w-32 text-sm">
             <SelectValue />
@@ -189,7 +187,7 @@ function FilterField({
 }) {
   return (
     <div className={`flex flex-col gap-1 ${className ?? ""}`}>
-      <span className="text-[11px] text-zinc-500 font-medium leading-none">
+      <span className="text-xs text-zinc-500 font-medium leading-none">
         {label}
       </span>
       {children}

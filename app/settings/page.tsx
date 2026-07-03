@@ -1,6 +1,8 @@
 import "server-only";
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { loadSettings, saveSettings } from "@/lib/storage";
+import { redirect } from "next/navigation";
+import { loadSettings, saveSettings, validateDataRoot } from "@/lib/storage";
 import type {
   LlmStage,
   ProviderConfig,
@@ -20,6 +22,17 @@ import { Switch } from "@/components/ui/switch";
 
 const STAGES: LlmStage[] = ["summary", "questions", "evaluation", "evaluationStrict"];
 
+/**
+ * API モード関連 UI の表示フラグ。
+ * Phase 1（貼付モード）では以下は非表示:
+ *   - ProvidersField（Anthropic/OpenAI/Google 键 + 工程別モデル）
+ *   - 質問生成数（貼付運用では既定 7/8 で十分。設定値は settings.json に残る）
+ * フォーム送信側も この flag で分岐し、非表示中は current 値を そのまま維持する
+ * （表示されていないフィールドを取り込んで書き潰してしまわないため）。
+ * Phase 2 で API モードを有効化する際に true に切り替えるだけで復活する。
+ */
+const SHOW_API_SETTINGS = false;
+
 async function updateSettings(formData: FormData) {
   "use server";
   const current = loadSettings();
@@ -28,49 +41,81 @@ async function updateSettings(formData: FormData) {
     return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback;
   };
 
-  // プロバイダごとの key / モデルを取り出す（空欄は現状維持、削除チェックで明示クリア）
-  const providerIds: ProviderId[] = ["anthropic", "openai", "google"];
-  const providers: Record<ProviderId, ProviderConfig> = {
-    ...current.providers,
-  };
-  for (const id of providerIds) {
-    const submitted = String(formData.get(`provider_${id}_key`) ?? "").trim();
-    const remove = formData.get(`remove_${id}`) === "on";
-    const nextKey = remove ? "" : submitted || current.providers[id].key;
-    const defaultModel = String(
-      formData.get(`provider_${id}_defaultModel`) ?? current.providers[id].defaultModel,
-    );
-    const models: ProviderConfig["models"] = { ...current.providers[id].models };
-    for (const stage of STAGES) {
-      const v = formData.get(`provider_${id}_model_${stage}`);
-      if (typeof v === "string" && v) models[stage] = v;
+  // API モード UI 非表示中は providers / defaultProvider / questionCounts の
+  // フォーム項目は そもそも DOM に無い。 formData から取り込むと フィールド不在 →
+  // 誤って空値扱い で 既存 設定を上書きしてしまう恐れがあるため、その場合は
+  // current 値を そのまま維持する。
+  let providers: Record<ProviderId, ProviderConfig>;
+  let defaultProvider: ProviderId;
+  let questionCounts: Settings["questionCounts"];
+
+  if (SHOW_API_SETTINGS) {
+    // プロバイダごとの key / モデルを取り出す（空欄は現状維持、削除チェックで明示クリア）
+    const providerIds: ProviderId[] = ["anthropic", "openai", "google"];
+    providers = { ...current.providers };
+    for (const id of providerIds) {
+      const submitted = String(formData.get(`provider_${id}_key`) ?? "").trim();
+      const remove = formData.get(`remove_${id}`) === "on";
+      const nextKey = remove ? "" : submitted || current.providers[id].key;
+      const defaultModel = String(
+        formData.get(`provider_${id}_defaultModel`) ?? current.providers[id].defaultModel,
+      );
+      const models: ProviderConfig["models"] = { ...current.providers[id].models };
+      for (const stage of STAGES) {
+        const v = formData.get(`provider_${id}_model_${stage}`);
+        if (typeof v === "string" && v) models[stage] = v;
+      }
+      providers[id] = { key: nextKey, defaultModel, models };
     }
-    providers[id] = { key: nextKey, defaultModel, models };
+
+    const submittedDefaultProvider = formData.get("defaultProvider");
+    defaultProvider =
+      submittedDefaultProvider === "anthropic" ||
+      submittedDefaultProvider === "openai" ||
+      submittedDefaultProvider === "google"
+        ? submittedDefaultProvider
+        : current.defaultProvider;
+
+    // ⑤質問生成数（1〜50 にクランプ）
+    // v が null / 空文字のときは fallback。Number(null) = 0 で誤って 1 に丸まるのを防ぐ。
+    const clampQ = (v: FormDataEntryValue | null, fallback: number) => {
+      if (v == null || v === "") return fallback;
+      const n = Number(v);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(1, Math.min(50, Math.floor(n)));
+    };
+    questionCounts = {
+      nontech: clampQ(formData.get("q_nontech"), current.questionCounts.nontech),
+      tech: clampQ(formData.get("q_tech"), current.questionCounts.tech),
+    };
+  } else {
+    providers = current.providers;
+    defaultProvider = current.defaultProvider;
+    questionCounts = current.questionCounts;
   }
 
-  const submittedDefaultProvider = formData.get("defaultProvider");
-  const defaultProvider: ProviderId =
-    submittedDefaultProvider === "anthropic" ||
-    submittedDefaultProvider === "openai" ||
-    submittedDefaultProvider === "google"
-      ? submittedDefaultProvider
-      : current.defaultProvider;
-
-  // ⑤質問生成数（1〜50 にクランプ）
-  const clampQ = (v: FormDataEntryValue | null, fallback: number) => {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return fallback;
-    return Math.max(1, Math.min(50, Math.floor(n)));
-  };
-  const questionCounts = {
-    nontech: clampQ(formData.get("q_nontech"), current.questionCounts.nontech),
-    tech: clampQ(formData.get("q_tech"), current.questionCounts.tech),
-  };
+  // dataRoot は destructive な値（C:\Windows / / 等）を受け入れると致命的
+  // （fs.rmSync が走る経路があるため）。サーバ側で必ず検証する。
+  // 検証失敗時は throw すると Next.js DEV のエラーオーバーレイが残るため、
+  // ?error= 経由でページ内の赤バナーに変換する。
+  //
+  // 空文字が来た場合は 静かに "./data" にフォールバックさせず、
+  // validateDataRoot に投げて明示的な エラー にする（クライアント側で「カスタム
+  // 選択したのに空」だった等のケースを見逃さない）。
+  const dataRootInput = String(
+    formData.get("dataRoot") ?? current.dataRoot,
+  ).trim();
+  let dataRoot: string;
+  try {
+    dataRoot = validateDataRoot(dataRootInput);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    redirect(`/settings?error=${encodeURIComponent(msg)}`);
+  }
 
   const next: Settings = {
     ...current,
-    dataRoot:
-      String(formData.get("dataRoot") ?? current.dataRoot).trim() || "./data",
+    dataRoot,
     defaultProvider,
     providers,
     questionCounts,
@@ -103,11 +148,22 @@ async function updateSettings(formData: FormData) {
       ),
     },
   };
-  saveSettings(next);
+  try {
+    saveSettings(next);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    redirect(`/settings?error=${encodeURIComponent(msg)}`);
+  }
   revalidatePath("/settings");
+  redirect("/settings?saved=1");
 }
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; saved?: string }>;
+}) {
+  const { error: errorMsg, saved } = await searchParams;
   const s = loadSettings();
   // 画面には key そのものは出さない。設定済かどうかと、環境変数優先かのみ表示。
   const envStatus: Record<ProviderId, boolean> = {
@@ -140,55 +196,76 @@ export default async function Page() {
       {/* 既存設定フォーム */}
       <div className="bg-white rounded-xl border shadow-sm">
         <div className="p-6 space-y-6 max-w-3xl">
-          <h2 className="font-bold text-lg">設定</h2>
+          <h1 className="font-bold text-lg">設定</h1>
+
+          {errorMsg && (
+            <div
+              role="alert"
+              className="border border-red-300 bg-red-50 text-red-800 text-sm rounded px-3 py-2"
+            >
+              保存できませんでした: {errorMsg}
+            </div>
+          )}
+          {saved && !errorMsg && (
+            <div
+              role="status"
+              className="border border-emerald-300 bg-emerald-50 text-emerald-800 text-sm rounded px-3 py-2"
+            >
+              設定を保存しました。
+            </div>
+          )}
 
           <form action={updateSettings} className="space-y-6">
             <DataRootField defaultValue={s.dataRoot} />
 
-            <ProvidersField
-              defaultProvider={s.defaultProvider}
-              providers={providersSafe}
-              envStatus={envStatus}
-            />
+            {SHOW_API_SETTINGS && (
+              <ProvidersField
+                defaultProvider={s.defaultProvider}
+                providers={providersSafe}
+                envStatus={envStatus}
+              />
+            )}
 
             {/* 質問生成数 — prompt と maxTokens 上限が両方この値から自動算出される */}
-            <section className="space-y-3">
-              <div className="font-medium text-sm">質問生成数</div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="q_nontech" className="text-xs text-zinc-500">
-                    非技術
-                  </Label>
-                  <Input
-                    id="q_nontech"
-                    name="q_nontech"
-                    type="number"
-                    min={1}
-                    max={50}
-                    defaultValue={s.questionCounts.nontech}
-                  />
-                  <div className="text-[10px] text-zinc-400">
-                    自己紹介・キャリア・志望動機 等
+            {SHOW_API_SETTINGS && (
+              <section className="space-y-3">
+                <div className="font-medium text-sm">質問生成数</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="q_nontech" className="text-xs text-zinc-500">
+                      非技術
+                    </Label>
+                    <Input
+                      id="q_nontech"
+                      name="q_nontech"
+                      type="number"
+                      min={1}
+                      max={50}
+                      defaultValue={s.questionCounts.nontech}
+                    />
+                    <div className="text-2xs text-zinc-400">
+                      自己紹介・キャリア・志望動機 等
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="q_tech" className="text-xs text-zinc-500">
+                      技術
+                    </Label>
+                    <Input
+                      id="q_tech"
+                      name="q_tech"
+                      type="number"
+                      min={1}
+                      max={50}
+                      defaultValue={s.questionCounts.tech}
+                    />
+                    <div className="text-2xs text-zinc-400">
+                      候補者の経歴・条件に紐づく専門質問
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="q_tech" className="text-xs text-zinc-500">
-                    技術
-                  </Label>
-                  <Input
-                    id="q_tech"
-                    name="q_tech"
-                    type="number"
-                    min={1}
-                    max={50}
-                    defaultValue={s.questionCounts.tech}
-                  />
-                  <div className="text-[10px] text-zinc-400">
-                    候補者の経歴・条件に紐づく専門質問
-                  </div>
-                </div>
-              </div>
-            </section>
+              </section>
+            )}
 
             {/* 保存期間（編集可能化） */}
             <section className="space-y-3">
@@ -220,7 +297,7 @@ export default async function Page() {
                     min={0}
                     defaultValue={s.retention.days["採用"] ?? 0}
                   />
-                  <div className="text-[10px] text-zinc-400">日数（0=削除しない）</div>
+                  <div className="text-2xs text-zinc-400">日数（0=削除しない）</div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="days_不採用" className="text-xs text-zinc-500">不採用</Label>
@@ -231,7 +308,7 @@ export default async function Page() {
                     min={0}
                     defaultValue={s.retention.days["不採用"] ?? 180}
                   />
-                  <div className="text-[10px] text-zinc-400">日数</div>
+                  <div className="text-2xs text-zinc-400">日数</div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="days_未確定" className="text-xs text-zinc-500">未確定</Label>
@@ -242,7 +319,7 @@ export default async function Page() {
                     min={0}
                     defaultValue={s.retention.days["未確定"] ?? 0}
                   />
-                  <div className="text-[10px] text-zinc-400">通常 0 推奨</div>
+                  <div className="text-2xs text-zinc-400">通常 0 推奨</div>
                 </div>
               </div>
 
@@ -258,7 +335,7 @@ export default async function Page() {
                     min={0}
                     defaultValue={s.retention.softDeleteGraceDays}
                   />
-                  <div className="text-[10px] text-zinc-400">
+                  <div className="text-2xs text-zinc-400">
                     ソフト削除後この日数で完全削除
                   </div>
                 </div>
@@ -291,7 +368,7 @@ export default async function Page() {
                     min={0}
                     defaultValue={s.retention.backupKeepDays ?? 90}
                   />
-                  <div className="text-[10px] text-zinc-400">
+                  <div className="text-2xs text-zinc-400">
                     日数（0=自動削除しない）
                   </div>
                 </div>
@@ -306,7 +383,7 @@ export default async function Page() {
                     min={0}
                     defaultValue={s.retention.backupMaxGenerations ?? 0}
                   />
-                  <div className="text-[10px] text-zinc-400">
+                  <div className="text-2xs text-zinc-400">
                     件数（0=無制限）
                   </div>
                 </div>
@@ -332,10 +409,15 @@ export default async function Page() {
             >
               {s.retention.enabled ? "有効" : "無効"}
             </span>
+            <Link
+              href="/trash"
+              className="ml-auto text-xs text-blue-600 hover:underline"
+            >
+              ゴミ箱を開く →
+            </Link>
           </div>
           <div className="text-xs text-zinc-500">
-            設計書 §7.5 の二段階削除（sessions/ → _trash/ → 完全削除）。実行前に必ず「次に消える面談を確認」してください。
-            ゴミ箱の中身は <a className="text-blue-600 hover:underline" href="/trash">/trash</a> で復元できます。
+            設計書 §7.5 の二段階削除（sessions/ → _trash/ → 完全削除）。実行前に必ず「次に消える面談を確認」してください。移動済みの面談は猶予期間内ならゴミ箱から復元できます。
           </div>
           <RetentionManager />
         </div>

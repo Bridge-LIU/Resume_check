@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { getEvaluation, listSessions } from "@/lib/storage";
+import {
+  getEvaluation,
+  listSessions,
+  saveSessionMeta,
+} from "@/lib/storage";
 import { SessionListFilters } from "./_components/SessionListFilters";
 import { SessionListTable } from "./_components/SessionListTable";
+import { SessionsExportButton } from "./_components/SessionsExportButton";
 
 type SP = Promise<{ state?: string; role?: string; result?: string; q?: string }>;
 
@@ -17,10 +22,31 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     return true;
   });
 
-  // 評価結果から総合スコアを取得
+  // 一覧描画の N+1 解消:
+  //   優先: SessionMeta.総合スコア / 合否（saveEvaluation 時にデノーマライズ済）
+  //   遅延バックフィル: 旧データでメタにキャッシュが無い「評価済」のみ evaluation.json を読む
+  //   （次回以降は meta から直接取れるので 1 回だけ）
   const rows = filtered.map((meta) => {
-    const ev = meta.status === "評価済" ? getEvaluation(meta.id) : null;
-    return { meta, score: ev?.総合スコア ?? null };
+    const hasScore = typeof meta.総合スコア === "number";
+    const hasVerdict = meta.合否 != null;
+    if (hasScore && hasVerdict) {
+      return { meta, score: meta.総合スコア ?? null };
+    }
+    if (meta.status !== "評価済") {
+      return { meta, score: meta.総合スコア ?? null };
+    }
+    const ev = getEvaluation(meta.id);
+    if (!ev) return { meta, score: meta.総合スコア ?? null };
+    const patched: typeof meta = {
+      ...meta,
+      総合スコア: hasScore ? meta.総合スコア : ev.総合スコア,
+      合否: hasVerdict ? meta.合否 : ev.合否,
+    };
+    // 差分があれば 1 度だけバックフィル
+    if (patched.総合スコア !== meta.総合スコア || patched.合否 !== meta.合否) {
+      saveSessionMeta(patched);
+    }
+    return { meta: patched, score: patched.総合スコア ?? null };
   });
 
   const roleOptions = Array.from(new Set(all.map((s) => s.役割)));
@@ -29,11 +55,15 @@ export default async function Page({ searchParams }: { searchParams: SP }) {
     <div className="bg-white rounded-xl border shadow-sm">
       <div className="p-6 space-y-4">
         <div className="flex items-center gap-3">
-          <h2 className="font-bold text-lg">面談一覧</h2>
+          <h1 className="font-bold text-lg">面談一覧</h1>
           <div className="flex-1" />
+          <SessionsExportButton />
         </div>
 
         <SessionListFilters
+          // URL パラメータ変更時にコンポーネントを再マウントさせ、内部 state を
+          // initial* から再初期化する（旧 useEffect+setState 同期パターンの代替）。
+          key={`${state ?? ""}|${role ?? ""}|${result ?? ""}|${q ?? ""}`}
           initialState={state}
           initialRole={role}
           initialResult={result}

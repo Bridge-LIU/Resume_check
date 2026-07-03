@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tip } from "@/components/ui/tooltip";
 import { useConfirm } from "@/components/ui/use-confirm";
-import { softDeleteSessionAction } from "@/app/sessions/[id]/actions";
+import {
+  bulkSoftDeleteSessionsAction,
+  softDeleteSessionAction,
+} from "@/app/sessions/[id]/actions";
+import { useRouter } from "next/navigation";
 
 type Row = {
   meta: SessionMeta;
@@ -45,10 +49,31 @@ function statusPillClass(status: SessionMeta["status"]) {
   }
 }
 
-function resultCell(result: SessionMeta["result"]) {
-  if (result === "採用") return <span className="pill pill-pass">合格</span>;
-  if (result === "不採用") return <span className="pill pill-fail">不合格</span>;
+/** 合否（自動判定：⑧評価保存時に評価 JSON から由来） */
+function verdictCell(verdict: SessionMeta["合否"] | undefined) {
+  if (verdict === "合格") return <span className="pill pill-pass -ml-2">合格</span>;
+  if (verdict === "普通") return <span className="pill pill-mid -ml-2">普通</span>;
+  if (verdict === "不合格") return <span className="pill pill-fail -ml-2">不合格</span>;
   return <span className="text-zinc-400">―</span>;
+}
+
+/** 採否（人工判断：採用 / 不採用 / 未確定） */
+function decisionCell(result: SessionMeta["result"]) {
+  if (result === "採用")
+    return (
+      <span className="inline-flex items-center gap-1 text-emerald-700 font-medium">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        採用
+      </span>
+    );
+  if (result === "不採用")
+    return (
+      <span className="inline-flex items-center gap-1 text-red-700 font-medium">
+        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+        不採用
+      </span>
+    );
+  return <span className="text-zinc-400">未確定</span>;
 }
 
 const MAX_COMPARE = 20;
@@ -56,8 +81,16 @@ const MAX_COMPARE = 20;
 export function SessionListTable({ rows, total }: { rows: Row[]; total: number }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [, startTransition] = useTransition();
   const { confirm, ConfirmDialog } = useConfirm();
+  const router = useRouter();
+
+  const nameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of rows) m.set(r.meta.id, r.meta.氏名);
+    return m;
+  }, [rows]);
 
   async function handleDelete(meta: SessionMeta) {
     const ok = await confirm({
@@ -101,6 +134,68 @@ export function SessionListTable({ rows, total }: { rows: Row[]; total: number }
     setSelected(new Set());
   }
 
+  async function handleBulkDelete() {
+    if (selected.size === 0) return;
+    const ids = Array.from(selected);
+    const names = ids
+      .map((id) => nameById.get(id))
+      .filter((n): n is string => !!n);
+    const visibleNames = names.slice(0, 8);
+    const overflow = names.length - visibleNames.length;
+    const ok = await confirm({
+      title: `${ids.length} 件をゴミ箱へ移動`,
+      body: (
+        <div className="space-y-4 -mt-1">
+          <div className="rounded-lg border bg-zinc-50 p-3">
+            <div className="text-xs text-zinc-500 mb-2">対象セッション</div>
+            <div className="flex flex-wrap gap-1.5">
+              {visibleNames.map((n, i) => (
+                <span
+                  key={`${n}-${i}`}
+                  className="inline-flex items-center rounded-md bg-white border px-2 py-0.5 text-xs font-medium text-zinc-800"
+                >
+                  {n}
+                </span>
+              ))}
+              {overflow > 0 && (
+                <span className="inline-flex items-center rounded-md bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                  +{overflow}
+                </span>
+              )}
+            </div>
+          </div>
+          <ul className="space-y-1.5 text-sm text-zinc-600">
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-600 mt-0.5">✓</span>
+              <span>
+                猶予期間内（既定 <strong className="text-zinc-800">14 日</strong>）は
+                <Link href="/trash" className="text-blue-600 hover:underline mx-1">ゴミ箱</Link>
+                から復元可能
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-red-500 mt-0.5">✕</span>
+              <span>猶予を過ぎると保存期間スイープにより<strong className="text-red-600">完全削除</strong></span>
+            </li>
+          </ul>
+        </div>
+      ),
+      confirmLabel: `${ids.length} 件を削除`,
+      destructive: true,
+    });
+    if (!ok) return;
+    setBulkDeleting(true);
+    try {
+      await bulkSoftDeleteSessionsAction(ids);
+      setSelected(new Set());
+      router.refresh();
+    } catch (e) {
+      console.error("[handleBulkDelete] failed", e);
+    } finally {
+      setBulkDeleting(false);
+    }
+  }
+
   function toggleAllVisible() {
     if (evaluableIds.every((id) => selected.has(id))) {
       setSelected((prev) => {
@@ -130,7 +225,7 @@ export function SessionListTable({ rows, total }: { rows: Row[]; total: number }
 
   return (
     <>
-      <table className="w-full text-sm border rounded-lg overflow-hidden">
+      <table className="w-full text-sm border rounded-lg overflow-hidden [&_td]:align-middle [&_th]:align-middle">
         <thead className="bg-zinc-50 text-zinc-600 text-xs">
           <tr>
             <th className="px-3 py-2 w-8">
@@ -147,7 +242,8 @@ export function SessionListTable({ rows, total }: { rows: Row[]; total: number }
             <th className="text-left px-4 py-2">状態</th>
             <th className="text-right px-4 py-2">総合スコア</th>
             <th className="text-left px-4 py-2">合否</th>
-            <th className="px-4 py-2" />
+            <th className="text-left px-4 py-2">採否</th>
+            <th className="px-3 py-2" />
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -161,7 +257,7 @@ export function SessionListTable({ rows, total }: { rows: Row[]; total: number }
                 key={meta.id}
                 className={`hover:bg-zinc-50 ${isSelected ? "bg-blue-50/50" : ""}`}
               >
-                <td className="px-3 py-2 align-middle">
+                <td className="px-3 py-2">
                   <Tip
                     content={
                       !isEvaluated
@@ -182,10 +278,10 @@ export function SessionListTable({ rows, total }: { rows: Row[]; total: number }
                 <td className="px-4 py-2 tabular">{formatDateTime(meta.作成日時)}</td>
                 <td className="px-4 py-2 font-medium">{meta.氏名}</td>
                 <td className="px-4 py-2">
-                  <span className={rolePillClass(meta.役割)}>{meta.役割}</span>
+                  <span className={`${rolePillClass(meta.役割)} -ml-2`}>{meta.役割}</span>
                 </td>
                 <td className="px-4 py-2">
-                  <span className={statusPillClass(meta.status)}>{meta.status}</span>
+                  <span className={`${statusPillClass(meta.status)} -ml-2`}>{meta.status}</span>
                 </td>
                 <td className="px-4 py-2 text-right tabular font-medium">
                   {score != null ? (
@@ -194,7 +290,8 @@ export function SessionListTable({ rows, total }: { rows: Row[]; total: number }
                     <span className="text-zinc-400">―</span>
                   )}
                 </td>
-                <td className="px-4 py-2">{resultCell(meta.result)}</td>
+                <td className="px-4 py-2">{verdictCell(meta.合否)}</td>
+                <td className="px-4 py-2">{decisionCell(meta.result)}</td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
                   <div className="inline-flex items-center gap-2">
                     <Button
@@ -253,6 +350,16 @@ export function SessionListTable({ rows, total }: { rows: Row[]; total: number }
             選択解除
           </Button>
           <div className="flex-1" />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleting}
+            className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+          >
+            {bulkDeleting ? "削除中…" : `${selected.size} 件を一括削除`}
+          </Button>
           {compareHref ? (
             <Button asChild size="sm">
               <Link href={compareHref}>{selected.size} 件を比較 →</Link>

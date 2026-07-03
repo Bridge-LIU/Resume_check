@@ -2,6 +2,7 @@ import { listRoles, getEvalCriteria } from "@/lib/storage";
 import RolesEditor from "./RolesEditor";
 import EvalCriteriaEditor from "./EvalCriteriaEditor";
 import MasterIO from "./MasterIO";
+import { PageHeader } from "@/app/_components/PageHeader";
 import type { EvalCriteria } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -22,13 +23,15 @@ export default async function MasterPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">マスタ管理</h1>
-        <p className="text-xs text-zinc-500 mt-1">
-          役割別の「求める人材条件」と、共通の「評価条件（BARS）」を編集します。
-          ここでの変更は<strong className="text-zinc-700">これから作成する面談</strong>に反映されます。
-          既存の面談は④確定時の凍結スナップショットを使うため影響を受けません。
-        </p>
+      <div className="bg-white rounded-xl border shadow-sm">
+        <PageHeader title="マスタ管理" />
+        <div className="p-6">
+          <p className="text-xs text-zinc-500">
+            役割別の「求める人材条件」と、共通の「評価条件（BARS）」を編集します。
+            ここでの変更は<strong className="text-zinc-700">これから作成する面談</strong>に反映されます。
+            既存の面談は④確定時の凍結スナップショットを使うため影響を受けません。
+          </p>
+        </div>
       </div>
 
       <MasterIO />
