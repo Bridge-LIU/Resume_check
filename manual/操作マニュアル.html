@@ -3,277 +3,646 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>面談AI評価ツール — 操作マニュアル</title>
+<title>面談AI評価ツール — 操作マニュアル v2</title>
 <style>
   :root {
-    --vp-c-bg: #ffffff;
-    --vp-c-bg-alt: #f6f6f7;
-    --vp-c-bg-soft: #f9f9fa;
-    --vp-c-text: #213547;
-    --vp-c-text-soft: #5e6c75;
-    --vp-c-text-mute: #99a1b2;
-    --vp-c-divider: #ebebeb;
-    --vp-c-divider-light: #f0f0f0;
-    --vp-c-brand: #2563eb;
-    --vp-c-brand-soft: #eff6ff;
-    --vp-c-brand-dark: #1e40af;
-    --vp-c-tip: #10b981;
-    --vp-c-tip-soft: #ecfdf5;
-    --vp-c-warn: #ea580c;
-    --vp-c-warn-soft: #fff7ed;
-    --vp-c-danger: #dc2626;
-    --vp-c-danger-soft: #fef2f2;
-    --vp-c-note-soft: #eff6ff;
-    --vp-c-pill-edit-bg: #fef3c7; --vp-c-pill-edit-ink: #92400e;
-    --vp-c-pill-pub-bg:  #dbeafe; --vp-c-pill-pub-ink:  #1e40af;
-    --vp-c-pill-itv-bg:  #ede9fe; --vp-c-pill-itv-ink:  #5b21b6;
-    --vp-c-pill-eval-bg: #dcfce7; --vp-c-pill-eval-ink: #166534;
-    --vp-c-pill-pass-bg: #dcfce7; --vp-c-pill-pass-ink: #166534;
-    --vp-c-pill-fail-bg: #fee2e2; --vp-c-pill-fail-ink: #991b1b;
+    --c-bg: #ffffff;
+    --c-bg-soft: #fafaf9;
+    --c-bg-soft2: #f5f5f4;
+    --c-text: #1c1917;
+    --c-text-soft: #57534e;
+    --c-text-mute: #a8a29e;
+    --c-divider: #e7e5e4;
+    --c-divider-lite: #f3f2f0;
+    --c-brand: #4f46e5;
+    --c-brand-dark: #4338ca;
+    --c-brand-soft: #eef2ff;
+    --c-accent: #f59e0b;
+    --c-accent-soft: #fffbeb;
+    --c-tip: #10b981;
+    --c-tip-soft: #ecfdf5;
+    --c-warn: #ea580c;
+    --c-warn-soft: #fff7ed;
+    --c-danger: #dc2626;
+    --c-danger-soft: #fef2f2;
+    --c-note-soft: #eff6ff;
+
+    --pill-edit-bg: #fef3c7; --pill-edit-ink: #92400e;
+    --pill-pub-bg:  #dbeafe; --pill-pub-ink:  #1e40af;
+    --pill-itv-bg:  #ede9fe; --pill-itv-ink:  #5b21b6;
+    --pill-eval-bg: #dcfce7; --pill-eval-ink: #166534;
+    --pill-pass-bg: #dcfce7; --pill-pass-ink: #166534;
+    --pill-fail-bg: #fee2e2; --pill-fail-ink: #991b1b;
+
+    --font-jp: "Inter","Noto Sans JP",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic Medium","Segoe UI",system-ui,sans-serif;
+    --font-mono: ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
   }
   * { box-sizing: border-box; }
   html, body { margin:0; padding:0;
-    background:var(--vp-c-bg); color:var(--vp-c-text);
-    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Segoe UI",sans-serif;
-    font-size:15px; line-height:1.75; -webkit-font-smoothing:antialiased; }
-  a { color:var(--vp-c-brand); text-decoration:none; transition:color .15s; }
-  a:hover { color:var(--vp-c-brand-dark); text-decoration:underline; }
+    background:var(--c-bg); color:var(--c-text);
+    font-family:var(--font-jp);
+    font-size:16px; line-height:1.85;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    font-feature-settings:"palt";
+  }
+  a { color:var(--c-brand); text-decoration:none; transition:color .12s; }
+  a:hover { color:var(--c-brand-dark); text-decoration:underline; }
+  ::selection { background:var(--c-brand-soft); }
 
-  /* header */
+  /* ─── header ─── */
   header.top {
     position:sticky; top:0; z-index:50;
-    background:rgba(255,255,255,0.92); backdrop-filter:saturate(1.5) blur(8px);
-    border-bottom:1px solid var(--vp-c-divider); height:56px;
+    background:rgba(255,255,255,0.94);
+    backdrop-filter:saturate(1.4) blur(10px);
+    border-bottom:1px solid var(--c-divider);
+    height:60px;
   }
-  header.top .inner { display:flex; align-items:center; padding:0 28px; height:100%; gap:24px; max-width:1440px; margin:0 auto; }
-  header.top .brand { font-weight:700; font-size:15px; color:var(--vp-c-text); }
-  header.top .brand .ver { font-weight:400; color:var(--vp-c-text-mute); margin-left:8px; font-size:12px; }
-  header.top nav.top { display:flex; gap:24px; margin-left:auto; }
-  header.top nav.top a { color:var(--vp-c-text-soft); font-size:14px; font-weight:500; }
-  header.top nav.top a:hover { color:var(--vp-c-brand); text-decoration:none; }
+  header.top .inner {
+    display:flex; align-items:center; gap:20px;
+    padding:0 32px; height:100%;
+    max-width:1520px; margin:0 auto;
+  }
+  header.top .brand {
+    font-weight:700; font-size:15px; color:var(--c-text);
+    display:flex; align-items:baseline; gap:8px;
+  }
+  header.top .brand .ver {
+    font-weight:400; color:var(--c-text-mute);
+    font-size:11px; letter-spacing:0.05em;
+    padding:2px 8px; border:1px solid var(--c-divider);
+    border-radius:999px;
+  }
+  header.top .search-btn {
+    display:flex; align-items:center; gap:10px;
+    padding:6px 12px; margin-left:12px;
+    background:var(--c-bg-soft); border:1px solid var(--c-divider);
+    border-radius:8px; cursor:pointer;
+    font-family:inherit; font-size:13px; color:var(--c-text-mute);
+    min-width:220px;
+    transition:border-color .15s, background .15s;
+  }
+  header.top .search-btn:hover {
+    border-color:var(--c-brand); background:#fff;
+    color:var(--c-text-soft);
+  }
+  header.top .search-btn kbd {
+    background:#fff; border:1px solid var(--c-divider);
+    padding:1px 6px; border-radius:4px; font-size:11px;
+    color:var(--c-text-mute); font-family:var(--font-mono);
+    margin-left:auto;
+  }
+  header.top nav.top {
+    display:flex; gap:6px; margin-left:auto;
+  }
+  header.top nav.top a {
+    padding:6px 12px; border-radius:6px;
+    color:var(--c-text-soft); font-size:13px; font-weight:500;
+  }
+  header.top nav.top a:hover {
+    color:var(--c-brand); background:var(--c-brand-soft);
+    text-decoration:none;
+  }
+  header.top .hamburger {
+    display:none; align-items:center; justify-content:center;
+    width:36px; height:36px; border-radius:8px; cursor:pointer;
+    background:var(--c-bg-soft); border:1px solid var(--c-divider);
+  }
+  header.top .hamburger span,
+  header.top .hamburger span::before,
+  header.top .hamburger span::after {
+    display:block; width:16px; height:2px;
+    background:var(--c-text-soft); border-radius:1px;
+    position:relative;
+  }
+  header.top .hamburger span::before { content:""; position:absolute; top:-5px; left:0; }
+  header.top .hamburger span::after  { content:""; position:absolute; top:5px; left:0; }
 
+  /* ─── layout ─── */
   .layout {
-    display:grid; grid-template-columns:272px 1fr 240px;
-    max-width:1440px; margin:0 auto; min-height:calc(100vh - 56px);
+    display:grid;
+    grid-template-columns:288px minmax(0,1fr) 240px;
+    max-width:1520px; margin:0 auto;
+    min-height:calc(100vh - 60px);
   }
 
-  /* left */
+  /* ─── left nav ─── */
   aside.left {
-    border-right:1px solid var(--vp-c-divider);
-    padding:32px 0 32px 32px;
-    position:sticky; top:56px; height:calc(100vh - 56px); overflow-y:auto;
+    padding:36px 0 40px 32px;
+    position:sticky; top:60px;
+    height:calc(100vh - 60px); overflow-y:auto;
+    border-right:1px solid var(--c-divider-lite);
   }
   aside.left ul { list-style:none; margin:0; padding:0; }
   aside.left .group {
-    font-size:13px; font-weight:700; color:var(--vp-c-text);
-    padding:14px 0 8px; margin-top:6px;
+    font-size:11px; font-weight:700; color:var(--c-text-mute);
+    letter-spacing:0.08em; text-transform:uppercase;
+    padding:16px 0 6px; margin-top:6px;
   }
   aside.left li a {
-    display:block; padding:5px 14px 5px 12px;
-    color:var(--vp-c-text-soft); font-size:14px;
-    border-left:1px solid var(--vp-c-divider-light);
-    transition:color .15s, border-color .15s;
+    display:flex; align-items:center; gap:8px;
+    padding:6px 14px 6px 12px;
+    color:var(--c-text-soft); font-size:14px;
+    border-radius:6px; margin-right:8px;
+    transition:color .12s, background .12s;
   }
-  aside.left li a:hover { color:var(--vp-c-brand); text-decoration:none; }
+  aside.left li a:hover {
+    color:var(--c-brand); text-decoration:none;
+    background:var(--c-brand-soft);
+  }
   aside.left li a.active {
-    color:var(--vp-c-brand); font-weight:600;
-    border-left-color:var(--vp-c-brand);
+    color:#fff; font-weight:600;
+    background:var(--c-brand);
   }
+  aside.left li a.active:hover { background:var(--c-brand-dark); }
 
-  /* center */
-  main.content { padding:32px 56px 96px; max-width:752px; width:100%; }
+  /* ─── center content ─── */
+  main.content {
+    padding:40px 64px 96px;
+    max-width:880px; width:100%;
+  }
   .page { display:none; }
-  .page.active { display:block; animation:fadeIn .15s; }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
-
-  main.content h1 { font-size:32px; margin:0 0 8px; letter-spacing:-0.02em; }
-  main.content h1 + p.subtitle { color:var(--vp-c-text-mute); font-size:16px; margin:0 0 32px; }
-  main.content h2 {
-    font-size:22px; margin:36px 0 14px; padding-top:18px;
-    border-top:1px solid var(--vp-c-divider); letter-spacing:-0.01em;
-    scroll-margin-top:72px;
+  .page.active { display:block; animation:fadeIn .18s ease-out; }
+  @keyframes fadeIn {
+    from { opacity:0; transform:translateY(6px); }
+    to   { opacity:1; transform:none; }
   }
-  main.content h2:first-of-type { border-top:0; padding-top:0; margin-top:24px; }
-  main.content h3 { font-size:17px; margin:24px 0 10px; scroll-margin-top:72px; }
-  main.content p, main.content ol, main.content ul { margin:0 0 16px; }
-  main.content ol, main.content ul { padding-left:26px; }
-  main.content li { margin-bottom:6px; }
+
+  main.content h1 {
+    font-size:36px; margin:0 0 6px;
+    letter-spacing:-0.02em; line-height:1.25;
+    color:var(--c-text);
+    display:flex; align-items:center; flex-wrap:wrap;
+    column-gap:14px; row-gap:6px;
+  }
+  main.content h1 .pill {
+    vertical-align:0;
+    font-size:13px;
+    padding:3px 12px;
+    line-height:1.6;
+  }
+  main.content h1 + p.subtitle {
+    color:var(--c-text-mute); font-size:17px; line-height:1.6;
+    margin:0 0 40px;
+  }
+  main.content h2 {
+    font-size:23px; margin:44px 0 14px; padding-top:22px;
+    border-top:1px solid var(--c-divider);
+    letter-spacing:-0.015em; line-height:1.4;
+    scroll-margin-top:80px;
+  }
+  main.content h2:first-of-type {
+    border-top:0; padding-top:0; margin-top:28px;
+  }
+  main.content h3 {
+    font-size:17px; margin:28px 0 10px;
+    scroll-margin-top:80px;
+  }
+  main.content p, main.content ol, main.content ul { margin:0 0 18px; }
+  main.content ol, main.content ul { padding-left:28px; }
+  main.content li { margin-bottom:8px; }
+  main.content li::marker { color:var(--c-text-mute); }
+
   main.content code {
-    background:var(--vp-c-bg-soft); border:1px solid var(--vp-c-divider-light);
-    padding:2px 6px; border-radius:4px; font-size:13px;
-    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-    color:var(--vp-c-brand-dark);
+    background:var(--c-bg-soft2); border:1px solid var(--c-divider);
+    padding:2px 6px; border-radius:4px; font-size:13.5px;
+    font-family:var(--font-mono);
+    color:var(--c-brand-dark);
+  }
+  main.content pre.sample {
+    background:var(--c-bg-soft2); border:1px solid var(--c-divider);
+    border-radius:10px; padding:16px 20px;
+    font-family:var(--font-mono); font-size:12.5px; line-height:1.75;
+    color:var(--c-text);
+    white-space:pre-wrap; word-break:break-word;
+    overflow-x:auto; margin:16px 0 20px;
+  }
+  main.content pre.sample .sep {
+    color:var(--c-text-mute);
   }
   main.content kbd {
-    background:#fafafa; border:1px solid #d4d4d8; border-bottom-width:2px;
-    border-radius:4px; padding:2px 7px; font-size:12px;
-    font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--vp-c-text);
+    background:#fff; border:1px solid #d6d3d1; border-bottom-width:2px;
+    border-radius:5px; padding:2px 7px; font-size:12px;
+    font-family:var(--font-mono); color:var(--c-text);
+    box-shadow:0 1px 0 rgba(0,0,0,0.02);
   }
+
   main.content table {
-    width:100%; border-collapse:collapse; margin:16px 0 24px; font-size:14px;
-    border:1px solid var(--vp-c-divider); border-radius:8px; overflow:hidden;
+    width:100%; border-collapse:separate; border-spacing:0;
+    margin:20px 0 26px; font-size:14.5px;
+    border:1px solid var(--c-divider); border-radius:10px; overflow:hidden;
+    background:#fff;
   }
   main.content table th, main.content table td {
-    border-top:1px solid var(--vp-c-divider);
-    padding:8px 14px; text-align:left; vertical-align:top;
+    padding:10px 16px; text-align:left; vertical-align:top;
+    border-top:1px solid var(--c-divider-lite);
   }
-  main.content table th { background:var(--vp-c-bg-soft); font-size:13px; color:var(--vp-c-text-soft); font-weight:600; border-top:0; }
+  main.content table th {
+    background:var(--c-bg-soft); font-size:13px;
+    color:var(--c-text-soft); font-weight:600;
+    border-top:0;
+  }
+  main.content table tbody tr:hover td { background:var(--c-bg-soft); }
 
+  /* ─── pill ─── */
   .pill {
-    display:inline-block; padding:1px 9px; border-radius:999px;
-    font-size:11.5px; font-weight:600; line-height:1.7; vertical-align:1px;
+    display:inline-flex; align-items:center;
+    padding:2px 10px; border-radius:999px;
+    font-size:12px; font-weight:600; line-height:1.6;
+    vertical-align:2px;
   }
-  .pill-edit { background:var(--vp-c-pill-edit-bg); color:var(--vp-c-pill-edit-ink); }
-  .pill-pub  { background:var(--vp-c-pill-pub-bg);  color:var(--vp-c-pill-pub-ink); }
-  .pill-itv  { background:var(--vp-c-pill-itv-bg);  color:var(--vp-c-pill-itv-ink); }
-  .pill-eval { background:var(--vp-c-pill-eval-bg); color:var(--vp-c-pill-eval-ink); }
-  .pill-pass { background:var(--vp-c-pill-pass-bg); color:var(--vp-c-pill-pass-ink); }
-  .pill-fail { background:var(--vp-c-pill-fail-bg); color:var(--vp-c-pill-fail-ink); }
+  .pill-edit { background:var(--pill-edit-bg); color:var(--pill-edit-ink); }
+  .pill-pub  { background:var(--pill-pub-bg);  color:var(--pill-pub-ink); }
+  .pill-itv  { background:var(--pill-itv-bg);  color:var(--pill-itv-ink); }
+  .pill-eval { background:var(--pill-eval-bg); color:var(--pill-eval-ink); }
+  .pill-pass { background:var(--pill-pass-bg); color:var(--pill-pass-ink); }
+  .pill-fail { background:var(--pill-fail-bg); color:var(--pill-fail-ink); }
 
+  /* ─── admonition (v2: top-border card style) ─── */
   .tip, .warn, .danger, .note {
-    border-left:4px solid; padding:14px 20px;
-    border-radius:0 8px 8px 0; margin:20px 0; font-size:14px;
+    border:1px solid; border-top:none;
+    border-radius:10px; overflow:hidden;
+    margin:22px 0; font-size:14.5px; line-height:1.75;
+    background:#fff;
+    box-shadow:0 1px 2px rgba(0,0,0,0.02);
   }
-  .tip    { background:var(--vp-c-tip-soft);    border-color:var(--vp-c-tip);    color:#064e3b; }
-  .warn   { background:var(--vp-c-warn-soft);   border-color:var(--vp-c-warn);   color:#7c2d12; }
-  .danger { background:var(--vp-c-danger-soft); border-color:var(--vp-c-danger); color:#7f1d1d; }
-  .note   { background:var(--vp-c-note-soft);   border-color:var(--vp-c-brand);  color:#1e3a8a; }
+  .tip    { border-color:#a7f3d0; }
+  .warn   { border-color:#fed7aa; }
+  .danger { border-color:#fecaca; }
+  .note   { border-color:#bfdbfe; }
   .tip::before, .warn::before, .danger::before, .note::before {
-    display:block; font-size:12px; font-weight:700; letter-spacing:0.05em;
-    text-transform:uppercase; margin-bottom:4px;
+    display:block; padding:8px 18px; font-size:12px; font-weight:700;
+    letter-spacing:0.08em; text-transform:uppercase; color:#fff;
   }
-  .tip::before    { content:"💡 ヒント"; }
-  .warn::before   { content:"⚠ 注意"; }
-  .danger::before { content:"🚨 重要"; }
-  .note::before   { content:"📌 メモ"; }
+  .tip::before    { content:"💡 ヒント"; background:var(--c-tip); }
+  .warn::before   { content:"⚠ 注意";   background:var(--c-warn); }
+  .danger::before { content:"🚨 重要";   background:var(--c-danger); }
+  .note::before   { content:"📌 メモ";   background:var(--c-brand); }
+  .tip > *, .warn > *, .danger > *, .note > * { padding:0 18px; }
+  .tip    { color:#064e3b; background:var(--c-tip-soft); }
+  .warn   { color:#7c2d12; background:var(--c-warn-soft); }
+  .danger { color:#7f1d1d; background:var(--c-danger-soft); }
+  .note   { color:#1e3a8a; background:var(--c-note-soft); }
+  .tip, .warn, .danger, .note { padding-bottom:14px; padding-top:0; }
+  .tip::before, .warn::before, .danger::before, .note::before { margin-bottom:12px; }
 
-  figure.shot { margin:20px 0; }
-  figure.shot img { width:100%; height:auto; display:block;
-    border:1px solid var(--vp-c-divider); border-radius:10px;
-    box-shadow:0 1px 3px rgba(0,0,0,0.04);
-    cursor:zoom-in; transition:filter .15s; }
-  figure.shot img:hover { filter:brightness(0.97); }
+  /* ─── figures ─── */
+  figure.shot { margin:24px 0; }
+  figure.shot .frame {
+    border:1px solid var(--c-divider); border-radius:12px;
+    overflow:hidden; background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04);
+    transition:box-shadow .15s;
+  }
+  figure.shot .frame:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+  figure.shot .dots {
+    display:flex; gap:6px; padding:8px 14px;
+    background:var(--c-bg-soft); border-bottom:1px solid var(--c-divider-lite);
+  }
+  figure.shot .dots span {
+    width:10px; height:10px; border-radius:50%;
+    display:inline-block;
+  }
+  figure.shot .dots .d1 { background:#fca5a5; }
+  figure.shot .dots .d2 { background:#fcd34d; }
+  figure.shot .dots .d3 { background:#86efac; }
+  figure.shot img {
+    width:100%; height:auto; display:block;
+    cursor:zoom-in;
+  }
   figure.shot figcaption {
-    font-size:12.5px; color:var(--vp-c-text-mute); margin-top:8px; text-align:center;
+    font-size:12.5px; color:var(--c-text-mute);
+    margin-top:10px; text-align:center;
+    padding:0 20px;
   }
   figure.shot figcaption::after {
-    content:" · 🔍 ダブルクリックで原寸表示";
-    color:var(--vp-c-text-mute); font-size:11px;
+    content:" · 🔍 クリックで拡大";
+    color:var(--c-text-mute); font-size:11px;
   }
 
-  /* ─── lightbox ─── */
+  /* ─── lightbox v2 (wheel zoom + drag pan + prev/next) ─── */
   .lightbox {
     position:fixed; inset:0; z-index:100;
-    background:rgba(0,0,0,0.88);
-    display:none;
-    overflow:auto;            /* 高い画像は縦スクロール可 */
-    cursor:zoom-out;
+    background:rgba(15,15,15,0.94);
+    display:none; overflow:hidden;
     animation:fadeBg .15s;
+    user-select:none;
   }
   .lightbox.on { display:block; }
-  /* 画像本体 — 寸法は JS が naturalWidth * ratio をインラインで設定 */
-  .lightbox .frame {
-    min-height:100%;
-    min-width:fit-content;        /* 画像が viewport より広い場合、横スクロール領域を確保 */
-    padding:48px 24px 60px;       /* 上ボタン + 下ヒントの余白 */
-    display:block;
+  @keyframes fadeBg { from { opacity:0; } to { opacity:1; } }
+  .lightbox .stage {
+    position:absolute; inset:60px 0 60px 0;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
   }
   .lightbox img {
-    display:block;
-    margin:0 auto;                /* 中央寄せ */
-    box-shadow:0 8px 40px rgba(0,0,0,0.5);
+    display:block; max-width:none; max-height:none;
+    box-shadow:0 12px 60px rgba(0,0,0,0.6);
     border-radius:6px;
-    cursor:default;
+    will-change:transform;
+    transition:transform .06s;
   }
-  /* 閉じる ボタンは viewport 固定 */
-  .lightbox .close {
-    position:fixed; top:16px; right:20px; z-index:2;
-    color:#fff; font-size:28px; cursor:pointer;
-    background:rgba(0,0,0,0.5); border-radius:50%;
-    width:40px; height:40px; display:flex;
+  .lightbox.dragging img { transition:none; cursor:grabbing; }
+  .lightbox img.can-drag { cursor:grab; }
+  .lightbox .close,
+  .lightbox .nav-btn {
+    position:fixed; z-index:2;
+    color:#fff; font-size:20px; cursor:pointer;
+    background:rgba(255,255,255,0.08); border-radius:999px;
+    width:44px; height:44px; display:flex;
     align-items:center; justify-content:center;
     transition:background .15s;
     line-height:1;
+    backdrop-filter:blur(6px);
   }
-  .lightbox .close:hover { background:rgba(255,255,255,0.25); }
-  /* 100% / fit トグル ボタン */
-  .lightbox .zoom-toggle {
-    position:fixed; top:16px; right:72px; z-index:2;
-    color:#fff; font-size:13px; cursor:pointer;
-    background:rgba(0,0,0,0.5); border-radius:20px;
-    padding:8px 14px; transition:background .15s;
-    user-select:none;
+  .lightbox .close { top:14px; right:20px; font-size:24px; }
+  .lightbox .nav-btn.prev { top:50%; left:20px; transform:translateY(-50%); font-size:22px; }
+  .lightbox .nav-btn.next { top:50%; right:20px; transform:translateY(-50%); font-size:22px; }
+  .lightbox .close:hover, .lightbox .nav-btn:hover { background:rgba(255,255,255,0.2); }
+  .lightbox .toolbar {
+    position:fixed; top:14px; left:20px; z-index:2;
+    display:flex; align-items:center; gap:10px;
+    color:#fff; font-size:13px;
+    background:rgba(0,0,0,0.4);
+    padding:8px 14px; border-radius:999px;
+    backdrop-filter:blur(6px);
   }
-  .lightbox .zoom-toggle:hover { background:rgba(255,255,255,0.25); }
+  .lightbox .toolbar .counter { font-family:var(--font-mono); opacity:0.85; }
+  .lightbox .toolbar .zoom-lvl {
+    min-width:50px; text-align:center; font-variant-numeric:tabular-nums;
+  }
+  .lightbox .toolbar button {
+    background:transparent; border:1px solid rgba(255,255,255,0.25);
+    color:#fff; padding:2px 10px; border-radius:6px;
+    font-family:inherit; font-size:12px; cursor:pointer;
+    transition:background .15s;
+  }
+  .lightbox .toolbar button:hover { background:rgba(255,255,255,0.15); }
   .lightbox .hint {
-    position:fixed; bottom:16px; left:50%; transform:translateX(-50%); z-index:2;
+    position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:2;
     color:rgba(255,255,255,0.7); font-size:12px;
-    background:rgba(0,0,0,0.5); padding:4px 12px; border-radius:12px;
+    background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:12px;
+    backdrop-filter:blur(6px);
   }
-  @keyframes fadeBg { from { opacity:0; } to { opacity:1; } }
+  .lightbox .hint kbd {
+    background:rgba(255,255,255,0.12); padding:1px 6px;
+    border-radius:3px; font-family:var(--font-mono); font-size:11px;
+    color:#fff; border:none;
+  }
 
-  details.faq { border-bottom:1px solid var(--vp-c-divider); padding:14px 0; }
-  details.faq summary { cursor:pointer; font-weight:600; font-size:15px;
-    list-style:none; display:flex; align-items:center; gap:10px; color:var(--vp-c-text); }
-  details.faq summary::before { content:"Q"; background:var(--vp-c-brand); color:#fff;
+  /* ─── FAQ ─── */
+  details.faq {
+    border:1px solid var(--c-divider); border-radius:10px;
+    padding:0; margin:12px 0; overflow:hidden;
+    background:#fff;
+  }
+  details.faq summary {
+    cursor:pointer; font-weight:600; font-size:15px;
+    list-style:none; display:flex; align-items:center; gap:12px;
+    padding:14px 18px;
+    color:var(--c-text);
+    background:var(--c-bg-soft);
+    transition:background .12s;
+  }
+  details.faq summary:hover { background:var(--c-brand-soft); }
+  details.faq[open] summary { background:var(--c-brand-soft); }
+  details.faq summary::before {
+    content:"Q"; background:var(--c-brand); color:#fff;
     width:22px; height:22px; border-radius:50%;
-    display:inline-flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
-  details.faq summary::after { content:"+"; margin-left:auto; color:var(--vp-c-text-mute); font-size:18px; }
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:12px; flex-shrink:0;
+  }
+  details.faq summary::after {
+    content:"+"; margin-left:auto; color:var(--c-text-mute);
+    font-size:20px; transition:transform .15s;
+  }
   details.faq[open] summary::after { content:"−"; }
-  details.faq[open] summary { margin-bottom:8px; }
-  details.faq .a { padding:0 0 0 32px; color:var(--vp-c-text-soft); font-size:14px; }
+  details.faq .a {
+    padding:16px 18px 18px 52px;
+    color:var(--c-text-soft); font-size:14.5px; line-height:1.75;
+  }
 
-  /* page footer (prev / next) */
+  /* ─── pager ─── */
   .pager {
-    display:flex; gap:16px; margin-top:48px; padding-top:24px;
-    border-top:1px solid var(--vp-c-divider);
+    display:flex; gap:16px; margin-top:56px; padding-top:28px;
+    border-top:1px solid var(--c-divider);
   }
   .pager a {
-    flex:1; padding:14px 18px; border:1px solid var(--vp-c-divider);
-    border-radius:10px; transition:all .15s;
+    flex:1; padding:16px 20px;
+    border:1px solid var(--c-divider);
+    border-radius:12px;
+    transition:all .12s;
+    background:#fff;
   }
-  .pager a:hover { border-color:var(--vp-c-brand); text-decoration:none; }
-  .pager a .lbl { display:block; font-size:11px; color:var(--vp-c-text-mute); text-transform:uppercase; letter-spacing:0.05em; }
-  .pager a .ttl { display:block; color:var(--vp-c-brand); font-weight:600; margin-top:4px; }
+  .pager a:hover {
+    border-color:var(--c-brand);
+    background:var(--c-brand-soft);
+    text-decoration:none;
+    transform:translateY(-2px);
+    box-shadow:0 6px 20px rgba(79,70,229,0.12);
+  }
+  .pager a .lbl {
+    display:block; font-size:11px; color:var(--c-text-mute);
+    text-transform:uppercase; letter-spacing:0.08em;
+  }
+  .pager a .ttl {
+    display:block; color:var(--c-brand); font-weight:600;
+    margin-top:6px; font-size:15px;
+  }
   .pager .next { text-align:right; }
   .pager .prev:only-child { max-width:50%; }
 
-  /* right "On this page" */
+  /* ─── right "on this page" ─── */
   aside.right {
-    padding:32px 0 32px 24px;
-    position:sticky; top:56px; height:calc(100vh - 56px); overflow-y:auto;
+    padding:40px 0 40px 24px;
+    position:sticky; top:60px;
+    height:calc(100vh - 60px); overflow-y:auto;
     font-size:13px;
   }
   aside.right .title {
-    font-size:12px; font-weight:700; letter-spacing:0.05em;
-    text-transform:uppercase; color:var(--vp-c-text);
-    padding-bottom:8px; border-bottom:1px solid var(--vp-c-divider);
-    margin-bottom:8px;
+    font-size:11px; font-weight:700; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--c-text-mute);
+    padding-bottom:10px; border-bottom:1px solid var(--c-divider);
+    margin-bottom:10px;
   }
   aside.right ul { list-style:none; margin:0; padding:0; }
   aside.right li a {
-    display:block; padding:4px 0 4px 12px;
-    color:var(--vp-c-text-soft); font-size:13px;
-    border-left:1px solid var(--vp-c-divider-light);
-    transition:color .15s, border-color .15s;
+    display:block; padding:5px 0 5px 14px;
+    color:var(--c-text-soft); font-size:13px;
+    border-left:2px solid var(--c-divider-lite);
+    transition:color .12s, border-color .12s;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  aside.right li a:hover { color:var(--vp-c-brand); text-decoration:none; }
+  aside.right li a:hover { color:var(--c-brand); text-decoration:none; }
   aside.right li a.active {
-    color:var(--vp-c-brand); font-weight:600;
-    border-left-color:var(--vp-c-brand);
+    color:var(--c-brand); font-weight:600;
+    border-left-color:var(--c-brand);
   }
-  aside.right li.lvl3 a { padding-left:24px; font-size:12.5px; color:var(--vp-c-text-mute); }
-  aside.right .empty { color:var(--vp-c-text-mute); font-size:12px; padding:4px 0 4px 12px; }
+  aside.right li.lvl3 a {
+    padding-left:26px; font-size:12.5px; color:var(--c-text-mute);
+  }
+  aside.right .empty {
+    color:var(--c-text-mute); font-size:12px;
+    padding:6px 0 6px 14px; font-style:italic;
+  }
 
-  @media (max-width:1100px) {
-    .layout { grid-template-columns:240px 1fr; }
-    aside.right { display:none; }
+  /* ─── search palette ─── */
+  .search-modal {
+    position:fixed; inset:0; z-index:200;
+    display:none;
+    background:rgba(15,15,15,0.55);
+    backdrop-filter:blur(4px);
+    animation:fadeBg .15s;
   }
-  @media (max-width:720px) {
+  .search-modal.on { display:flex; align-items:flex-start; justify-content:center; padding-top:80px; }
+  .search-panel {
+    width:min(640px, 90vw);
+    background:#fff; border:1px solid var(--c-divider);
+    border-radius:14px; overflow:hidden;
+    box-shadow:0 24px 80px rgba(0,0,0,0.35);
+    animation:popIn .15s ease-out;
+  }
+  @keyframes popIn {
+    from { opacity:0; transform:translateY(-6px) scale(0.98); }
+    to   { opacity:1; transform:none; }
+  }
+  .search-panel .box {
+    display:flex; align-items:center; gap:10px;
+    padding:14px 18px; border-bottom:1px solid var(--c-divider);
+  }
+  .search-panel input {
+    flex:1; border:0; outline:0;
+    font-family:inherit; font-size:16px; color:var(--c-text);
+    background:transparent;
+  }
+  .search-panel .icon { color:var(--c-text-mute); font-size:16px; }
+  .search-panel .esc {
+    color:var(--c-text-mute); font-size:11px; font-family:var(--font-mono);
+    border:1px solid var(--c-divider); padding:2px 6px; border-radius:4px;
+  }
+  .search-results {
+    max-height:min(60vh, 480px); overflow-y:auto;
+    padding:6px;
+  }
+  .search-results .hit {
+    display:block; padding:10px 14px; border-radius:8px;
+    cursor:pointer; text-decoration:none; color:var(--c-text);
+  }
+  .search-results .hit:hover,
+  .search-results .hit.sel {
+    background:var(--c-brand-soft); text-decoration:none;
+  }
+  .search-results .hit .page-name {
+    font-size:11px; color:var(--c-brand); font-weight:600;
+    letter-spacing:0.05em; text-transform:uppercase;
+  }
+  .search-results .hit .snippet {
+    font-size:14px; color:var(--c-text); margin-top:2px;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .search-results .hit mark {
+    background:var(--c-accent-soft); color:#78350f;
+    padding:0 2px; border-radius:2px;
+  }
+  .search-results .empty {
+    padding:24px; text-align:center;
+    color:var(--c-text-mute); font-size:13.5px;
+  }
+  .search-results .hint {
+    padding:8px 14px; font-size:12px; color:var(--c-text-mute);
+    display:flex; justify-content:space-between; gap:12px;
+    border-top:1px solid var(--c-divider);
+  }
+  .search-results .hint kbd {
+    background:var(--c-bg-soft); border:1px solid var(--c-divider);
+    padding:1px 6px; border-radius:3px; font-family:var(--font-mono); font-size:11px;
+    color:var(--c-text-soft);
+  }
+
+  /* ─── kbd help overlay ─── */
+  .kbd-help {
+    position:fixed; inset:0; z-index:200;
+    display:none; align-items:center; justify-content:center;
+    background:rgba(15,15,15,0.55); backdrop-filter:blur(4px);
+    animation:fadeBg .15s;
+  }
+  .kbd-help.on { display:flex; }
+  .kbd-help .panel {
+    background:#fff; border-radius:14px; padding:26px 30px;
+    box-shadow:0 24px 80px rgba(0,0,0,0.35);
+    max-width:min(480px, 92vw);
+    animation:popIn .15s ease-out;
+  }
+  .kbd-help h3 {
+    margin:0 0 16px; font-size:16px; font-weight:700;
+  }
+  .kbd-help ul { list-style:none; margin:0; padding:0; }
+  .kbd-help li {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 0; font-size:14px; color:var(--c-text-soft);
+    border-bottom:1px solid var(--c-divider-lite);
+  }
+  .kbd-help li:last-child { border-bottom:0; }
+  .kbd-help kbd {
+    background:var(--c-bg-soft); border:1px solid var(--c-divider);
+    padding:2px 8px; border-radius:4px;
+    font-family:var(--font-mono); font-size:12px; color:var(--c-text);
+    margin-left:4px;
+  }
+
+  /* ─── mobile ─── */
+  @media (max-width:1200px) {
+    .layout { grid-template-columns:260px minmax(0,1fr); }
+    aside.right { display:none; }
+    main.content { padding:36px 48px 96px; }
+  }
+  @media (max-width:820px) {
     .layout { grid-template-columns:1fr; }
-    aside.left { position:static; height:auto; padding:16px 24px; }
-    main.content { padding:24px; }
+    aside.left {
+      position:fixed; top:60px; left:0;
+      width:280px; height:calc(100vh - 60px);
+      background:#fff; z-index:40;
+      border-right:1px solid var(--c-divider);
+      transform:translateX(-100%);
+      transition:transform .2s ease-out;
+      padding-left:24px;
+    }
+    aside.left.open { transform:translateX(0); box-shadow:8px 0 24px rgba(0,0,0,0.1); }
+    header.top .hamburger { display:flex; }
+    header.top .search-btn { min-width:0; padding:6px 10px; }
+    header.top .search-btn .placeholder { display:none; }
+    main.content { padding:24px 20px 80px; }
+    main.content h1 { font-size:28px; }
+    .layout::after {
+      content:""; position:fixed; inset:60px 0 0 0;
+      background:rgba(0,0,0,0.5); z-index:39;
+      opacity:0; pointer-events:none;
+      transition:opacity .2s;
+    }
+    aside.left.open ~ * { }
+  }
+  .backdrop {
+    position:fixed; inset:60px 0 0 0;
+    background:rgba(0,0,0,0.4); z-index:39;
+    display:none;
+  }
+  .backdrop.on { display:block; }
+
+  /* ─── print stylesheet ─── */
+  @media print {
+    header.top, aside.left, aside.right, .pager, .backdrop,
+    .lightbox, .search-modal, .kbd-help { display:none !important; }
+    .layout { display:block; }
+    main.content { padding:0; max-width:none; }
+    .page { display:block !important; page-break-after:always; }
+    .page:last-child { page-break-after:auto; }
+    main.content h1 { font-size:26px; margin-top:24px; }
+    main.content h2 { border-top:1px solid #999; page-break-after:avoid; }
+    figure.shot { page-break-inside:avoid; }
+    figure.shot img { max-width:100%; }
+    a { color:#000; text-decoration:none; }
+    body { font-size:11pt; }
   }
 </style>
 </head>
@@ -281,17 +650,31 @@
 
 <header class="top">
   <div class="inner">
-    <span class="brand">面談AI評価ツール <span class="ver">v1.0</span></span>
+    <div class="hamburger" id="hamburger" title="メニュー">
+      <span></span>
+    </div>
+    <span class="brand">
+      面談AI評価マニュアル
+      <span class="ver">v1.0</span>
+    </span>
+    <button class="search-btn" id="search-open" title="検索 (Ctrl+K)">
+      <span class="icon">🔍</span>
+      <span class="placeholder">マニュアル内を検索…</span>
+      <kbd>⌘K</kbd>
+    </button>
     <nav class="top">
       <a href="http://127.0.0.1:3939" target="_blank">アプリを開く ↗</a>
+      <a href="#" id="show-help" title="キーボードショートカット (?)">キー ?</a>
     </nav>
   </div>
 </header>
 
+<div class="backdrop" id="backdrop"></div>
+
 <div class="layout">
 
-  <!-- ───────── LEFT NAV ───────── -->
-  <aside class="left">
+  <!-- ─── LEFT NAV ─── -->
+  <aside class="left" id="left-nav">
     <div class="group">入門</div>
     <ul>
       <li><a href="#intro" data-page="intro">はじめに</a></li>
@@ -309,18 +692,26 @@
       <li><a href="#step8" data-page="step8">⑤ 評価を貼る</a></li>
       <li><a href="#status" data-page="status">ステータスの流れ</a></li>
     </ul>
-    <div class="group">機能リファレンス</div>
+    <div class="group">準備・設定</div>
+    <ul>
+      <li><a href="#master" data-page="master">マスタ管理</a></li>
+      <li><a href="#settings" data-page="settings">設定</a></li>
+    </ul>
+    <div class="group">日常運用</div>
     <ul>
       <li><a href="#list" data-page="list">一覧画面</a></li>
       <li><a href="#duplicate" data-page="duplicate">複製と役割変更</a></li>
-      <li><a href="#master" data-page="master">マスタ管理</a></li>
-      <li><a href="#settings" data-page="settings">設定</a></li>
-      <li><a href="#trash" data-page="trash">ゴミ箱と復元</a></li>
-      <li><a href="#backup" data-page="backup">バックアップ</a></li>
+    </ul>
+    <div class="group">分析・出力</div>
+    <ul>
       <li><a href="#analytics" data-page="analytics">分析画面</a></li>
       <li><a href="#compare" data-page="compare">横断比較</a></li>
-      <li><a href="#cost" data-page="cost">コスト集計</a></li>
       <li><a href="#export" data-page="export">Excel エクスポート</a></li>
+    </ul>
+    <div class="group">運用管理</div>
+    <ul>
+      <li><a href="#trash" data-page="trash">ゴミ箱と復元</a></li>
+      <li><a href="#backup" data-page="backup">バックアップ</a></li>
       <li><a href="#audit" data-page="audit">監査ログ</a></li>
     </ul>
     <div class="group">困ったら</div>
@@ -330,22 +721,21 @@
     </ul>
   </aside>
 
-  <!-- ───────── CENTER CONTENT ───────── -->
+  <!-- ─── CENTER CONTENT ─── -->
   <main class="content" id="content">
 
-  <!-- ─── intro ─── -->
   <article class="page" id="p-intro">
     <h1>面談AI評価ツール</h1>
     <p class="subtitle">採用面談 1 件あたりの「候補者要約 → 条件凍結 → 質問づくり → 議事録 → 評価」をローカル PC で完結させるツールです。</p>
 
     <h2 id="intro-about">このマニュアルについて</h2>
-    <p>左側のメニューで章を切り替えます。各章は <strong>独立したページ</strong> として表示され、右側の「このページ内」は<strong>その章の小節</strong>だけを案内します。</p>
+    <p>左側のメニューで章を切り替えます。各章は <strong>独立したページ</strong> として表示され、右側の「このページ内」は<strong>その章の小節</strong>だけを案内します。右上の 🔍 または <kbd>Ctrl</kbd>+<kbd>K</kbd> で全ページから横断検索できます。</p>
 
     <h2 id="intro-features">主な機能</h2>
     <ul>
       <li>面談ごとに専用 URL を作って、関連情報を 1 ヶ所に集約</li>
       <li>履歴書要約・議事録・評価結果を <strong>貼付</strong> で保存（AI に直接投げる必要なし）</li>
-      <li>役割（NW / Server / Dev / PMO / IT / Special）ごとに別々の評価条件</li>
+      <li>役割（NW / Server / Dev / PMO / ITSupport / Special）ごとに別々の評価条件</li>
       <li>面談時点の条件を <strong>凍結</strong> → 後でマスタを変えても過去面談に影響しない</li>
       <li>過去面談を <strong>匿名サマリ</strong>として集計・分析</li>
       <li>Excel ファイル（マスタ / 面談者一覧）を自動更新</li>
@@ -354,12 +744,10 @@
 
     <h2 id="intro-mode">動作モード</h2>
     <div class="note">
-      本ツールは「<strong>貼付モード</strong>」で動作します。AI 要約・質問生成・評価は Max などのAI チャット側で実行し、結果をコピー → このツールに貼付という流れです。<br>
-      AI が直接アクセスする「<strong>API モード</strong>」は<strong>有料オプション</strong>です。ご希望の方は別途お問い合わせください。
+      <p>本ツールは「<strong>貼付モード</strong>」で動作します。AI 要約・質問生成・評価は Claude などの AI チャット側で実行し、結果をコピー → このツールに貼付という流れです。</p>
     </div>
   </article>
 
-  <!-- ─── start ─── -->
   <article class="page" id="p-start">
     <h1>起動方法</h1>
     <p class="subtitle">プロジェクトフォルダの <code>start-app.bat</code> をダブルクリックするだけです。</p>
@@ -379,46 +767,53 @@
     <h2 id="start-stop">停止</h2>
     <p>起動時に開いた コマンドプロンプトで <kbd>Ctrl</kbd>+<kbd>C</kbd> → <kbd>Y</kbd> → <kbd>Enter</kbd>。</p>
     <div class="warn">
-      <strong>ブラウザを閉じるだけでは停止しません。</strong>コマンドプロンプトでの操作が必要です。
+      <p><strong>ブラウザを閉じるだけでは停止しません。</strong>コマンドプロンプトでの操作が必要です。</p>
     </div>
   </article>
 
-  <!-- ─── layout ─── -->
   <article class="page" id="p-layout">
     <h1>画面構成</h1>
     <p class="subtitle">上部に固定ヘッダ＋ナビ、その下に各ページの本文。右上の「+ 新規面談」でいつでも新規作成できます。</p>
 
     <h2 id="layout-screenshot">画面全体</h2>
     <figure class="shot">
-      <img src="assets/list.png" alt="一覧画面">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/list.png" alt="一覧画面">
+      </div>
       <figcaption>一覧画面 (<code>/</code>) — ヘッダ + フィルタ + セッション一覧</figcaption>
     </figure>
 
     <h2 id="layout-pages">ページ一覧</h2>
+    <p>ヘッダの上部ナビからは <strong>一覧 / 分析 / マスタ / 設定 / ＋ 新規面談</strong> の 5 つに直接遷移できます。ゴミ箱・比較は各ページ内のボタンや設定画面のリンクから開きます。</p>
     <table>
-      <thead><tr><th>ページ</th><th>URL</th><th>用途</th></tr></thead>
+      <thead><tr><th>ページ</th><th>URL</th><th>到達手段</th><th>用途</th></tr></thead>
       <tbody>
-        <tr><td>一覧</td><td><code>/</code></td><td>セッション一覧、フィルタ、検索</td></tr>
-        <tr><td>新規</td><td><code>/new</code></td><td>面談を新規作成</td></tr>
-        <tr><td>セッション</td><td><code>/sessions/&lt;id&gt;</code></td><td>面談 1 件の本体（①②③④⑤）</td></tr>
-        <tr><td>マスタ</td><td><code>/master</code></td><td>役割マスタ・評価条件の編集</td></tr>
-        <tr><td>設定</td><td><code>/settings</code></td><td>API キー・保存先・保存期間など</td></tr>
-        <tr><td>ゴミ箱</td><td><code>/trash</code></td><td>削除セッションの復元</td></tr>
-        <tr><td>分析</td><td><code>/analytics</code></td><td>過去面談を匿名集計</td></tr>
-        <tr><td>比較</td><td><code>/compare</code></td><td>複数面談を並べて比較</td></tr>
-        <tr><td>コスト</td><td><code>/cost</code></td><td>API コスト試算</td></tr>
+        <tr><td>一覧</td><td><code>/</code></td><td>ヘッダ「一覧」</td><td>セッション一覧、フィルタ、検索</td></tr>
+        <tr><td>新規</td><td><code>/new</code></td><td>ヘッダ「＋ 新規面談」</td><td>面談を新規作成</td></tr>
+        <tr><td>セッション</td><td><code>/sessions/&lt;id&gt;</code></td><td>一覧の「詳細」</td><td>面談 1 件の本体（①②③④⑤）</td></tr>
+        <tr><td>マスタ</td><td><code>/master</code></td><td>ヘッダ「マスタ」</td><td>役割マスタ・評価条件の編集</td></tr>
+        <tr><td>設定</td><td><code>/settings</code></td><td>ヘッダ「設定」</td><td>保存先・保存期間・バックアップ・監査ログ</td></tr>
+        <tr><td>分析</td><td><code>/analytics</code></td><td>ヘッダ「分析」</td><td>過去面談を匿名集計</td></tr>
+        <tr><td>比較</td><td><code>/compare</code></td><td>一覧で複数選択 →「比較」</td><td>複数評価済セッションを並べて比較</td></tr>
+        <tr><td>ゴミ箱</td><td><code>/trash</code></td><td>設定 or 直接 URL</td><td>削除セッションの復元・完全削除</td></tr>
       </tbody>
     </table>
+    <div class="note">
+      <p><code>/analytics</code>・<code>/compare</code> は左上に「← 一覧」戻りボタン付きの統一ヘッダーで表示されます。</p>
+    </div>
   </article>
 
-  <!-- ─── flow overview ─── -->
   <article class="page" id="p-flow">
     <h1>基本フロー：全体像</h1>
     <p class="subtitle">1 件の面談は <strong>新規面談→①→②→③→④→⑤</strong> の順で進めます。</p>
 
     <h2 id="flow-screenshot">セッション本体（全セクション）</h2>
     <figure class="shot">
-      <img src="assets/session.png" alt="セッション本体">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/session.png" alt="セッション本体">
+      </div>
       <figcaption>1 つのセッションには ①候補者 / ②条件 / ③質問 / ④議事録 / ⑤評価 が縦に並ぶ</figcaption>
     </figure>
 
@@ -430,9 +825,22 @@
       <li>④ 議事録保存 → <span class="pill pill-itv">面談済</span></li>
       <li>⑤ 評価保存 → <span class="pill pill-eval">評価済</span></li>
     </ul>
+
+    <h2 id="flow-sidebar">セクション内ナビ（サイドバー）</h2>
+    <p>セッション本体の左側には <strong>①〜⑤</strong> の縦型ナビが常時追従表示されます。</p>
+    <ul>
+      <li>クリックでその工程まで即ジャンプ（スムーススクロール）</li>
+      <li>スクロール位置で現在のセクションを自動ハイライト</li>
+      <li>各項目の末尾に <strong>✓（入力済）</strong> / <strong>○（未入力）</strong> のマークが付き、進捗が一目でわかる</li>
+    </ul>
+
+    <h2 id="flow-header">共通セクションヘッダー</h2>
+    <p>各セクション（①③④⑤）の先頭には <strong>緑の左ボーダー付きヘッダーバー</strong>があります。保存済みの工程は <span class="pill pill-eval">保存済</span> chip が並び、未着手の工程はグレーのままになります。</p>
+    <div class="tip">
+      <p>② 条件凍結だけは専用のヘッダーで、条件チップ群と「修正」ボタンが並びます。</p>
+    </div>
   </article>
 
-  <!-- ─── step 1 ─── -->
   <article class="page" id="p-step1">
     <h1>新規面談を作る <span class="pill pill-edit">編集中</span></h1>
     <p class="subtitle">面談ごとに専用の URL を作るのが最初のステップです。</p>
@@ -447,26 +855,28 @@
 
     <h2 id="step1-screenshot">新規作成画面</h2>
     <figure class="shot">
-      <img src="assets/new.png" alt="新規面談">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/new.png" alt="新規面談">
+      </div>
       <figcaption>/new — 役割 と 氏名 を入力</figcaption>
     </figure>
 
     <h2 id="step1-id">セッション ID について</h2>
     <div class="note">
-      ID は <code>YYYYMMDD_HHMMSS_&lt;氏名&gt;_&lt;役割&gt;</code> 形式で自動生成。秒まで含むので同一分内の連続作成でも ID 衝突しません。
+      <p>ID は <code>YYYYMMDD_HHMMSS_&lt;氏名&gt;_&lt;役割&gt;</code> 形式で自動生成。秒まで含むので同一分内の連続作成でも ID 衝突しません。</p>
     </div>
-    <div class="tip">役割を間違えても <a href="#duplicate">複製機能</a> で後から変更できます。</div>
+    <div class="tip"><p>役割を間違えても <a href="#duplicate">複製機能</a> で後から変更できます。</p></div>
   </article>
 
-  <!-- ─── step 2 ─── -->
   <article class="page" id="p-step2">
     <h1>① 候補者情報を貼る <span class="pill pill-edit">編集中</span></h1>
     <p class="subtitle">履歴書を AI で要約して、結果をこのエリアに貼ります。</p>
 
     <h2 id="step2-howto">手順</h2>
     <ol>
-      <li>① エリア上の <strong>「📋 履歴書要約プロンプト」</strong> でテンプレ プロンプトをコピー</li>
-      <li>Max などの AI チャットに貼付 → 履歴書ファイル（PDF / Word / Excel）を添付</li>
+      <li>① エリア上の <strong>「📋 コピー」</strong> ボタンで履歴書要約プロンプトをクリップボードへ</li>
+      <li>Claude などの AI チャットに貼付 → 履歴書ファイル（PDF / Word / Excel）を添付</li>
       <li>AI が出した要約をすべてコピー（<kbd>Ctrl</kbd>+<kbd>A</kbd> → <kbd>Ctrl</kbd>+<kbd>C</kbd>）</li>
       <li>① エリアの「要約」テキスト枠に貼付（<kbd>Ctrl</kbd>+<kbd>V</kbd>）</li>
       <li><strong>「保存」</strong> をクリック</li>
@@ -474,11 +884,10 @@
 
     <h2 id="step2-excel">Excel 自動分割</h2>
     <div class="tip">
-      テキスト内に「<strong>経歴サマリ：</strong>」「<strong>主要スキル：</strong>」「<strong>強み：</strong>」の見出しを入れると、Excel エクスポート時に自動で 3 列に分割されます。
+      <p>テキスト内に「<strong>経歴サマリ：</strong>」「<strong>主要スキル：</strong>」「<strong>強み：</strong>」の見出しを入れると、Excel エクスポート時に自動で 3 列に分割されます。</p>
     </div>
   </article>
 
-  <!-- ─── step 4 ─── -->
   <article class="page" id="p-step4">
     <h1>② 条件を凍結する <span class="pill pill-pub">→ 質問公開</span></h1>
     <p class="subtitle">役割マスタの条件と評価軸をこの面談に固定します。</p>
@@ -489,41 +898,65 @@
     <h2 id="step4-howto">手順</h2>
     <ol>
       <li>② エリアで「現在の条件」を確認</li>
-      <li><strong>「条件を凍結する」</strong> ボタンをクリック</li>
+      <li>下部の <strong>「この内容で凍結する」</strong> ボタンをクリック</li>
       <li>確認ダイアログで「OK」</li>
       <li>ステータスが <span class="pill pill-pub">質問公開</span> に変わり、③ 質問エリアが触れるようになる</li>
     </ol>
 
-    <h2 id="step4-warn">注意点</h2>
-    <div class="warn">
-      <strong>凍結後は役割の変更ができません。</strong>役割を間違えた場合は、一覧画面で <a href="#duplicate">複製</a> → 新しい役割で作り直してください。
-    </div>
     <div class="note">
-      スナップショットには <strong>役割別の重み上書き</strong>も畳み込まれます。例：NW は「問題解決力」の重みが既定 3 → 4 に上書きされている、など。
+      <p><strong>「凍結」＝今の評価条件を写真のように コピーして保存すること。</strong></p>
+      <p>あとでマスタの重み・軸・合格ラインを変えても、<strong>この面談は当時の条件で評価され続けます</strong>。</p>
+      <p>例：マスタで「<strong>NW は問題解決力の重みを 3 → 4 に上書き</strong>」している状態で凍結すれば、その面談の問題解決力は <strong>4 で固定</strong>。<br>
+      あとから NW の重みを 3 に戻しても、<strong>この面談だけは 4 で計算されます</strong>。</p>
+    </div>
+
+    <h2 id="step4-revise">凍結後に条件を修正したい場合</h2>
+    <p>凍結済ヘッダー右側の <strong>「修正」</strong> ボタンで編集モードに入れます。人材条件・評価軸・重み・合格ラインを直接書き換え、下部の <strong>「この内容で再凍結する」</strong> ボタンで凍結条件が上書きされます（マスタは変わりません）。誤入力・軸抜けを直したいときに利用してください。</p>
+    <div class="warn">
+      <p>⑤ 評価保存後は凍結条件を変えると <strong>過去スコアの意味が変わる</strong> ため、原則として評価前に完結させます。</p>
     </div>
   </article>
 
-  <!-- ─── step 5 ─── -->
   <article class="page" id="p-step5">
     <h1>③ 質問を貼る <span class="pill pill-pub">質問公開</span></h1>
     <p class="subtitle">候補者の経歴と条件に基づく面談質問を AI で生成、結果を貼ります。</p>
 
     <h2 id="step5-howto">手順</h2>
     <ol>
-      <li>③ エリア上の <strong>「📋 質問生成プロンプト」</strong> でテンプレをコピー</li>
-      <li>Max などの AI に貼付 → 候補者の経歴と組み合わせて 15問前後を生成</li>
-      <li>AI 回答をコピーして ③ エリアの「質問テキスト」枠に貼付</li>
-      <li><strong>「保存」</strong> をクリック → 1問ずつカード化される</li>
-      <li>必要に応じて <strong>⭐</strong> で重要マーク、編集アイコンで文面修正、ドラッグで並べ替え</li>
+      <li>③ エリア上の <strong>「📋 コピー」</strong> ボタンで質問生成プロンプトをクリップボードへ</li>
+      <li>Claude などの AI に貼付 → 候補者の経歴と組み合わせて 15問前後を生成</li>
+      <li>AI 回答をコピーして ③ エリアの <strong>「非技術」</strong> 枠と <strong>「技術」</strong> 枠に振り分けて貼付
+        <ul>
+          <li>AI が <code>## 非技術</code> / <code>## 技術</code> の見出しを付けている場合は 1 枠に全文貼付でも自動振り分けされます</li>
+        </ul>
+      </li>
+      <li><strong>「保存」</strong> をクリック → 下の「構造化プレビュー」で 1 問ずつカード表示される</li>
     </ol>
 
-    <h2 id="step5-count">質問数の設定</h2>
+    <h2 id="step5-format">質問の形式</h2>
+    <p>質問テキスト内で以下の接頭辞・キーワードが使えます（AI に生成させる時点でこの形式にしておくとカードに反映されます）:</p>
+    <ul>
+      <li><strong>⭐</strong>（行頭）：必須質問マーク。カードに ⭐ が表示される</li>
+      <li><strong>Q1. / T1.</strong> のような <em>Q / T + 番号</em>：質問見出し</li>
+      <li><strong>狙い: 〜</strong>：質問の意図</li>
+      <li><strong>解答例: 〜</strong>：参考解答</li>
+    </ul>
     <div class="tip">
-      質問数の上限は <a href="#settings">設定</a> で変更可能（既定：非技術 7問 + 技術 8問）。
+      <p>編集はテキスト枠内で直接行います（並べ替え・削除も文字ベース）。保存後のカードは表示専用です。</p>
     </div>
+
+    <h2 id="step5-count">質問数の目安</h2>
+    <div class="tip">
+      <p>既定は <strong>非技術 7 問 + 技術 8 問</strong>。カウンタが目標値のとき緑、超過は黄で色付けされます。プロンプトを AI に流す前に文中の数字を書き換えれば任意の件数で生成できます。</p>
+    </div>
+
+    <h2 id="step5-copy">コピー系ボタン</h2>
+    <ul>
+      <li><strong>本文コピー</strong>：狙い / 解答例を除いた質問本文のみをコピー（面談本番の司会用）</li>
+      <li><strong>全文コピー</strong>：狙い / 解答例を含めて全部コピー（面談官への配布用）</li>
+    </ul>
   </article>
 
-  <!-- ─── step 6 ─── -->
   <article class="page" id="p-step6">
     <h1>④ 議事録を貼る <span class="pill pill-itv">→ 面談済</span></h1>
     <p class="subtitle">面談本番の文字起こしや手書きメモをここに貼り付けます。</p>
@@ -536,33 +969,89 @@
       <li>ステータスが <span class="pill pill-itv">面談済</span> に変わる</li>
     </ol>
 
-    <h2 id="step6-future">今後の予定</h2>
-    <div class="tip">
-      議事録の AI 要約は <strong>API モード（有料オプション）</strong>でご利用いただけます。貼付モードでは生のテキストをそのまま保存します。長文でもパフォーマンス問題はありません。
-    </div>
+    <h2 id="step6-sample">議事録の例（貼付イメージ）</h2>
+    <p>フォーマットは自由（Teams 文字起こしそのまま／手書きメモ／整形済みどれでも可）。上限は約 200 万文字なので、通常の 60 分面談なら余裕で収まります。参考までに整形版の例：</p>
+    <pre class="sample">日時: 2026-06-30(月) 14:00-15:00
+面談官: 採用担当 A / 現場リード B
+候補者: 測試 太郎（Test 役割応募）
+形式: Teams（録画あり）
+
+────────────────────
+【非技術】
+
+Q1. これまでの経歴と今回の応募動機
+- 大学卒 → SIer 3年（保守系）→ 事業会社 2年目
+- 現職はテスト自動化基盤の設計・運用
+- 動機: プロダクトに寄り添った品質保証をやりたい、
+  上流工程からのテスト設計に興味がある
+
+Q2. 現職で自分から提案して改善した事例
+- CI で失敗しても誰も見ないテストが 300件 あった
+- Flaky を可視化する Slack Bot を独学で作って導入
+- 3ヶ月で flaky 率 42% → 8%、修正フローが定着
+- 「全員に説明資料を配って自主参加」型で進めた
+
+Q4. 直近で困難だったこと、どう乗り越えたか
+- 移行案件で本番リハーサルが 2 週間ずれた
+- チーム内でスコープ優先度が食い違い
+- 一旦全員集めて「捨てる項目」を先に決めた
+- スコープ調整のたたき台を毎日更新して合意形成
+- 結果: 予定より 1 日遅れで着地
+
+────────────────────
+【技術】
+
+T1. 自分で書いたコードで自信ある部分を 1 分で
+- 上記 Bot の失敗検出ロジック
+- GitHub Actions のログを正規化 → 重複キー化して DB 保存
+- Retry 判定は「連続 3 回同一エラー」で自動化
+- コード自体は 200 行、外部依存は octokit のみ
+
+T3. 大規模データ絞り込みのアプローチ
+- まず sort / hash / インデックスの想定コストを図示
+- 実データで EXPLAIN を先に取る（想定と差が出るため）
+- インデックスが貼れないケースの回避策も併せて提示
+
+T5. 得意な言語と、その言語で気をつけていること
+- Python / TypeScript
+- Python: mutable default 引数の罠、型注釈をきちんと入れる
+- TS: any の握り潰し禁止、unknown で受けて narrow する運用
+
+────────────────────
+【所感・条件面】
+
+- 説明は構造的、質問も的確に返す
+- ドキュメント志向が強い（自作の設計資料 URL を提示）
+- 深夜対応: 月 1 回程度なら可、常時オンコールは NG
+- 希望年収: 現年収の 1.1〜1.2 倍レンジ
+- 入社可能時期: 2ヶ月後（引継ぎ考慮）</pre>
+
+    <div class="tip"><p>質問番号（<code>Q1</code> / <code>T1</code> など）を残しておくと、⑤ 評価プロンプトを流したときに AI が該当質問と紐付けた根拠を返しやすくなります。</p></div>
   </article>
 
-  <!-- ─── step 8 ─── -->
   <article class="page" id="p-step8">
     <h1>⑤ 評価を貼る <span class="pill pill-eval">→ 評価済</span></h1>
     <p class="subtitle">議事録と凍結条件から AI に評価 JSON を生成してもらい、結果を貼ります。</p>
 
     <h2 id="step8-howto">手順</h2>
     <ol>
-      <li>⑤ エリア上の <strong>「📋 評価プロンプト」</strong> でテンプレをコピー</li>
-      <li>Max などの AI に <strong>議事録 + 凍結条件</strong> と一緒に貼って、JSON 形式で評価結果を生成</li>
-      <li>AI が返す JSON を「評価 JSON」枠に貼付 → <strong>「保存」</strong></li>
+      <li>⑤ エリアの「評価結果 JSON を貼り付ける」を開き、<strong>「📋 コピー」</strong> ボタンで評価プロンプトをクリップボードへ</li>
+      <li>Claude などの AI に貼付 → <strong>議事録 + 凍結条件</strong>を組み合わせて JSON 形式で評価結果を生成</li>
+      <li>AI が返す JSON を評価 JSON 枠に貼付 → <strong>「保存」</strong>
+        <ul>
+          <li>AI が <code>```json</code> のフェンスで囲んでいたら囲みを除いてから貼ってください（素の JSON のみ受け付けます）</li>
+        </ul>
+      </li>
       <li>各軸スコア・総合スコア・合否（合格 / 普通 / 不合格）が自動表示</li>
       <li>最後に <strong>採否</strong>（採用 / 不採用 / 未確定）を選ぶ → ステータスが <span class="pill pill-eval">評価済</span> に</li>
     </ol>
 
     <h2 id="step8-warn">注意</h2>
     <div class="warn">
-      凍結条件を変えるとスコアの意味が変わるため、評価後の凍結条件変更は基本不可です。
+      <p>凍結条件を変えるとスコアの意味が変わるため、評価後の凍結条件変更は基本不可です。</p>
     </div>
   </article>
 
-  <!-- ─── status ─── -->
   <article class="page" id="p-status">
     <h1>ステータスの流れ</h1>
     <p class="subtitle">セッションは 4 つのステータスを順に進みます。</p>
@@ -586,21 +1075,23 @@
     </ul>
   </article>
 
-  <!-- ─── list ─── -->
   <article class="page" id="p-list">
     <h1>一覧画面</h1>
     <p class="subtitle">トップページ <code>/</code> はすべてのセッションを一覧します。</p>
 
     <h2 id="list-screenshot">画面</h2>
     <figure class="shot">
-      <img src="assets/list.png" alt="一覧画面">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/list.png" alt="一覧画面">
+      </div>
       <figcaption>/ — フィルタ + 検索 + セッション表</figcaption>
     </figure>
 
     <h2 id="list-filter">フィルタ</h2>
     <ul>
       <li><strong>状態</strong>：編集中 / 質問公開 / 面談済 / 評価済</li>
-      <li><strong>役割</strong>：NW / Server / Dev / PMO / IT / Special</li>
+      <li><strong>役割</strong>：NW / Server / Dev / PMO / ITSupport / Special（マスタで追加した役割も表示）</li>
       <li><strong>合否</strong>：採用 / 不採用 / 未確定</li>
       <li><strong>氏名検索</strong>：上部の検索ボックスに入力（部分一致）</li>
     </ul>
@@ -611,18 +1102,25 @@
       <li><strong>削除</strong> → ゴミ箱に移動（即時完全削除ではない）</li>
       <li><strong>チェックボックス</strong>（評価済のみ）→ 複数選択して横断比較へ</li>
     </ul>
+
+    <h2 id="list-bulk">複数選択時の操作（画面下部の固定バー）</h2>
+    <ul>
+      <li><strong>N 件を一括削除</strong> — 選択した全セッションをゴミ箱へ</li>
+      <li><strong>N 件を比較 →</strong> — <a href="#compare">横断比較画面</a> へ（2 件以上で有効）</li>
+      <li><strong>選択解除</strong> — チェックを全解除</li>
+    </ul>
   </article>
 
-  <!-- ─── duplicate ─── -->
   <article class="page" id="p-duplicate">
     <h1>複製と役割変更</h1>
     <p class="subtitle">同じ候補者を別の役割で評価し直したい、役割を間違えたときに使います。</p>
 
     <h2 id="dup-howto">手順</h2>
     <ol>
-      <li>一覧画面で対象セッションの <strong>「複製」</strong> をクリック</li>
+      <li>複製元のセッション詳細画面を開く（一覧の「詳細」から）</li>
+      <li>ヘッダー右側の <strong>複製アイコン</strong>（コピーマーク）をクリック</li>
       <li>ダイアログで氏名・役割を変更可能</li>
-      <li>「複製する」をクリック</li>
+      <li><strong>「複製する」</strong> をクリック → 新セッションが自動で開かれる</li>
     </ol>
 
     <h2 id="dup-inherit">引き継ぎルール</h2>
@@ -638,17 +1136,19 @@
       </tbody>
     </table>
 
-    <div class="tip">議事録・評価は「別ラウンド」になるため、同じ役割でも常に破棄されます。</div>
+    <div class="tip"><p>議事録・評価は「別ラウンド」になるため、同じ役割でも常に破棄されます。</p></div>
   </article>
 
-  <!-- ─── master ─── -->
   <article class="page" id="p-master">
     <h1>マスタ管理</h1>
     <p class="subtitle"><code>/master</code> で 役割マスタ と 評価条件 を編集します。</p>
 
     <h2 id="master-screenshot">画面</h2>
     <figure class="shot">
-      <img src="assets/master.png" alt="マスタ管理">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/master.png" alt="マスタ管理">
+      </div>
       <figcaption>/master — 上：役割マスタ、下：評価条件（BARS）</figcaption>
     </figure>
 
@@ -676,60 +1176,73 @@
       <li><strong>PMO</strong>：対人影響力・柔軟性とも 3→<strong>4</strong></li>
     </ul>
 
-    <h2 id="master-import">Import / Export</h2>
-    <p>マスタ全体（役割 + 評価条件）を JSON / Excel ファイルで書き出し・読み込みできます。別 PC への移行や、編集前のスナップショット保存に。</p>
+    <h2 id="master-import">エクスポート</h2>
+    <p>マスタ全体（役割 + 評価条件）を JSON / Excel ファイルとして書き出しできます。編集前のスナップショット保存や、他 PC への引き継ぎ元として利用してください。</p>
+    <ul>
+      <li>役割マスタセクション右上の <strong>「エクスポート」</strong> ボタン — 役割マスタのみ JSON</li>
+      <li>ページ末尾の <strong>「マスタ一括 export」</strong>：<strong>「📥 JSON」</strong> — 役割 + 評価条件をまとめて JSON</li>
+      <li>同じく <strong>「📊 Excel」</strong> — テンプレ準拠の .xlsx（人事担当への配布用）</li>
+    </ul>
+    <div class="note">
+      <p>読み込み（インポート）は現状 UI 未提供です。API 経由（<code>POST /api/master/import</code>）または JSON ファイル直置きで反映してください。</p>
+    </div>
   </article>
 
-  <!-- ─── settings ─── -->
   <article class="page" id="p-settings">
     <h1>設定</h1>
     <p class="subtitle"><code>/settings</code> で全体設定を管理します。</p>
 
     <h2 id="settings-screenshot">画面</h2>
     <figure class="shot">
-      <img src="assets/settings.png" alt="設定画面">
-      <figcaption>/settings — データ保存先 / API キー / 質問数 / 保存期間 / バックアップ</figcaption>
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/settings.png" alt="設定画面">
+      </div>
+      <figcaption>/settings — データ保存先 / 保存期間 / バックアップ / 監査ログ</figcaption>
     </figure>
 
     <h2 id="settings-data-root">データ保存先（dataRoot）</h2>
     <p>面談データ・マスタ・ログの保存先。既定は <code>./data</code>。
     <strong>システムディレクトリ（C:\Windows 等）は拒否</strong>されます。</p>
 
-    <h2 id="settings-api-key">API キー</h2>
-    <p>API モード（有料オプション）を使うときに必要です。<strong>貼付モードのみで使う場合は入力不要</strong>です。</p>
-    <ul>
-      <li>対応サービス： Anthropic（Claude）／ OpenAI（ChatGPT）／ Google（Gemini）</li>
-      <li>設定画面でキーを貼り付けて「保存」を押すだけで登録完了</li>
-      <li>キーはご利用の PC 内にだけ保存され、外部には送信されません</li>
-      <li>保存後は「設定済／未設定」のみ表示され、キー本体は再表示されません</li>
-    </ul>
-
-    <h2 id="settings-models">工程別モデル</h2>
-    <p>①要約 / ③質問 / ⑤評価 / ⑤厳格評価 の 4 工程ごとに使うモデルを指定可能。既定では速度と品質のバランスを取って自動選択。</p>
-
-    <h2 id="settings-questions">質問生成数</h2>
-    <ul>
-      <li><strong>非技術</strong>：自己紹介・キャリア・志望動機系（既定 7問）</li>
-      <li><strong>技術</strong>：候補者の経歴・条件に紐づく専門質問（既定 8問）</li>
-    </ul>
-
     <h2 id="settings-retention">保存期間（自動削除）</h2>
+    <p>判定確定日（closedAt）からの経過で自動削除する日数を設定します。<strong>0 = 自動削除しない</strong>。</p>
     <ul>
-      <li><strong>採用</strong>：既定 0（自動削除しない）</li>
+      <li><strong>採用</strong>：既定 0</li>
       <li><strong>不採用</strong>：既定 180 日</li>
-      <li><strong>未確定</strong>：既定 0</li>
+      <li><strong>未確定</strong>：既定 0（通常 0 推奨）</li>
       <li><strong>ゴミ箱の猶予日数</strong>：ソフト削除後にこの日数で完全削除（既定 7 日）</li>
+      <li><strong>匿名サマリを analytics/ に残す</strong>：完全削除時も統計データだけ残すオプション</li>
     </ul>
+    <div class="note">
+      <p>スイッチ「自動削除を有効化」が OFF の間は日数を入れても実行されません。手動実行は下の「保存期間スイープ」から。</p>
+    </div>
+
+    <h2 id="settings-backup-retention">バックアップ世代の保持</h2>
+    <ul>
+      <li><strong>バックアップ保存日数</strong>：既定 90 日（0 = 自動削除しない）</li>
+      <li><strong>バックアップ世代上限</strong>：既定 0 = 無制限</li>
+    </ul>
+    <p>両条件のいずれかに該当した世代が「世代を整理」実行時に削除されます。</p>
+
+    <h2 id="settings-sweep">保存期間スイープ</h2>
+    <p>設定した保存期間ルールに従って古いセッションを削除します。実行前に <strong>「次に消える面談を確認」</strong> でプレビュー表示 → 問題なければ「スイープ実行」。<br>
+    削除されたセッションは <a href="#trash">ゴミ箱</a> 経由で猶予期間内なら復元可能です。</p>
+
+    <h2 id="settings-audit">監査ログビューア</h2>
+    <p>ページ末尾に直近 50 件の操作ログが表示されます（詳細は <a href="#audit">監査ログ</a>）。</p>
   </article>
 
-  <!-- ─── trash ─── -->
   <article class="page" id="p-trash">
     <h1>ゴミ箱と復元</h1>
     <p class="subtitle"><code>/trash</code> で削除済みセッションを管理します。</p>
 
     <h2 id="trash-screenshot">画面</h2>
     <figure class="shot">
-      <img src="assets/trash.png" alt="ゴミ箱">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/trash.png" alt="ゴミ箱">
+      </div>
       <figcaption>/trash — ソフト削除後の猶予期間内に復元できる</figcaption>
     </figure>
 
@@ -742,29 +1255,28 @@
 
     <h2 id="trash-warn">注意</h2>
     <div class="danger">
-      完全削除すると <strong>元に戻せません</strong>。実行前に必ず氏名を確認してください。
+      <p>完全削除すると <strong>元に戻せません</strong>。実行前に必ず氏名を確認してください。</p>
     </div>
 
     <h2 id="trash-anon">匿名サマリは残せる</h2>
     <p>設定で「匿名サマリを analytics/ に残す」を ON にすると、完全削除しても <strong>氏名・履歴書・議事録を含まない統計データ</strong>は残り、<a href="#analytics">分析画面</a> で使えます。</p>
   </article>
 
-  <!-- ─── backup ─── -->
   <article class="page" id="p-backup">
     <h1>バックアップ</h1>
     <p class="subtitle"><code>/settings</code> 下部の「バックアップ」セクションで管理します。</p>
 
     <h2 id="backup-create">作成</h2>
     <ol>
-      <li><strong>暗号化パスワード</strong>を入力（必須）</li>
-      <li><strong>「今すぐバックアップ」</strong> をクリック</li>
-      <li><code>data/_backups/</code> に <code>YYYYMMDD_HHMMSS.tar.gz.enc</code> が作られる</li>
+      <li>お好きな<strong>パスワード</strong>を入力（バックアップの中身を守るため）</li>
+      <li><strong>「今すぐバックアップ」</strong> ボタンをクリック</li>
+      <li>これで完了。バックアップファイルが 1 つ作られます</li>
     </ol>
-    <p>対象：<code>data/sessions/</code> + <code>data/master/</code>。AES-256-GCM で暗号化。</p>
+    <p>面談データとマスタの中身をまるごと 1 ファイルにまとめて、入力したパスワードで暗号化して保存します。暗号化は <strong>AES-256-GCM</strong>、パスワードからの鍵導出は <strong>PBKDF2-SHA256（200,000 回反復）</strong>。パスワード無しの平文バックアップは作成できません。</p>
 
     <h2 id="backup-warn">パスワードの管理</h2>
     <div class="danger">
-      パスワードを紛失すると <strong>復元不可</strong> です。パスワード管理ツールに保存推奨。
+      <p>パスワードを紛失すると <strong>復元不可</strong> です。パスワード管理ツールに保存推奨。</p>
     </div>
 
     <h2 id="backup-rotate">世代管理</h2>
@@ -773,16 +1285,36 @@
       <li><strong>世代上限</strong>：既定 0 = 無制限</li>
       <li>「<strong>世代を整理</strong>」ボタンで手動掃除可能</li>
     </ul>
+
+    <h2 id="backup-restore">復元（手動）</h2>
+    <div class="warn">
+      <p>現状、GUI からの復元機能は未提供です（Phase 2 で追加予定）。緊急時は付属の CLI スクリプトで復号 → 手動配置してください。</p>
+    </div>
+    <ol>
+      <li>アプリを停止（コマンドプロンプトで <kbd>Ctrl</kbd>+<kbd>C</kbd>）</li>
+      <li>現在の <code>data\master\</code> と <code>data\sessions\</code> を別フォルダにコピーして退避</li>
+      <li>復号スクリプトを実行:<br>
+        <code>node scripts/decrypt-backup.mjs data\_backups\backup-YYYYMMDD-HHmm.enc.tar.gz restored\</code>
+      </li>
+      <li>プロンプトに従ってパスワードを入力（<kbd>Enter</kbd> で確定）</li>
+      <li><code>restored\master\</code> と <code>restored\sessions\</code> を <code>data\</code> 直下へ配置</li>
+      <li><code>start-app.bat</code> で再起動</li>
+    </ol>
+    <div class="note">
+      <p>スクリプトは復号だけを行い、既存データは書き換えません。事故防止のため出力先に既に <code>master/</code> か <code>sessions/</code> があると上書きせず終了します。</p>
+    </div>
   </article>
 
-  <!-- ─── analytics ─── -->
   <article class="page" id="p-analytics">
     <h1>分析画面</h1>
     <p class="subtitle"><code>/analytics</code> で過去面談を匿名集計します。</p>
 
     <h2 id="analytics-screenshot">画面</h2>
     <figure class="shot">
-      <img src="assets/analytics.png" alt="分析画面">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/analytics.png" alt="分析画面">
+      </div>
       <figcaption>/analytics — KPI + 月別 + 役割別 + 軸別 + 明細</figcaption>
     </figure>
 
@@ -797,14 +1329,10 @@
 
     <h2 id="analytics-privacy">プライバシー</h2>
     <div class="note">
-      分析データは <strong>氏名・履歴書・議事録を含まない</strong>匿名サマリです。元の面談を完全削除しても統計だけは長期保存できます。
+      <p>分析データは <strong>氏名・履歴書・議事録を含まない</strong>匿名サマリです。元の面談を完全削除しても統計だけは長期保存できます。</p>
     </div>
-
-    <h2 id="analytics-fake">ダミーデータ（開発用）</h2>
-    <p><code>/settings</code> 末尾の「<strong>/analytics ダミーデータ</strong>」セクションで、役割名に <code>[FAKE]</code> 前缀が付いたテスト用ダミーを生成できます。動作確認後は「ダミーを全削除」で清掃。</p>
   </article>
 
-  <!-- ─── compare ─── -->
   <article class="page" id="p-compare">
     <h1>横断比較</h1>
     <p class="subtitle"><code>/compare</code> で複数の評価済セッションを並べて比較します。</p>
@@ -814,13 +1342,19 @@
 
     <h3>2〜6 件：標準ビュー（候補者を列で並べる）</h3>
     <figure class="shot">
-      <img src="assets/compare.png" alt="比較画面（標準ビュー）">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/compare.png" alt="比較画面（標準ビュー）">
+      </div>
       <figcaption>2〜6 件の場合：候補者を左から右に並べ、レーダーチャート＋各軸の詳細（スコア＋根拠）を表示</figcaption>
     </figure>
 
     <h3>7 件以上：転置ビュー（候補者を行で並べる）</h3>
     <figure class="shot">
-      <img src="assets/compare-transposed.png" alt="比較画面（転置ビュー）">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/compare-transposed.png" alt="比較画面（転置ビュー）">
+      </div>
       <figcaption>7 件以上の場合：候補者を上から下に並べ、総合・重み付き・各軸スコアが 1 表で俯瞰できる。列ヘッダクリックでソート、行クリックで根拠展開。</figcaption>
     </figure>
 
@@ -832,28 +1366,6 @@
     </ul>
   </article>
 
-  <!-- ─── cost ─── -->
-  <article class="page" id="p-cost">
-    <h1>コスト集計</h1>
-    <p class="subtitle"><code>/cost</code> で API モード（有料オプション）使用時のコストを試算します。</p>
-
-    <h2 id="cost-screenshot">画面</h2>
-    <figure class="shot">
-      <img src="assets/cost.png" alt="コスト集計">
-      <figcaption>/cost — プロバイダ別・モデル別の入出力トークン数とコスト</figcaption>
-    </figure>
-
-    <h2 id="cost-content">表示内容</h2>
-    <ul>
-      <li>プロバイダ別・モデル別の入出力トークン数</li>
-      <li>USD / JPY 換算のおおよそのコスト</li>
-      <li>工程別の内訳（要約 / 質問 / 評価）</li>
-    </ul>
-
-    <div class="note">貼付モードでは値はほぼ 0。API モード（有料オプション）をご利用の場合に意味を持つ機能です。</div>
-  </article>
-
-  <!-- ─── export ─── -->
   <article class="page" id="p-export">
     <h1>Excel エクスポート</h1>
     <p class="subtitle">マスタ・候補者一覧を Excel ファイルとして自動的に生成します。</p>
@@ -867,11 +1379,10 @@
 
     <h2 id="export-split">3 列自動分割</h2>
     <div class="tip">
-      Excel 出力時、① 候補者要約は「経歴サマリ：」「主要スキル：」「強み：」の見出しで<strong>3 列に自動分割</strong>されます。
+      <p>Excel 出力時、① 候補者要約は「経歴サマリ：」「主要スキル：」「強み：」の見出しで<strong>3 列に自動分割</strong>されます。</p>
     </div>
   </article>
 
-  <!-- ─── audit ─── -->
   <article class="page" id="p-audit">
     <h1>監査ログ</h1>
     <p class="subtitle"><code>/settings</code> 末尾の「監査ログ」セクションで操作履歴を確認できます。</p>
@@ -884,14 +1395,12 @@
       <li>マスタ更新（役割・評価条件）</li>
       <li>バックアップ 作成 / 削除</li>
       <li>保存期間スイープ実行</li>
-      <li>ダミー匿名サマリ生成 / 削除</li>
     </ul>
 
     <h2 id="audit-file">ログファイル</h2>
     <p>ファイルパス：<code>data/logs/audit.log</code>（JSON Lines 形式）</p>
   </article>
 
-  <!-- ─── FAQ ─── -->
   <article class="page" id="p-faq">
     <h1>FAQ</h1>
     <p class="subtitle">よく寄せられる質問。</p>
@@ -909,23 +1418,13 @@
     </details>
 
     <details class="faq">
-      <summary>履歴書を直接アップロードできないの？</summary>
-      <div class="a">直接アップロード機能は <strong>API モード（有料オプション）</strong>で対応しています。本マニュアル対象の貼付モードでは、Max などの AI チャットで要約 → 結果をコピー → ① に貼付という運用です。</div>
-    </details>
-
-    <details class="faq">
       <summary>削除した面談を元に戻したい</summary>
       <div class="a">ヘッダの <strong>「ゴミ箱」</strong>（<code>/trash</code>）から復元できます。猶予期間（既定 7 日）を過ぎると完全削除されます。</div>
     </details>
 
     <details class="faq">
-      <summary>API キーはどこに保存される？</summary>
-      <div class="a">ご利用の PC 内のみに保存されます。外部サーバへ送信されることはありません。バックアップに含める場合はパスワード付きで暗号化されます。</div>
-    </details>
-
-    <details class="faq">
       <summary>バックアップはどう取る？</summary>
-      <div class="a"><code>/settings</code> 下部の「バックアップ」で暗号化パスワードを入れて作成。AES-256-GCM で暗号化された tar.gz が <code>data/_backups/</code> に保存されます。<strong>パスワードを忘れると復号不可</strong>。</div>
+      <div class="a"><code>/settings</code> 下部の「バックアップ」で暗号化パスワードを入れて作成。AES-256-GCM（鍵導出は PBKDF2-SHA256 200k）で暗号化されたアーカイブが <code>data/_backups/</code> に保存されます。<strong>パスワードを忘れると復号不可</strong>。</div>
     </details>
 
     <details class="faq">
@@ -937,9 +1436,28 @@
       <summary>過去の合格率や軸別スコアを見たい</summary>
       <div class="a"><a href="#analytics">分析画面</a> で集計表示されます。匿名化されているので個人特定はできません。</div>
     </details>
+
+    <details class="faq">
+      <summary>データは PC のどこに保存されている？</summary>
+      <div class="a">既定では <code>data/</code> フォルダ配下（役割マスタ・面談セッション・監査ログ・バックアップ）。保存先を変えたい場合は <code>/settings</code> の <strong>「データ保存先」</strong> で任意フォルダを指定できます。OneDrive など同期フォルダに変えれば別 PC からも同じデータを開けます。</div>
+    </details>
+
+    <details class="faq">
+      <summary>履歴書が PDF や Word だがそのまま貼れない</summary>
+      <div class="a">貼付モードでは <strong>テキスト</strong> しか受け付けません。運用としては、Claude や ChatGPT に PDF/Word を投げて <strong>「経歴サマリ / 主要スキル / 強み」</strong> の 3 見出しで要約させ、その結果を ① に貼り付けます。<a href="#step2">① 候補者情報を貼る</a> にサンプル形式があります。</div>
+    </details>
+
+    <details class="faq">
+      <summary>一度保存した評価やスコアを後から修正できる？</summary>
+      <div class="a">はい、⑤ 評価セクションを開いて上書き保存すれば <strong>evaluation.json と一覧の総合スコア・採否</strong> が書き換わります。採否（採用 / 不採用 / 未確定）の変更も同じ手順です。<br>ただし <a href="#analytics">分析画面</a> の集計は保存期間スイープが匿名サマリを書き出したタイミングのスナップショットなので、日常の上書き保存では更新されません（スイープ後は ⑤ の再編集自体ができなくなります）。</div>
+    </details>
+
+    <details class="faq">
+      <summary>面談者が増えて一覧から探しにくい</summary>
+      <div class="a">一覧画面上部のフィルタで <strong>役割 / 状態 / 採否 / 氏名（部分一致）</strong> による絞込みが可能。表ヘッダをクリックすれば作成日やスコア順の並び替えもできます。</div>
+    </details>
   </article>
 
-  <!-- ─── trouble ─── -->
   <article class="page" id="p-trouble">
     <h1>トラブル時</h1>
     <p class="subtitle">よくある問題と対処。</p>
@@ -951,6 +1469,10 @@
       <li>ファイアウォール / セキュリティソフトが <code>node.exe</code> をブロックしていないか</li>
       <li>ポート 3939 が他で使われていないか（<code>netstat -ano | findstr :3939</code>）</li>
     </ul>
+
+    <h2 id="trouble-einval"><code>Error: spawn EINVAL</code> が出て起動しない</h2>
+    <p>Node.js 22 系以降で <code>next-with-port.mjs</code> が <code>.cmd</code> を <code>spawn</code> するときに発生します（CVE-2024-27980 対策の仕様変更）。<br>
+    <code>scripts/next-with-port.mjs</code> の <code>spawn</code> オプションに <code>shell: isWin</code> が含まれていることを確認してください。含まれていない場合は追記して保存 → 再度 <code>start-app.bat</code>。</p>
 
     <h2 id="trouble-save">「保存」を押しても反映されない</h2>
     <ul>
@@ -966,14 +1488,13 @@
     <h2 id="trouble-lost">データが消えた</h2>
     <ol>
       <li>まず <a href="#trash">ゴミ箱</a> を確認（猶予期間内なら復元可）</li>
-      <li><code>data/_backups/</code> にバックアップがあれば復元</li>
+      <li><code>data/_backups/</code> にバックアップがあれば <a href="#backup-restore">CLI で復号 → 手動配置</a></li>
       <li>OneDrive 等で同期しているなら、サービス側の「履歴」から復元</li>
     </ol>
   </article>
 
   </main>
 
-  <!-- ───────── RIGHT "ON THIS PAGE" ───────── -->
   <aside class="right">
     <div class="title">このページ内</div>
     <ul id="right-toc"></ul>
@@ -981,223 +1502,583 @@
 
 </div>
 
-<!-- ───────── LIGHTBOX ───────── -->
+<!-- ─── LIGHTBOX v2 ─── -->
 <div class="lightbox" id="lightbox">
-  <div class="close" id="lightbox-close" title="閉じる (Esc)">×</div>
-  <div class="zoom-toggle" id="lightbox-zoom" title="原寸 ↔ 幅合わせ">100%</div>
-  <div class="frame"><img id="lightbox-img" src="" alt=""></div>
-  <div class="hint">既定 画面幅 50% ・ 100% は右上ボタン / 0 / Space ・ 閉じる Esc</div>
+  <div class="close" id="lb-close" title="閉じる (Esc)">×</div>
+  <div class="toolbar">
+    <span class="counter" id="lb-counter">1 / 1</span>
+    <button id="lb-fit">画面に合わせる</button>
+    <span class="zoom-lvl" id="lb-zoom">100%</span>
+  </div>
+  <div class="nav-btn prev" id="lb-prev" title="前 (←)">‹</div>
+  <div class="nav-btn next" id="lb-next" title="次 (→)">›</div>
+  <div class="stage" id="lb-stage">
+    <img id="lb-img" src="" alt="">
+  </div>
+  <div class="hint">
+    <kbd>ホイール</kbd> 拡縮 · <kbd>ドラッグ</kbd> 移動 · <kbd>←</kbd> <kbd>→</kbd> 前後 · <kbd>0</kbd> 画面に合わせる · <kbd>Esc</kbd> 閉じる
+  </div>
+</div>
+
+<!-- ─── SEARCH MODAL ─── -->
+<div class="search-modal" id="search-modal">
+  <div class="search-panel">
+    <div class="box">
+      <span class="icon">🔍</span>
+      <input id="search-input" type="search" autocomplete="off" spellcheck="false" placeholder="マニュアル内を検索…（見出し・本文から）">
+      <span class="esc">Esc</span>
+    </div>
+    <div class="search-results" id="search-results"></div>
+    <div class="hint">
+      <span><kbd>↑</kbd> <kbd>↓</kbd> 選択 · <kbd>Enter</kbd> 開く</span>
+      <span id="search-count"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ─── KEYBOARD HELP ─── -->
+<div class="kbd-help" id="kbd-help">
+  <div class="panel">
+    <h3>キーボードショートカット</h3>
+    <ul>
+      <li>検索を開く<span><kbd>Ctrl</kbd>+<kbd>K</kbd> / <kbd>/</kbd></span></li>
+      <li>次のページ<span><kbd>→</kbd> / <kbd>L</kbd></span></li>
+      <li>前のページ<span><kbd>←</kbd> / <kbd>H</kbd></span></li>
+      <li>次の小節へスクロール<span><kbd>J</kbd></span></li>
+      <li>前の小節へスクロール<span><kbd>K</kbd></span></li>
+      <li>このヘルプを開く<span><kbd>?</kbd></span></li>
+      <li>閉じる<span><kbd>Esc</kbd></span></li>
+    </ul>
+  </div>
 </div>
 
 <script>
-  // ====== SPA router (hash-based) ======
-  const pages = Array.from(document.querySelectorAll('article.page'));
-  const leftLinks = document.querySelectorAll('aside.left a[data-page]');
-  const tocList = document.getElementById('right-toc');
-  const pagerHosts = new Map(); // optional prev/next placeholders
+"use strict";
 
-  // page order (from left nav)
-  const pageOrder = Array.from(leftLinks).map(a => a.dataset.page);
-  const pageMeta = {};
-  for (const a of leftLinks) {
-    pageMeta[a.dataset.page] = { label: a.textContent.replace(/\s+(編集中|質問公開|面談済|評価済)$/, '').trim(), hash: a.getAttribute('href') };
+// ─── page routing ─────────────────────────────────────────
+const pages = Array.from(document.querySelectorAll("article.page"));
+const leftLinks = document.querySelectorAll('aside.left a[data-page]');
+const tocList = document.getElementById("right-toc");
+const pageOrder = Array.from(leftLinks).map(a => a.dataset.page);
+const pageMeta = {};
+for (const a of leftLinks) {
+  pageMeta[a.dataset.page] = {
+    label: a.textContent.replace(/\s+(編集中|質問公開|面談済|評価済)$/, "").trim(),
+    hash: a.getAttribute("href"),
+  };
+}
+const LS_KEY = "manual_v2_last_page";
+let currentPage = null;
+let scrollSyncEnabled = true;
+
+function showPage(name, opts = {}) {
+  if (!name) name = localStorage.getItem(LS_KEY) || pageOrder[0];
+  if (!pageMeta[name]) name = pageOrder[0];
+  currentPage = name;
+  for (const p of pages) p.classList.toggle("active", p.id === "p-" + name);
+  leftLinks.forEach(a => a.classList.toggle("active", a.dataset.page === name));
+  buildToc(name);
+  ensurePager(name);
+  try { localStorage.setItem(LS_KEY, name); } catch (_) {}
+  if (opts.scrollTop !== false) {
+    window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+  }
+  closeLeftDrawer();
+}
+
+function buildToc(name) {
+  tocList.innerHTML = "";
+  const article = document.getElementById("p-" + name);
+  if (!article) return;
+  const headings = article.querySelectorAll("h2[id], h3[id]");
+  if (!headings.length) {
+    const li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = "小節なし";
+    tocList.appendChild(li);
+    return;
+  }
+  headings.forEach(h => {
+    const li = document.createElement("li");
+    if (h.tagName === "H3") li.className = "lvl3";
+    const a = document.createElement("a");
+    a.href = "#" + name + "--" + h.id;
+    a.textContent = h.textContent.replace(/\s+(編集中|質問公開|面談済|評価済).*$/, "").trim();
+    a.title = a.textContent;
+    a.addEventListener("click", e => {
+      e.preventDefault();
+      scrollSyncEnabled = false;
+      window.scrollTo({ top: h.offsetTop - 72, behavior: "smooth" });
+      history.replaceState(null, "", "#" + name + "--" + h.id);
+      setTimeout(() => (scrollSyncEnabled = true), 500);
+    });
+    li.appendChild(a);
+    tocList.appendChild(li);
+  });
+}
+
+function ensurePager(name) {
+  const article = document.getElementById("p-" + name);
+  if (!article) return;
+  article.querySelectorAll(".pager").forEach(n => n.remove());
+  const i = pageOrder.indexOf(name);
+  const prev = i > 0 ? pageOrder[i - 1] : null;
+  const next = i < pageOrder.length - 1 ? pageOrder[i + 1] : null;
+  if (!prev && !next) return;
+  const pager = document.createElement("div");
+  pager.className = "pager";
+  if (prev) {
+    const a = document.createElement("a");
+    a.className = "prev"; a.href = "#" + prev; a.dataset.page = prev;
+    a.innerHTML = '<span class="lbl">← 前のページ</span><span class="ttl">' + pageMeta[prev].label + "</span>";
+    pager.appendChild(a);
+  }
+  if (next) {
+    const a = document.createElement("a");
+    a.className = "next"; a.href = "#" + next; a.dataset.page = next;
+    a.innerHTML = '<span class="lbl">次のページ →</span><span class="ttl">' + pageMeta[next].label + "</span>";
+    pager.appendChild(a);
+  }
+  article.appendChild(pager);
+}
+
+// scroll → highlight right TOC + sync hash
+let scrollTimer = null;
+window.addEventListener("scroll", () => {
+  if (!scrollSyncEnabled) return;
+  if (scrollTimer) return;
+  scrollTimer = requestAnimationFrame(() => {
+    scrollTimer = null;
+    highlightAndSyncHash();
+  });
+}, { passive: true });
+
+function highlightAndSyncHash() {
+  const activePage = document.querySelector("article.page.active");
+  if (!activePage) return;
+  const headings = Array.from(activePage.querySelectorAll("h2[id], h3[id]"));
+  if (!headings.length) return;
+  const y = window.scrollY + 100;
+  let cur = headings[0];
+  for (const h of headings) if (h.offsetTop <= y) cur = h;
+  document.querySelectorAll("aside.right a").forEach(a => {
+    a.classList.toggle("active", a.getAttribute("href").endsWith("--" + cur.id));
+  });
+  const hash = "#" + currentPage + "--" + cur.id;
+  if (location.hash !== hash) {
+    history.replaceState(null, "", hash);
+  }
+}
+
+// hash: #page or #page--anchor
+function parseHash() {
+  const h = (location.hash || "").replace(/^#/, "");
+  if (!h) return { page: null, anchor: null };
+  const i = h.indexOf("--");
+  if (i < 0) return { page: h, anchor: null };
+  return { page: h.slice(0, i), anchor: h.slice(i + 2) };
+}
+
+function onHash() {
+  const { page, anchor } = parseHash();
+  const wasSame = page === currentPage;
+  showPage(page, { scrollTop: !anchor && !wasSame });
+  if (anchor) {
+    const t = document.getElementById(anchor);
+    if (t) {
+      scrollSyncEnabled = false;
+      setTimeout(() => {
+        window.scrollTo({ top: t.offsetTop - 72, behavior: "smooth" });
+        setTimeout(() => (scrollSyncEnabled = true), 500);
+      }, 40);
+    }
+  }
+}
+window.addEventListener("hashchange", onHash);
+
+// intercept nav clicks
+document.addEventListener("click", e => {
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const href = a.getAttribute("href");
+  if (href === "#") return;
+  const m = href.match(/^#([^-]+(?:-[^-]+)*?)(?:--(.+))?$/);
+  if (!m) return;
+  const target = m[1];
+  if (pageMeta[target] || pageOrder.includes(target)) {
+    e.preventDefault();
+    if (location.hash === href) onHash();
+    else location.hash = href;
+  }
+});
+
+// ─── LIGHTBOX v2 with wheel zoom + drag pan + prev/next ──────
+const lb = document.getElementById("lightbox");
+const lbImg = document.getElementById("lb-img");
+const lbCounter = document.getElementById("lb-counter");
+const lbZoomLvl = document.getElementById("lb-zoom");
+const lbStage = document.getElementById("lb-stage");
+const lbPrev = document.getElementById("lb-prev");
+const lbNext = document.getElementById("lb-next");
+const lbFit = document.getElementById("lb-fit");
+const lbClose = document.getElementById("lb-close");
+
+let lbImgs = [];
+let lbIdx = 0;
+let lbScale = 1;
+let lbTx = 0, lbTy = 0;
+let lbFitScale = 1;
+
+function currentPageImgs() {
+  const active = document.querySelector("article.page.active");
+  if (!active) return [];
+  return Array.from(active.querySelectorAll("figure.shot img"));
+}
+
+function updateLbTransform() {
+  lbImg.style.transform = `translate(${lbTx}px, ${lbTy}px) scale(${lbScale})`;
+  lbZoomLvl.textContent = Math.round((lbScale / lbFitScale) * 100) + "%";
+  lbImg.classList.toggle("can-drag", lbScale > lbFitScale + 0.01);
+}
+
+function computeFitScale() {
+  const stageW = lbStage.clientWidth - 40;
+  const stageH = lbStage.clientHeight - 40;
+  const iw = lbImg.naturalWidth || 1;
+  const ih = lbImg.naturalHeight || 1;
+  const sx = stageW / iw, sy = stageH / ih;
+  return Math.min(sx, sy, 1);
+}
+
+function openLb(idx) {
+  lbImgs = currentPageImgs();
+  if (!lbImgs.length) return;
+  lbIdx = Math.max(0, Math.min(idx, lbImgs.length - 1));
+  const el = lbImgs[lbIdx];
+  lbCounter.textContent = (lbIdx + 1) + " / " + lbImgs.length;
+  lbPrev.style.visibility = lbImgs.length > 1 ? "visible" : "hidden";
+  lbNext.style.visibility = lbImgs.length > 1 ? "visible" : "hidden";
+  lbImg.onload = () => {
+    lbFitScale = computeFitScale();
+    lbScale = lbFitScale;
+    lbTx = 0; lbTy = 0;
+    updateLbTransform();
+  };
+  lbImg.src = el.src;
+  lbImg.alt = el.alt || "";
+  lb.classList.add("on");
+  document.body.style.overflow = "hidden";
+}
+
+function closeLb() {
+  lb.classList.remove("on");
+  document.body.style.overflow = "";
+}
+
+function fitLb() {
+  lbFitScale = computeFitScale();
+  lbScale = lbFitScale; lbTx = 0; lbTy = 0;
+  updateLbTransform();
+}
+
+document.addEventListener("click", e => {
+  const img = e.target.closest("figure.shot img");
+  if (!img) return;
+  const imgs = currentPageImgs();
+  openLb(imgs.indexOf(img));
+});
+
+lbClose.addEventListener("click", closeLb);
+lbFit.addEventListener("click", fitLb);
+lbPrev.addEventListener("click", () => openLb(lbIdx - 1));
+lbNext.addEventListener("click", () => openLb(lbIdx + 1));
+lb.addEventListener("click", e => {
+  if (e.target === lb || e.target === lbStage) closeLb();
+});
+
+// wheel zoom
+lbStage.addEventListener("wheel", e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+  const rect = lbImg.getBoundingClientRect();
+  const cx = e.clientX - rect.left - rect.width / 2;
+  const cy = e.clientY - rect.top - rect.height / 2;
+  const newScale = Math.max(lbFitScale * 0.5, Math.min(lbScale * factor, lbFitScale * 8));
+  const ratio = newScale / lbScale;
+  lbTx -= cx * (ratio - 1);
+  lbTy -= cy * (ratio - 1);
+  lbScale = newScale;
+  updateLbTransform();
+}, { passive: false });
+
+// drag pan
+let dragging = false, dragSX = 0, dragSY = 0, dragTX = 0, dragTY = 0;
+lbImg.addEventListener("mousedown", e => {
+  if (lbScale <= lbFitScale + 0.01) return;
+  dragging = true; dragSX = e.clientX; dragSY = e.clientY;
+  dragTX = lbTx; dragTY = lbTy;
+  lb.classList.add("dragging");
+  e.preventDefault();
+});
+window.addEventListener("mousemove", e => {
+  if (!dragging) return;
+  lbTx = dragTX + (e.clientX - dragSX);
+  lbTy = dragTY + (e.clientY - dragSY);
+  updateLbTransform();
+});
+window.addEventListener("mouseup", () => {
+  dragging = false;
+  lb.classList.remove("dragging");
+});
+
+// ─── search palette ─────────────────────────────────────────
+const searchModal = document.getElementById("search-modal");
+const searchInput = document.getElementById("search-input");
+const searchResults = document.getElementById("search-results");
+const searchCount = document.getElementById("search-count");
+const searchOpen = document.getElementById("search-open");
+let searchIndex = null;
+let searchSelIdx = 0;
+
+function buildSearchIndex() {
+  const idx = [];
+  for (const p of pages) {
+    const name = p.id.replace(/^p-/, "");
+    const meta = pageMeta[name];
+    if (!meta) continue;
+    const headings = p.querySelectorAll("h1, h2, h3");
+    for (const h of headings) {
+      idx.push({
+        page: name,
+        pageLabel: meta.label,
+        anchor: h.id || "",
+        title: h.textContent.trim(),
+        text: h.textContent.trim(),
+        type: "h",
+      });
+    }
+    const paras = p.querySelectorAll("p, li, td");
+    for (const el of paras) {
+      const t = el.textContent.trim();
+      if (t.length < 10) continue;
+      const nearest = closestHeadingId(el);
+      idx.push({
+        page: name,
+        pageLabel: meta.label,
+        anchor: nearest,
+        title: meta.label,
+        text: t,
+        type: "b",
+      });
+    }
+  }
+  return idx;
+}
+function closestHeadingId(el) {
+  let cur = el;
+  while (cur) {
+    let sib = cur.previousElementSibling;
+    while (sib) {
+      if (/^H[123]$/.test(sib.tagName) && sib.id) return sib.id;
+      sib = sib.previousElementSibling;
+    }
+    cur = cur.parentElement;
+    if (cur && /^ARTICLE$/.test(cur.tagName)) break;
+  }
+  return "";
+}
+
+function openSearch() {
+  if (!searchIndex) searchIndex = buildSearchIndex();
+  searchModal.classList.add("on");
+  searchInput.value = "";
+  searchInput.focus();
+  renderSearch("");
+}
+function closeSearch() {
+  searchModal.classList.remove("on");
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+function highlight(text, terms) {
+  let out = escapeHtml(text);
+  for (const t of terms) {
+    if (!t) continue;
+    const re = new RegExp("(" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi");
+    out = out.replace(re, "<mark>$1</mark>");
+  }
+  return out;
+}
+function renderSearch(q) {
+  searchResults.innerHTML = "";
+  q = q.trim();
+  if (!q) {
+    searchResults.innerHTML = '<div class="empty">キーワードを入力してください</div>';
+    searchCount.textContent = "";
+    return;
+  }
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hits = [];
+  for (const item of searchIndex) {
+    const lower = item.text.toLowerCase();
+    let score = 0;
+    for (const t of terms) {
+      const i = lower.indexOf(t);
+      if (i < 0) { score = -1; break; }
+      score += 10 - Math.min(i, 10);
+      if (item.type === "h") score += 20;
+    }
+    if (score >= 0) hits.push({ item, score });
+  }
+  hits.sort((a, b) => b.score - a.score);
+  const top = hits.slice(0, 30);
+  if (!top.length) {
+    searchResults.innerHTML = '<div class="empty">該当なし</div>';
+    searchCount.textContent = "0 件";
+    return;
+  }
+  searchSelIdx = 0;
+  top.forEach((h, i) => {
+    const a = document.createElement("a");
+    a.className = "hit" + (i === 0 ? " sel" : "");
+    a.href = "#" + h.item.page + (h.item.anchor ? "--" + h.item.anchor : "");
+    a.innerHTML =
+      '<div class="page-name">' + escapeHtml(h.item.pageLabel) + "</div>" +
+      '<div class="snippet">' + highlight(h.item.text, terms) + "</div>";
+    a.addEventListener("click", closeSearch);
+    a.addEventListener("mouseenter", () => selectSearchHit(i));
+    searchResults.appendChild(a);
+  });
+  searchCount.textContent = hits.length + " 件";
+}
+function selectSearchHit(i) {
+  const hits = searchResults.querySelectorAll(".hit");
+  if (!hits.length) return;
+  searchSelIdx = Math.max(0, Math.min(i, hits.length - 1));
+  hits.forEach((el, j) => el.classList.toggle("sel", j === searchSelIdx));
+  hits[searchSelIdx].scrollIntoView({ block: "nearest" });
+}
+searchInput.addEventListener("input", () => renderSearch(searchInput.value));
+searchOpen.addEventListener("click", openSearch);
+searchModal.addEventListener("click", e => {
+  if (e.target === searchModal) closeSearch();
+});
+searchInput.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeSearch();
+  else if (e.key === "ArrowDown") { e.preventDefault(); selectSearchHit(searchSelIdx + 1); }
+  else if (e.key === "ArrowUp")   { e.preventDefault(); selectSearchHit(searchSelIdx - 1); }
+  else if (e.key === "Enter") {
+    const hits = searchResults.querySelectorAll(".hit");
+    if (hits[searchSelIdx]) { hits[searchSelIdx].click(); }
+  }
+});
+
+// ─── keyboard help ─────────────────────────────────────────
+const kbdHelp = document.getElementById("kbd-help");
+document.getElementById("show-help").addEventListener("click", e => {
+  e.preventDefault();
+  kbdHelp.classList.add("on");
+});
+kbdHelp.addEventListener("click", e => {
+  if (e.target === kbdHelp) kbdHelp.classList.remove("on");
+});
+
+// ─── global keyboard shortcuts ─────────────────────────────
+document.addEventListener("keydown", e => {
+  const inEditable = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+
+  // Escape closes everything
+  if (e.key === "Escape") {
+    if (lb.classList.contains("on")) { closeLb(); return; }
+    if (searchModal.classList.contains("on")) { closeSearch(); return; }
+    if (kbdHelp.classList.contains("on")) { kbdHelp.classList.remove("on"); return; }
+    closeLeftDrawer();
+    return;
   }
 
-  function showPage(name) {
-    if (!name) name = pageOrder[0];
-    let found = false;
-    for (const p of pages) {
-      const active = p.id === 'p-' + name;
-      p.classList.toggle('active', active);
-      if (active) found = true;
-    }
-    if (!found) {
-      // fallback to first
-      pages[0].classList.add('active');
-      name = pages[0].id.replace(/^p-/, '');
-    }
-    // left nav active
-    leftLinks.forEach(a =>
-      a.classList.toggle('active', a.dataset.page === name));
-    // rebuild right TOC for this page
-    buildToc(name);
-    // ensure pager
-    ensurePager(name);
-    // scroll to top of content
-    window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
-  }
-
-  function buildToc(name) {
-    tocList.innerHTML = '';
-    const article = document.getElementById('p-' + name);
-    if (!article) return;
-    const headings = article.querySelectorAll('h2[id], h3[id]');
-    if (headings.length === 0) {
-      const li = document.createElement('li');
-      li.className = 'empty';
-      li.textContent = '小節なし';
-      tocList.appendChild(li);
+  // Lightbox nav
+  if (lb.classList.contains("on")) {
+    if (e.key === "ArrowLeft") { openLb(lbIdx - 1); return; }
+    if (e.key === "ArrowRight") { openLb(lbIdx + 1); return; }
+    if (e.key === "0") { e.preventDefault(); fitLb(); return; }
+    if (e.key === "+" || e.key === "=") {
+      e.preventDefault();
+      lbScale = Math.min(lbFitScale * 8, lbScale * 1.2);
+      updateLbTransform();
       return;
     }
-    headings.forEach(h => {
-      const li = document.createElement('li');
-      if (h.tagName === 'H3') li.className = 'lvl3';
-      const a = document.createElement('a');
-      a.href = '#' + name + '--' + h.id;
-      a.textContent = h.textContent.replace(/\s+(編集中|質問公開|面談済|評価済).*$/, '').trim();
-      a.title = a.textContent;
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        window.scrollTo({ top: h.offsetTop - 64, behavior: 'smooth' });
-        history.replaceState(null, '', '#' + name + '--' + h.id);
-      });
-      li.appendChild(a);
-      tocList.appendChild(li);
-    });
-  }
-
-  function ensurePager(name) {
-    const article = document.getElementById('p-' + name);
-    if (!article) return;
-    // remove existing
-    article.querySelectorAll('.pager').forEach(n => n.remove());
-    const i = pageOrder.indexOf(name);
-    const prev = i > 0 ? pageOrder[i - 1] : null;
-    const next = i < pageOrder.length - 1 ? pageOrder[i + 1] : null;
-    if (!prev && !next) return;
-    const pager = document.createElement('div');
-    pager.className = 'pager';
-    if (prev) {
-      const a = document.createElement('a');
-      a.className = 'prev';
-      a.href = '#' + prev;
-      a.dataset.page = prev;
-      a.innerHTML = '<span class="lbl">← 前のページ</span><span class="ttl">' + pageMeta[prev].label + '</span>';
-      pager.appendChild(a);
-    }
-    if (next) {
-      const a = document.createElement('a');
-      a.className = 'next';
-      a.href = '#' + next;
-      a.dataset.page = next;
-      a.innerHTML = '<span class="lbl">次のページ →</span><span class="ttl">' + pageMeta[next].label + '</span>';
-      pager.appendChild(a);
-    }
-    article.appendChild(pager);
-  }
-
-  // scroll highlight for right TOC
-  function highlightToc() {
-    const activePage = document.querySelector('article.page.active');
-    if (!activePage) return;
-    const headings = Array.from(activePage.querySelectorAll('h2[id], h3[id]'));
-    if (!headings.length) return;
-    const y = window.scrollY + 90;
-    let cur = headings[0];
-    for (const h of headings) { if (h.offsetTop <= y) cur = h; }
-    document.querySelectorAll('aside.right a').forEach(a => {
-      a.classList.toggle('active', a.getAttribute('href').endsWith('--' + cur.id));
-    });
-  }
-  window.addEventListener('scroll', highlightToc, { passive: true });
-
-  // hash handling: #page  or  #page--anchor
-  function parseHash() {
-    const h = (location.hash || '').replace(/^#/, '');
-    if (!h) return { page: null, anchor: null };
-    const i = h.indexOf('--');
-    if (i < 0) return { page: h, anchor: null };
-    return { page: h.slice(0, i), anchor: h.slice(i + 2) };
-  }
-  function onHash() {
-    const { page, anchor } = parseHash();
-    showPage(page);
-    if (anchor) {
-      const t = document.getElementById(anchor);
-      if (t) setTimeout(() => window.scrollTo({ top: t.offsetTop - 64, behavior: 'smooth' }), 60);
-    }
-  }
-  window.addEventListener('hashchange', onHash);
-  // initial
-  onHash();
-
-  // ====== lightbox (image zoom) ======
-  const lb = document.getElementById('lightbox');
-  const lbImg = document.getElementById('lightbox-img');
-  const lbZoom = document.getElementById('lightbox-zoom');
-  // ズーム状態（viewport 幅に対する比率）
-  let zoomState = 0;
-  const ZOOM_VW = [50, 100];                // 50% / 100% （of viewport width）
-
-  function applyZoom() {
-    const vw = ZOOM_VW[zoomState];
-    lbImg.style.width = vw + 'vw';
-    lbImg.style.maxWidth = 'none';
-    lbImg.style.height = 'auto';
-    lbZoom.textContent = vw + '%';
-  }
-  function openLightbox(src, alt) {
-    lbImg.src = src;
-    lbImg.alt = alt || '';
-    zoomState = 0;                          // 既定 50vw（画面中央の半分）
-    applyZoom();
-    lb.classList.add('on');
-    lb.scrollTop = 0; lb.scrollLeft = 0;
-    document.body.style.overflow = 'hidden';
-  }
-  function closeLightbox() {
-    lb.classList.remove('on');
-    document.body.style.overflow = '';
-  }
-  function toggleZoom() {
-    zoomState = (zoomState + 1) % ZOOM_VW.length;
-    applyZoom();
-    lb.scrollTop = 0; lb.scrollLeft = 0;
-  }
-  document.addEventListener('dblclick', e => {
-    const img = e.target.closest('figure.shot img');
-    if (!img) return;
-    e.preventDefault();
-    openLightbox(img.src, img.alt);
-  });
-  document.addEventListener('click', e => {
-    const img = e.target.closest('figure.shot img');
-    if (!img) return;
-    openLightbox(img.src, img.alt);
-  });
-  // 閉じる：背景クリック（画像クリックは透過させない、cursor:default で）
-  lb.addEventListener('click', e => {
-    if (e.target.closest('#lightbox-img')) return;
-    if (e.target.closest('#lightbox-zoom')) return;
-    closeLightbox();
-  });
-  document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
-  lbZoom.addEventListener('click', e => { e.stopPropagation(); toggleZoom(); });
-  document.addEventListener('keydown', e => {
-    if (!lb.classList.contains('on')) return;
-    if (e.key === 'Escape') closeLightbox();
-    if (e.key === '0' || e.key === ' ') { e.preventDefault(); toggleZoom(); }
-  });
-
-  // intercept left nav + internal page links
-  document.addEventListener('click', e => {
-    const a = e.target.closest('a[href^="#"]');
-    if (!a) return;
-    const href = a.getAttribute('href');
-    if (href === '#') return;
-    // detect "#page" or "#page--anchor"
-    const m = href.match(/^#([^-]+(?:-[^-]+)*?)(?:--(.+))?$/);
-    if (!m) return;
-    const target = m[1];
-    if (pageMeta[target] || pageOrder.includes(target)) {
+    if (e.key === "-") {
       e.preventDefault();
-      if (location.hash === href) {
-        onHash(); // re-trigger
-      } else {
-        location.hash = href;
-      }
+      lbScale = Math.max(lbFitScale * 0.5, lbScale / 1.2);
+      updateLbTransform();
+      return;
     }
-  });
+    return;
+  }
+
+  if (inEditable) return;
+
+  // Ctrl/Cmd+K → search
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault(); openSearch(); return;
+  }
+  // "/" → search
+  if (e.key === "/") { e.preventDefault(); openSearch(); return; }
+  // "?" → help
+  if (e.key === "?") { e.preventDefault(); kbdHelp.classList.add("on"); return; }
+
+  // Page nav: ← / H = prev; → / L = next
+  if (e.key === "ArrowLeft" || e.key.toLowerCase() === "h") {
+    const i = pageOrder.indexOf(currentPage);
+    if (i > 0) { location.hash = "#" + pageOrder[i - 1]; }
+    return;
+  }
+  if (e.key === "ArrowRight" || e.key.toLowerCase() === "l") {
+    const i = pageOrder.indexOf(currentPage);
+    if (i < pageOrder.length - 1) { location.hash = "#" + pageOrder[i + 1]; }
+    return;
+  }
+
+  // Section scroll: J = next h2, K = prev h2
+  if (e.key.toLowerCase() === "j" || e.key.toLowerCase() === "k") {
+    const active = document.querySelector("article.page.active");
+    if (!active) return;
+    const hs = Array.from(active.querySelectorAll("h2[id], h3[id]"));
+    if (!hs.length) return;
+    const y = window.scrollY + 90;
+    let idx = 0;
+    for (let i = 0; i < hs.length; i++) if (hs[i].offsetTop <= y) idx = i;
+    const target = e.key.toLowerCase() === "j"
+      ? Math.min(idx + 1, hs.length - 1)
+      : Math.max(idx - 1, 0);
+    scrollSyncEnabled = false;
+    window.scrollTo({ top: hs[target].offsetTop - 72, behavior: "smooth" });
+    setTimeout(() => (scrollSyncEnabled = true), 500);
+  }
+});
+
+// ─── mobile drawer ─────────────────────────────────────────
+const leftNav = document.getElementById("left-nav");
+const backdrop = document.getElementById("backdrop");
+const hamburger = document.getElementById("hamburger");
+function openLeftDrawer() {
+  leftNav.classList.add("open");
+  backdrop.classList.add("on");
+}
+function closeLeftDrawer() {
+  leftNav.classList.remove("open");
+  backdrop.classList.remove("on");
+}
+hamburger.addEventListener("click", () => {
+  if (leftNav.classList.contains("open")) closeLeftDrawer();
+  else openLeftDrawer();
+});
+backdrop.addEventListener("click", closeLeftDrawer);
+
+// initial
+onHash();
 </script>
 </body>
 </html>
