@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import type { Evaluation, Mode } from "@/lib/types";
 import {
   buildEvaluationPromptAction,
@@ -10,8 +10,14 @@ import {
 import { MaxPromptCopy } from "./MaxPromptCopy";
 import { ModeSwitch } from "./ModeSwitch";
 import { SectionHeaderBar } from "./SectionHeaderBar";
-import { type ProviderModelOverride } from "./ProviderModelSelect";
+import {
+  ProviderModelSelect,
+  type ProviderModelOverride,
+} from "./ProviderModelSelect";
+import type { LlmDefaults } from "../page";
+import { useIsFullEdition } from "@/app/_components/EditionProvider";
 import { useStableSectionScroll } from "./useStableSectionScroll";
+import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -19,62 +25,83 @@ import { Switch } from "@/components/ui/switch";
 
 const SAMPLE = `{
   "軸評価": [
-    { "軸": "主体性", "スコア": 4.5, "根拠": "未経験ながら独学でCCNA範囲を学習し、ハンズオン環境を自費で構築した具体例があった" },
-    { "軸": "問題解決力", "スコア": 3.5, "根拠": "障害切り分けの手順は ping→traceroute と説明できたが、原因特定の深掘りは曖昧で確証が不足" },
-    { "軸": "対人影響力", "スコア": 4.2, "根拠": "前職で運用チーム3名のリーダー経験あり、エスカレーション基準を自分で整備した実績を具体的に語れた" },
-    { "軸": "柔軟性", "スコア": 4.4, "根拠": "夜間作業のシフト変更や急な切替案件にも対応した経験があり、優先順位の付け方を説明できた" }
+    { "軸": "非技術", "スコア": 3.8, "根拠": "主体性・コミュ力・学習意欲を包括評価。前職で運用チーム3名のリーダー経験、業務外でCCNA学習を継続していた具体例が語れた" },
+    { "軸": "技術", "スコア": 4.5, "根拠": "NW/サーバ技術力・問題解決力を包括評価。障害切り分け手順の説明が体系的で、実案件でのBGP設計経験も定量的に語れた" },
+    { "軸": "総合", "スコア": 4.0, "根拠": "志望度・カルチャーフィット・定着性の総合印象。企業理解が深く、逆質問も事業戦略まで踏み込む。前職在籍4年で定着性も良好" }
   ],
   "自己解決レベル": 4,
   "総合スコア": 4.15,
   "合否": "普通",
-  "良い点": "学習意欲と初動の速さが具体例で確認できた。リーダー経験も等身大の表現で誇張がない。",
-  "懸念点": "夜間作業の体力面の確証が薄い（要確認）。問題解決力の深掘り部分は次回オファー前に再確認したい。"
+  "良い点": "技術力の裏付けが定量的（BGP設計、切り分け手順）。志望度も企業理解の深さから確信できる。",
+  "懸念点": "夜間作業の体力面の確証が薄い（要確認）。非技術面は良好だが、大規模チーム統率経験は限定的。"
 }`;
 
 export function Section8Evaluation({
   sessionId,
   initial,
+  llmDefaults,
+  frozenAt,
+  minutesUpdatedAt,
 }: {
   sessionId: string;
   initial: Evaluation | null;
+  llmDefaults?: LlmDefaults;
+  /** ④凍結条件の frozenAt。評価より新しければ「最新ではない」と表示 */
+  frozenAt?: string | null;
+  /** ⑥議事録の updatedAt。評価より新しければ「最新ではない」と表示 */
+  minutesUpdatedAt?: string | null;
 }) {
-  // API モードを UI から隠しているため、表示・保存とも貼付モードに固定
-  const [mode] = useState<Mode>("paste");
+  const isFull = useIsFullEdition();
+  // 貼付版（lite）: ModeSwitch 側で onChange が無効化され "paste" 固定
+  // 完全版（full）: 貼付 / API をユーザがトグル可
+  const [mode, setMode] = useState<Mode>("paste");
   const { ref: rootRef } = useStableSectionScroll(mode);
   const [rawText, setRawText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Evaluation | null>(initial);
   const [strict, setStrict] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const [isEvaluating, startEvaluate] = useTransition();
-  const [llmOverride] = useState<ProviderModelOverride | undefined>(undefined);
+  const [llmOverride, setLlmOverride] = useState<ProviderModelOverride | undefined>(undefined);
+  const { save, isSaving, state } = useAutoSave();
+  const lastSavedRawRef = useRef("");
 
-  function handleSave() {
+  async function handleAutoSave() {
+    const snapshot = rawText.trim();
+    if (!snapshot) return; // 空欄では発火しない
+    if (snapshot === lastSavedRawRef.current) return;
     setError(null);
-    startTransition(async () => {
-      const result = await saveEvaluationFromJsonAction(sessionId, mode, rawText);
+    const currentMode = mode;
+    const ok = await save(async () => {
+      const result = await saveEvaluationFromJsonAction(
+        sessionId,
+        currentMode,
+        rawText,
+      );
       if (!result.ok) {
         setError(result.error ?? "保存に失敗しました");
-        return;
       }
-      // 保存に成功 → 表示用は楽観的に rawText を再パース
-      try {
-        const parsed = JSON.parse(rawText) as Record<string, unknown>;
-        setCurrent({
-          mode,
-          軸評価: (parsed["軸評価"] as Evaluation["軸評価"]) ?? [],
-          自己解決レベル: parsed["自己解決レベル"] as number,
-          総合スコア: parsed["総合スコア"] as number,
-          合否: parsed["合否"] as Evaluation["合否"],
-          良い点: (parsed["良い点"] as string) ?? "",
-          懸念点: (parsed["懸念点"] as string) ?? "",
-          updatedAt: new Date().toISOString(),
-        });
-        setRawText("");
-      } catch {
-        /* 保存自体は成功しているので再読込で反映 */
-      }
+      return result;
     });
+    if (!ok) return;
+    lastSavedRawRef.current = snapshot;
+    // 保存に成功 → 表示用は楽観的に rawText を再パース
+    try {
+      const parsed = JSON.parse(rawText) as Record<string, unknown>;
+      setCurrent({
+        mode: currentMode,
+        軸評価: (parsed["軸評価"] as Evaluation["軸評価"]) ?? [],
+        自己解決レベル: parsed["自己解決レベル"] as number,
+        総合スコア: parsed["総合スコア"] as number,
+        合否: parsed["合否"] as Evaluation["合否"],
+        良い点: (parsed["良い点"] as string) ?? "",
+        懸念点: (parsed["懸念点"] as string) ?? "",
+        updatedAt: new Date().toISOString(),
+      });
+      setRawText("");
+      lastSavedRawRef.current = "";
+    } catch {
+      /* 保存自体は成功しているので再読込で反映 */
+    }
   }
 
   function handleEvaluateApi() {
@@ -89,12 +116,41 @@ export function Section8Evaluation({
     });
   }
 
-  const busy = isPending || isEvaluating;
+  const busy = isSaving || isEvaluating;
+
+  // 評価保存後に ④凍結条件 or ⑥議事録 が更新されていたら「最新ではない」
+  const staleReasons: string[] = [];
+  if (current) {
+    const evalT = Date.parse(current.updatedAt);
+    if (frozenAt && Number.isFinite(evalT)) {
+      const t = Date.parse(frozenAt);
+      if (Number.isFinite(t) && t > evalT) staleReasons.push("凍結条件");
+    }
+    if (minutesUpdatedAt && Number.isFinite(evalT)) {
+      const t = Date.parse(minutesUpdatedAt);
+      if (Number.isFinite(t) && t > evalT) staleReasons.push("議事録");
+    }
+  }
 
   return (
     <div ref={rootRef}>
       <SectionHeaderBar title="⑤ 評価・合否判定" hasData={!!current}>
-        <ModeSwitch mode={mode} />
+        <ModeSwitch mode={mode} onChange={setMode} apiLabel="API評価" />
+        {isFull && mode === "api" && llmDefaults && (
+          <ProviderModelSelect
+            stage={strict ? "evaluationStrict" : "evaluation"}
+            defaultProvider={llmDefaults.defaultProvider}
+            defaultModel={
+              strict
+                ? llmDefaults.modelBy.evaluationStrict
+                : llmDefaults.modelBy.evaluation
+            }
+            value={llmOverride}
+            onChange={setLlmOverride}
+            hasKey={llmDefaults.hasKey}
+            disabled={busy}
+          />
+        )}
       </SectionHeaderBar>
 
       {mode === "api" && (
@@ -139,6 +195,21 @@ export function Section8Evaluation({
         </div>
       )}
 
+      {current && staleReasons.length > 0 && (
+        <div
+          role="status"
+          className="mb-3 text-sm border border-amber-300 bg-amber-50 text-amber-900 rounded px-3 py-2 flex items-start gap-2"
+        >
+          <span aria-hidden="true">⚠️</span>
+          <div>
+            <div className="font-medium">この評価結果は最新ではありません</div>
+            <div className="text-xs text-amber-800 mt-0.5">
+              {staleReasons.join(" / ")} が評価保存後に更新されています。再評価を推奨します。
+            </div>
+          </div>
+        </div>
+      )}
+
       {current && <EvaluationView evaluation={current} />}
 
       <details className="mt-3" open={!current && mode === "paste"}>
@@ -160,13 +231,17 @@ export function Section8Evaluation({
               }
             />
           )}
-          <Textarea
-            className="w-full text-sm font-mono"
-            rows={10}
-            placeholder={SAMPLE}
-            value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
-          />
+          <div className="relative">
+            <Textarea
+              className="w-full text-sm font-mono pr-3 pb-6"
+              rows={10}
+              placeholder={SAMPLE}
+              value={rawText}
+              onChange={(e) => setRawText(e.target.value)}
+              onBlur={handleAutoSave}
+            />
+            <AutoSaveIndicator state={state} />
+          </div>
           {mode === "paste" && error && (
             <div
               role="alert"
@@ -179,21 +254,15 @@ export function Section8Evaluation({
           <div className="flex items-center gap-3">
             <Button
               type="button"
-              onClick={handleSave}
-              disabled={busy || !rawText.trim()}
-            >
-              {isPending ? "保存中…" : "JSON を保存"}
-            </Button>
-            <Button
-              type="button"
               variant="outline"
               size="sm"
               onClick={() => setRawText(SAMPLE)}
+              disabled={busy}
             >
               サンプルを入れる
             </Button>
-            <span className="text-xs text-zinc-500">
-              期待スキーマ: 軸評価[] / 自己解決レベル / 総合スコア / 合否 / 良い点 / 懸念点
+            <span className="text-xs text-zinc-400">
+              貼り付け後、テキスト欄からフォーカスを外すと自動保存
             </span>
           </div>
         </div>

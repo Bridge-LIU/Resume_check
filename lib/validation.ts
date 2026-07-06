@@ -221,6 +221,9 @@ export function validateRoleObject(
       error: `${prefix}条件2_未経験者必須 は文字列配列で指定してください`,
     };
   }
+  if (b.ロック !== undefined && typeof b.ロック !== "boolean") {
+    return { ok: false, error: `${prefix}ロックは真偽値で指定してください` };
+  }
   return {
     ok: true,
     value: {
@@ -230,6 +233,7 @@ export function validateRoleObject(
       未経験可: b.未経験可,
       条件1_基本人物像: b.条件1_基本人物像 as string[],
       条件2_未経験者必須: b.条件2_未経験者必須 as string[],
+      ...(b.ロック === true ? { ロック: true } : {}),
     },
   };
 }

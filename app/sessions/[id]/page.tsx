@@ -14,6 +14,8 @@ import {
   listRoles,
   loadSettings,
 } from "@/lib/storage";
+import { isFullEdition } from "@/lib/edition";
+import type { LlmStage, ProviderId } from "@/lib/types";
 import { Section2Candidate } from "./_components/Section2Candidate";
 import { Section4Conditions } from "./_components/Section4Conditions";
 import { Section5Questions } from "./_components/Section5Questions";
@@ -21,6 +23,12 @@ import { Section6Minutes } from "./_components/Section6Minutes";
 import { Section8Evaluation } from "./_components/Section8Evaluation";
 import { SessionMetaControls } from "./_components/SessionMetaControls";
 import { SidebarNav } from "./_components/SidebarNav";
+
+export interface LlmDefaults {
+  defaultProvider: ProviderId;
+  hasKey: Record<ProviderId, boolean>;
+  modelBy: Record<LlmStage, string>;
+}
 
 const ROLE_PILL_MAP: Record<string, string> = {
   NW: "pill-role-nw",
@@ -72,6 +80,33 @@ export default async function SessionPage({
   if (!availableRoles.some((r) => r.id === meta.役割)) {
     availableRoles.unshift({ id: meta.役割, label: `${meta.役割}（マスタ削除済）` });
   }
+
+  // 完全版のみ: セッション内 ProviderModelSelect の既定表示に使う
+  // (⚠ hasKey は boolean のみ。API キー文字列は client に渡さない)
+  const llmDefaults: LlmDefaults | undefined = (() => {
+    if (!isFullEdition()) return undefined;
+    const defProv = settings.providers[settings.defaultProvider];
+    return {
+      defaultProvider: settings.defaultProvider,
+      hasKey: {
+        anthropic:
+          !!process.env.ANTHROPIC_API_KEY?.trim() ||
+          !!settings.providers.anthropic.key.trim(),
+        openai:
+          !!process.env.OPENAI_API_KEY?.trim() ||
+          !!settings.providers.openai.key.trim(),
+        google:
+          !!(process.env.GOOGLE_API_KEY?.trim() ?? process.env.GEMINI_API_KEY?.trim()) ||
+          !!settings.providers.google.key.trim(),
+      },
+      modelBy: {
+        summary: defProv.models.summary ?? defProv.defaultModel,
+        questions: defProv.models.questions ?? defProv.defaultModel,
+        evaluation: defProv.models.evaluation ?? defProv.defaultModel,
+        evaluationStrict: defProv.models.evaluationStrict ?? defProv.defaultModel,
+      },
+    };
+  })();
 
   const rolePill = ROLE_PILL_MAP[meta.役割] ?? "pill";
   const statusPill = STATUS_PILL_MAP[meta.status] ?? "pill-edit";
@@ -130,7 +165,11 @@ export default async function SessionPage({
         <SidebarNav status={sectionStatus} />
         <main className="flex-1 p-6 space-y-8 min-w-0">
           <section id="s2" className="scroll-mt-4">
-            <Section2Candidate sessionId={id} initial={candidate} />
+            <Section2Candidate
+              sessionId={id}
+              initial={candidate}
+              llmDefaults={llmDefaults}
+            />
           </section>
           <section id="s4" className="scroll-mt-4">
             <Section4Conditions
@@ -145,13 +184,20 @@ export default async function SessionPage({
               sessionId={id}
               initial={questions}
               questionCounts={settings.questionCounts}
+              llmDefaults={llmDefaults}
             />
           </section>
           <section id="s6" className="scroll-mt-4">
             <Section6Minutes sessionId={id} initial={minutes} />
           </section>
           <section id="s8" className="scroll-mt-4">
-            <Section8Evaluation sessionId={id} initial={evaluation} />
+            <Section8Evaluation
+              sessionId={id}
+              initial={evaluation}
+              llmDefaults={llmDefaults}
+              frozenAt={snapshot?.frozenAt ?? null}
+              minutesUpdatedAt={minutes?.updatedAt ?? null}
+            />
           </section>
         </main>
       </div>

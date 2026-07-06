@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Minutes } from "@/lib/types";
 import { saveMinutesAction } from "../actions";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tip } from "@/components/ui/tooltip";
 import { SectionHeaderBar } from "./SectionHeaderBar";
+import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
 
 export function Section6Minutes({
   sessionId,
@@ -16,17 +16,18 @@ export function Section6Minutes({
   initial: Minutes | null;
 }) {
   const [text, setText] = useState(initial?.text ?? "");
-  const [savedAt, setSavedAt] = useState<string | null>(
-    initial?.updatedAt ?? null,
-  );
   const summarized = initial?.summarized ?? false;
-  const [isPending, startTransition] = useTransition();
+  const { save, savedAt, setSavedAt, state } = useAutoSave();
+  const lastSavedRef = useRef(initial?.text ?? "");
+  useEffect(() => {
+    setSavedAt(initial?.updatedAt ?? null);
+  }, [initial?.updatedAt, setSavedAt]);
 
-  function handleSave() {
-    startTransition(async () => {
-      await saveMinutesAction(sessionId, text);
-      setSavedAt(new Date().toISOString());
-    });
+  async function handleAutoSave() {
+    if (text === lastSavedRef.current) return;
+    const snapshot = text;
+    const ok = await save(() => saveMinutesAction(sessionId, snapshot));
+    if (ok) lastSavedRef.current = snapshot;
   }
 
   return (
@@ -45,33 +46,24 @@ export function Section6Minutes({
           </>
         }
       />
-      <Textarea
-        className="w-full text-sm"
-        rows={10}
-        placeholder="議事録テキストを貼り付け"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <div className="flex items-center gap-3 mt-2">
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={isPending}
-        >
-          {isPending ? "保存中…" : "保存"}
-        </Button>
-        {savedAt && (
-          <span
-            role="status"
-            aria-live="polite"
-            className="text-xs text-zinc-500"
-          >
-            最終保存: {new Date(savedAt).toLocaleString("ja-JP")}
-          </span>
-        )}
-        {/* 文字数カウンタは頻繁に変動するため announce しない（aria-hidden）。
-            色は zinc-400 だが情報は textarea から取得可能なので装飾扱い。 */}
-        <span className="text-xs text-zinc-500 ml-auto tabular" aria-hidden="true">
+      <div className="relative">
+        <Textarea
+          className="w-full text-sm pr-3 pb-6"
+          rows={10}
+          placeholder="議事録テキストを貼り付け"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={handleAutoSave}
+        />
+        <AutoSaveIndicator state={state} />
+      </div>
+      <div className="flex items-center gap-3 mt-2 text-xs text-zinc-500">
+        <span>
+          {savedAt
+            ? `最終保存: ${new Date(savedAt).toLocaleString("ja-JP")}`
+            : "未保存（フォーカスを外すと自動保存）"}
+        </span>
+        <span className="ml-auto tabular" aria-hidden="true">
           {text.length.toLocaleString()} 文字
         </span>
       </div>

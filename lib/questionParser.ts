@@ -24,8 +24,10 @@ export interface ParsedQuestionItem extends QuestionItem {
   category: "非技術" | "技術" | "その他";
 }
 
-const NON_TECH_HEADER_RE = /^##\s*非技術\s*$/m;
-const TECH_HEADER_RE = /^##\s*技術\s*$/m;
+// LLM が # 非技術 / ## 非技術 / ### 非技術 のどれで出力しても拾えるよう
+// ハッシュ数を 1 以上に緩和（Haiku など軽量モデルは単一 # を返すことがある）
+const NON_TECH_HEADER_RE = /^#+\s*非技術\s*$/m;
+const TECH_HEADER_RE = /^#+\s*技術\s*$/m;
 
 /** 質問開始行: ⭐/☆ + Q/T/数字 + . */
 const QUESTION_START_RE =
@@ -101,13 +103,13 @@ export function parseQuestions(rawText: string): {
   for (const raw of lines) {
     const line = raw;
     // セクション見出し検知
-    if (/^##\s*非技術\s*$/.test(line.trim())) {
+    if (/^#+\s*非技術\s*$/.test(line.trim())) {
       commit();
       cur = null;
       currentCategory = "非技術";
       continue;
     }
-    if (/^##\s*技術\s*$/.test(line.trim())) {
+    if (/^#+\s*技術\s*$/.test(line.trim())) {
       commit();
       cur = null;
       currentCategory = "技術";

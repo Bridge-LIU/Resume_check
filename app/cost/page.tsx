@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { PageHeader } from "@/app/_components/PageHeader";
 import {
   aggregateBy,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/costEstimate";
 import { CHARS_PER_TOKEN, USD_TO_JPY, fmtJpy, fmtUsd, isPricingKnown } from "@/lib/pricing";
 import { PROVIDERS } from "@/lib/llm/registry";
+import { isFullEdition } from "@/lib/edition";
 import type { ProviderId } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +26,8 @@ function providerIcon(id: ProviderId): string {
 }
 
 export default async function CostPage() {
+  // 貼付版（EDITION=lite）では API コストは発生しないため /cost 自体を隠す
+  if (!isFullEdition()) notFound();
   const records = loadCostRecords(5000);
   const total = aggregateTotal(records);
 

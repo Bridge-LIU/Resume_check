@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Candidate, Mode } from "@/lib/types";
 import {
   buildSummaryPromptAction,
@@ -9,12 +9,19 @@ import {
 } from "../actions";
 import { MaxPromptCopy } from "./MaxPromptCopy";
 import { ModeSwitch } from "./ModeSwitch";
-import { type ProviderModelOverride } from "./ProviderModelSelect";
+import {
+  ProviderModelSelect,
+  type ProviderModelOverride,
+} from "./ProviderModelSelect";
+import type { LlmDefaults } from "../page";
+import { useIsFullEdition } from "@/app/_components/EditionProvider";
 import { useStableSectionScroll } from "./useStableSectionScroll";
+import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   detectResumeKind,
+  isLegacyXls,
   kindIcon,
   kindLabel,
   RESUME_FILE_ACCEPT,
@@ -40,12 +47,16 @@ function fileToBase64(file: File): Promise<string> {
 export function Section2Candidate({
   sessionId,
   initial,
+  llmDefaults,
 }: {
   sessionId: string;
   initial: Candidate | null;
+  llmDefaults?: LlmDefaults;
 }) {
-  // API モードを UI から隠しているため、表示・保存とも貼付モードに固定
-  const [mode] = useState<Mode>("paste");
+  const isFull = useIsFullEdition();
+  // 貼付版（lite）: ModeSwitch 側で onChange が無効化され "paste" 固定
+  // 完全版（full）: 貼付 / API をユーザがトグル可
+  const [mode, setMode] = useState<Mode>("paste");
   const { ref: rootRef } = useStableSectionScroll(mode);
   // 保存は 要約 1 本のみ（Excel 出力時に見出しで 3 列へ分割）。
   // 旧データで構造化 3 フィールドだけが残っているケースでは、それを 1 本に整形して初期値に。
@@ -61,11 +72,12 @@ export function Section2Candidate({
     return "";
   })();
   const [text, setText] = useState(initialText);
-  const [savedAt, setSavedAt] = useState<string | null>(
-    initial?.updatedAt ?? null,
-  );
-  const [isPending, startTransition] = useTransition();
-  const [llmOverride] = useState<ProviderModelOverride | undefined>(undefined);
+  const { save, isSaving, savedAt, setSavedAt, state } = useAutoSave();
+  const lastSavedRef = useRef(initialText);
+  useEffect(() => {
+    setSavedAt(initial?.updatedAt ?? null);
+  }, [initial?.updatedAt, setSavedAt]);
+  const [llmOverride, setLlmOverride] = useState<ProviderModelOverride | undefined>(undefined);
 
   // API モード用
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -73,26 +85,73 @@ export function Section2Candidate({
   const [pasteText, setPasteText] = useState("");
   const [summarizing, setSummarizing] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [converting, setConverting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function handleSave() {
-    startTransition(async () => {
-      await saveCandidateAction(sessionId, mode, text);
-      setSavedAt(new Date().toISOString());
-    });
+  /**
+   * 旧 .xls (BIFF 形式) をブラウザ上で SheetJS を使い .xlsx に変換する。
+   * サーバー側では ExcelJS しか動かないため、.xls はここで必ず変換してから送る。
+   * SheetJS の CVE (Prototype Pollution / ReDoS) はブラウザサンドボックスに閉じ込める設計。
+   */
+  async function convertXlsToXlsx(file: File): Promise<File> {
+    const XLSX = await import("xlsx");
+    const arrayBuffer = await file.arrayBuffer();
+    const wb = XLSX.read(arrayBuffer, { type: "array" });
+    const out = XLSX.write(wb, {
+      bookType: "xlsx",
+      type: "array",
+    }) as ArrayBuffer;
+    const newName = file.name.replace(/\.xls$/i, ".xlsx");
+    return new File(
+      [out],
+      newName.toLowerCase().endsWith(".xlsx") ? newName : newName + ".xlsx",
+      {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    );
   }
 
-  function handlePickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0] ?? null;
-    if (!f) {
+  async function handleAutoSave() {
+    if (text === lastSavedRef.current) return;
+    const snapshot = text;
+    const ok = await save(() => saveCandidateAction(sessionId, mode, snapshot));
+    if (ok) lastSavedRef.current = snapshot;
+  }
+
+  async function handlePickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.files?.[0] ?? null;
+    if (!raw) {
       setResumeFile(null);
       setResumeKind(null);
       return;
     }
+
+    // 旧 .xls は先にブラウザ側で .xlsx に変換する
+    let f: File = raw;
+    if (isLegacyXls(raw.type, raw.name)) {
+      setApiError(null);
+      setConverting(true);
+      try {
+        f = await convertXlsToXlsx(raw);
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        setApiError(
+          `旧 .xls の変換に失敗しました。ファイルが破損しているか、対応外の形式の可能性があります。詳細: ${detail}`,
+        );
+        setResumeFile(null);
+        setResumeKind(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setConverting(false);
+        return;
+      } finally {
+        setConverting(false);
+      }
+    }
+
     const kind = detectResumeKind(f.type, f.name);
     if (!kind) {
       setApiError(
-        "対応していないファイル形式です。PDF / Word(.docx) / Excel(.xlsx / .xls) を選んでください。",
+        "対応していないファイル形式です。PDF / Word(.doc / .docx) / Excel(.xlsx / .xls) を選んでください。",
       );
       setResumeFile(null);
       setResumeKind(null);
@@ -146,6 +205,8 @@ export function Section2Candidate({
       }
       if (res.summary) {
         setText(res.summary);
+        // API 要約は Server 側で saveCandidate 済み → クライアントの savedAt/last も同期
+        lastSavedRef.current = res.summary;
         setSavedAt(new Date().toISOString());
       }
     } catch (e) {
@@ -158,23 +219,35 @@ export function Section2Candidate({
   return (
     <div ref={rootRef}>
       <SectionHeaderBar title="① 面談者情報" hasData={!!initial?.要約}>
-        <ModeSwitch mode={mode} />
+        <ModeSwitch mode={mode} onChange={setMode} apiLabel="API自動要約" />
+        {isFull && mode === "api" && llmDefaults && (
+          <ProviderModelSelect
+            stage="summary"
+            defaultProvider={llmDefaults.defaultProvider}
+            defaultModel={llmDefaults.modelBy.summary}
+            value={llmOverride}
+            onChange={setLlmOverride}
+            hasKey={llmDefaults.hasKey}
+            disabled={summarizing || isSaving}
+          />
+        )}
       </SectionHeaderBar>
 
       {mode === "api" && (
         <div className="border rounded-lg p-3 mb-3 bg-zinc-50 space-y-3">
           <div className="text-xs text-zinc-600">
-            履歴書（<strong>PDF / Word(.docx) / Excel(.xlsx / .xls)</strong>）をアップロードするか、
+            履歴書（<strong>PDF / Word(.doc / .docx) / Excel(.xlsx / .xls)</strong>）をアップロードするか、
             テキストを貼り付けて「要約する（API）」を押すと AI が経歴・スキル・強み・懸念点で要約します。
             <br />
             <span className="text-zinc-500">
               ※ ファイルはサーバー側でテキスト抽出してから送信します（PDF の生バイナリは送りません）。
+              旧 <code className="bg-white px-1 rounded border">.xls</code> はブラウザ内で自動的に <code className="bg-white px-1 rounded border">.xlsx</code> に変換されます。
             </span>
           </div>
 
           <div>
             <div className="text-xs text-zinc-500 mb-1">
-              履歴書ファイル（任意・PDF / Word / Excel）
+              履歴書ファイル（任意・PDF / Word(.doc / .docx) / Excel(.xlsx / .xls)）
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <Button variant="outline" size="sm" asChild>
@@ -190,7 +263,22 @@ export function Section2Candidate({
                 className="hidden"
                 onChange={handlePickFile}
               />
-              {resumeFile && resumeKind && (
+              {converting && (
+                <span className="inline-flex items-center gap-1 text-xs text-blue-700">
+                  <svg
+                    className="w-3 h-3 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M21 12a9 9 0 11-6.219-8.56" />
+                  </svg>
+                  .xls をブラウザで .xlsx に変換中…
+                </span>
+              )}
+              {!converting && resumeFile && resumeKind && (
                 <>
                   <span className="text-xs text-zinc-700 truncate max-w-xs">
                     {kindIcon(resumeKind)} {resumeFile.name}{" "}
@@ -212,7 +300,7 @@ export function Section2Candidate({
                   </Button>
                 </>
               )}
-              {!resumeFile && (
+              {!converting && !resumeFile && (
                 <span className="text-xs text-zinc-400">未選択</span>
               )}
             </div>
@@ -246,7 +334,7 @@ export function Section2Candidate({
             <Button
               type="button"
               onClick={handleSummarize}
-              disabled={summarizing || isPending}
+              disabled={summarizing || isSaving || converting}
             >
               {summarizing ? "要約中…" : "要約する（API）"}
             </Button>
@@ -270,37 +358,25 @@ export function Section2Candidate({
       )}
 
       <div className="text-xs text-zinc-500 mb-1">要約</div>
-      <Textarea
-        className="w-full text-sm leading-relaxed"
-        rows={14}
-        placeholder={
-          mode === "api"
-            ? "API で要約するとここに反映されます。手で編集することもできます。"
-            : "候補者の経歴要約を貼り付け"
-        }
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-      />
-      <div className="text-xs text-zinc-400 mt-1">
-        ※ Excel 出力時、「経歴サマリ」「主要スキル」「強み」の見出しで 3 列に自動分割されます。
+      <div className="relative">
+        <Textarea
+          className="w-full text-sm leading-relaxed pr-3 pb-6"
+          rows={14}
+          placeholder={
+            mode === "api"
+              ? "API で要約するとここに反映されます。手で編集することもできます。"
+              : "候補者の経歴要約を貼り付け"
+          }
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={handleAutoSave}
+        />
+        <AutoSaveIndicator state={state} />
       </div>
-      <div className="flex items-center gap-3 mt-2">
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={isPending || summarizing}
-        >
-          {isPending ? "保存中…" : "保存"}
-        </Button>
-        {savedAt && (
-          <span
-            role="status"
-            aria-live="polite"
-            className="text-xs text-zinc-500"
-          >
-            最終保存: {new Date(savedAt).toLocaleString("ja-JP")}
-          </span>
-        )}
+      <div className="text-xs text-zinc-400 mt-2">
+        {savedAt
+          ? `最終保存: ${new Date(savedAt).toLocaleString("ja-JP")}`
+          : "未保存（テキスト欄からフォーカスを外すと自動保存）"}
       </div>
     </div>
   );

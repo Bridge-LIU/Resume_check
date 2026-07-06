@@ -3,6 +3,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { loadSettings, saveSettings, validateDataRoot } from "@/lib/storage";
+import { isFullEdition } from "@/lib/edition";
 import type {
   LlmStage,
   ProviderConfig,
@@ -24,14 +25,13 @@ const STAGES: LlmStage[] = ["summary", "questions", "evaluation", "evaluationStr
 
 /**
  * API モード関連 UI の表示フラグ。
- * Phase 1（貼付モード）では以下は非表示:
- *   - ProvidersField（Anthropic/OpenAI/Google 键 + 工程別モデル）
- *   - 質問生成数（貼付運用では既定 7/8 で十分。設定値は settings.json に残る）
+ * 貼付版（EDITION=lite）: false 固定 → ProvidersField / 質問生成数は非表示
+ * 完全版（EDITION=full）: true → Provider / API キー / 質問生成数を表示
+ *
  * フォーム送信側も この flag で分岐し、非表示中は current 値を そのまま維持する
  * （表示されていないフィールドを取り込んで書き潰してしまわないため）。
- * Phase 2 で API モードを有効化する際に true に切り替えるだけで復活する。
  */
-const SHOW_API_SETTINGS = false;
+const SHOW_API_SETTINGS = isFullEdition();
 
 async function updateSettings(formData: FormData) {
   "use server";

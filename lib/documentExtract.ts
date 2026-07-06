@@ -6,20 +6,20 @@ export { detectResumeKind, kindLabel };
 export type { ResumeKind };
 
 /**
- * 履歴書ファイル（PDF / DOCX / XLSX）からテキストを抽出する。
+ * 履歴書ファイル（PDF / DOC / DOCX / XLSX）からテキストを抽出する。
  *
  * 方針：「ローカル変換 → text ブロックで Claude へ送信」に統一。
  * - PDF: unpdf でテキスト抽出（Next.js サーバビルドで worker 不要）
  * - DOCX: mammoth で本文抽出
+ * - DOC: word-extractor で本文抽出（MS Word 97-2003 の OLE CFB 形式に対応）
  * - XLSX: ExcelJS でシートごとに Markdown 表へ整形
  *
  * Claude の document ブロック（PDF ネイティブ）を使わず、すべてテキスト送信に揃えることで
  * 入力トークン量・処理時間・コードパスを最小化する。
  *
- * 注: 旧 .xls（BIFF 形式）は ExcelJS が読めないため、本実装では .xlsx のみ対応。
- * .xls がアップロードされた場合は load 時に throw され、ユーザに再保存を促す。
- * （以前は SheetJS の xlsx パッケージで対応していたが、CVE 履歴 + npm 公式配布なし
- *  のためアンインストールし、ExcelJS に統一した。）
+ * 注: 旧 .xls（BIFF 形式）は現状未対応。SheetJS の xlsx パッケージには未修正の
+ * Prototype Pollution / ReDoS CVE があり npm には修正版が無い（公式 CDN 経由のみ）。
+ * .xls がアップロードされた場合は detectResumeKind で null が返り、ユーザに .xlsx 再保存を促す。
  */
 
 export interface ResumeExtractResult {
@@ -41,7 +41,7 @@ export async function extractResumeText(
   const kind = detectResumeKind(mimeType, fileName);
   if (!kind) {
     throw new Error(
-      `対応していないファイル形式です: ${fileName}（${mimeType || "不明な MIME"}）。PDF / Word(.docx) / Excel(.xlsx) のみ受け付けます。`,
+      `対応していないファイル形式です: ${fileName}（${mimeType || "不明な MIME"}）。PDF / Word(.doc/.docx) / Excel(.xlsx) のみ受け付けます。`,
     );
   }
 
@@ -75,6 +75,26 @@ export async function extractResumeText(
     const result = await mammoth.extractRawText({ buffer });
     return {
       text: (result.value ?? "").trim(),
+      kind,
+      fileName,
+    };
+  }
+
+  if (kind === "doc") {
+    // MS Word 97-2003（.doc / OLE Compound File Binary Format）
+    const WordExtractor = (await import("word-extractor")).default;
+    const extractor = new WordExtractor();
+    let doc;
+    try {
+      doc = await extractor.extract(buffer);
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e);
+      throw new Error(
+        `.doc ファイルを読み込めませんでした: ${fileName}。破損 or 想定外形式の可能性があります。詳細: ${detail}`,
+      );
+    }
+    return {
+      text: (doc.getBody() ?? "").trim(),
       kind,
       fileName,
     };

@@ -137,10 +137,9 @@ export async function buildMasterXlsx(): Promise<Buffer> {
   wb.created = new Date();
 
   const axisNames = ev?.評価軸.map((a) => a.名前) ?? [
-    "主体性",
-    "問題解決力",
-    "対人影響力",
-    "柔軟性",
+    "非技術",
+    "技術",
+    "総合",
   ];
   const axisCount = axisNames.length;
 
@@ -508,10 +507,9 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
   wb.created = new Date();
 
   const axisNames = ev?.評価軸.map((a) => a.名前) ?? [
-    "主体性",
-    "問題解決力",
-    "対人影響力",
-    "柔軟性",
+    "非技術",
+    "技術",
+    "総合",
   ];
 
   const ws = wb.addWorksheet("①D_面談者一覧", {

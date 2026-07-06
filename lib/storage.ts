@@ -628,6 +628,19 @@ export function createSession(氏名: string, 役割: string): SessionMeta {
     hold: false,
   };
   saveSessionMeta(meta);
+  // 役割マスタが「ロック」状態なら、④凍結を即時実行して conditions_snapshot を先出しする。
+  // 目的：セッション画面で編集/凍結ボタンを一切見せず、常に読取表示にするため。
+  // マスタ or 評価条件が欠けていれば静かにスキップ（従来通り手動凍結にフォールバック）。
+  const role = getRole(役割);
+  const evalCriteria = getEvalCriteria();
+  if (role?.ロック && evalCriteria) {
+    const snapshot: ConditionsSnapshot = {
+      role,
+      eval: resolveEvalForRole(evalCriteria, role.id),
+      frozenAt: now.toISOString(),
+    };
+    writeJson(sectionPath(id, "conditions_snapshot.json"), snapshot);
+  }
   return meta;
 }
 

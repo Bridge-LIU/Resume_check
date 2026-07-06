@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { Mode, Questions, QuestionCounts } from "@/lib/types";
 import { parseQuestions } from "@/lib/questionParser";
 import {
@@ -12,8 +12,14 @@ import {
 import { MaxPromptCopy } from "./MaxPromptCopy";
 import { ModeSwitch } from "./ModeSwitch";
 import { SectionHeaderBar } from "./SectionHeaderBar";
-import { type ProviderModelOverride } from "./ProviderModelSelect";
+import {
+  ProviderModelSelect,
+  type ProviderModelOverride,
+} from "./ProviderModelSelect";
+import type { LlmDefaults } from "../page";
+import { useIsFullEdition } from "@/app/_components/EditionProvider";
 import { useStableSectionScroll } from "./useStableSectionScroll";
+import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,29 +66,39 @@ T2. BGP 改修で深夜メンテを完遂された経験で、最も切替が危
   狙い: 夜間作業耐性 / 責任感 / 問題解決力
   解答例: 「N分以内に収束しなければロールバック」の閾値を明示できるか`;
 
-/** rawText を「非技術／技術」に分割する。見出しが無ければ全部を非技術として扱う（後方互換） */
+/**
+ * rawText を「非技術／技術」に分割する。見出しが無ければ全部を非技術として扱う（後方互換）。
+ * LLM が # / ## / ### のどれで出力してもマッチするよう正規表現で見出し検索。
+ */
+const NON_TECH_HEADER_MATCH_RE = /^#+\s*非技術\s*$/m;
+const TECH_HEADER_MATCH_RE = /^#+\s*技術\s*$/m;
+function findHeader(raw: string, re: RegExp): { start: number; end: number } | null {
+  const m = re.exec(raw);
+  if (!m) return null;
+  return { start: m.index, end: m.index + m[0].length };
+}
 function splitSections(raw: string): { nonTech: string; tech: string } {
-  const nonIdx = raw.indexOf(NON_TECH_HEADER);
-  const techIdx = raw.indexOf(TECH_HEADER);
-  if (nonIdx < 0 && techIdx < 0) {
+  const non = findHeader(raw, NON_TECH_HEADER_MATCH_RE);
+  const tech = findHeader(raw, TECH_HEADER_MATCH_RE);
+  if (!non && !tech) {
     return { nonTech: raw, tech: "" };
   }
-  if (nonIdx >= 0 && techIdx < 0) {
-    return { nonTech: raw.slice(nonIdx + NON_TECH_HEADER.length).trim(), tech: "" };
+  if (non && !tech) {
+    return { nonTech: raw.slice(non.end).trim(), tech: "" };
   }
-  if (nonIdx < 0 && techIdx >= 0) {
-    return { nonTech: "", tech: raw.slice(techIdx + TECH_HEADER.length).trim() };
+  if (!non && tech) {
+    return { nonTech: "", tech: raw.slice(tech.end).trim() };
   }
-  // 両方ある場合: 出現順は問わず、それぞれの後ろから次の見出しまで
-  if (nonIdx < techIdx) {
+  // 両方ある場合
+  if (non!.start < tech!.start) {
     return {
-      nonTech: raw.slice(nonIdx + NON_TECH_HEADER.length, techIdx).trim(),
-      tech: raw.slice(techIdx + TECH_HEADER.length).trim(),
+      nonTech: raw.slice(non!.end, tech!.start).trim(),
+      tech: raw.slice(tech!.end).trim(),
     };
   }
   return {
-    tech: raw.slice(techIdx + TECH_HEADER.length, nonIdx).trim(),
-    nonTech: raw.slice(nonIdx + NON_TECH_HEADER.length).trim(),
+    tech: raw.slice(tech!.end, non!.start).trim(),
+    nonTech: raw.slice(non!.end).trim(),
   };
 }
 
@@ -97,38 +113,43 @@ export function Section5Questions({
   sessionId,
   initial,
   questionCounts,
+  llmDefaults,
 }: {
   sessionId: string;
   initial: Questions | null;
   questionCounts: QuestionCounts;
+  llmDefaults?: LlmDefaults;
 }) {
+  const isFull = useIsFullEdition();
   const targetNonTech = questionCounts.nontech;
   const targetTech = questionCounts.tech;
-  // API モードを UI から隠しているため、表示・保存とも貼付モードに固定
-  const [mode] = useState<Mode>("paste");
+  // 貼付版（lite）: ModeSwitch 側で onChange が無効化され "paste" 固定
+  // 完全版（full）: 貼付 / API をユーザがトグル可
+  const [mode, setMode] = useState<Mode>("paste");
   const { ref: rootRef } = useStableSectionScroll(mode);
   const initialSplit = splitSections(initial?.rawText ?? "");
   const [nonTech, setNonTech] = useState(initialSplit.nonTech);
   const [tech, setTech] = useState(initialSplit.tech);
-  const [savedAt, setSavedAt] = useState<string | null>(
-    initial?.updatedAt ?? null,
-  );
+  const { save, isSaving, savedAt, setSavedAt, state } = useAutoSave();
   const [error, setError] = useState<string | null>(null);
-  const [isSaving, startSave] = useTransition();
   const [isGenerating, startGen] = useTransition();
   const [isReformatting, startReformat] = useTransition();
-  const [llmOverride] = useState<ProviderModelOverride | undefined>(undefined);
+  const [llmOverride, setLlmOverride] = useState<ProviderModelOverride | undefined>(undefined);
   const { confirm, ConfirmDialog } = useConfirm();
 
   const combined = joinSections(nonTech, tech);
   const initialCombined = initial?.rawText ?? "";
+  const lastSavedRef = useRef(initialCombined);
+  useEffect(() => {
+    setSavedAt(initial?.updatedAt ?? null);
+  }, [initial?.updatedAt, setSavedAt]);
 
-  function handleSave() {
-    setError(null);
-    startSave(async () => {
-      await saveQuestionsAction(sessionId, mode, combined);
-      setSavedAt(new Date().toISOString());
-    });
+  async function handleAutoSave() {
+    if (combined === lastSavedRef.current) return;
+    const snapshot = combined;
+    const currentMode = mode;
+    const ok = await save(() => saveQuestionsAction(sessionId, currentMode, snapshot));
+    if (ok) lastSavedRef.current = snapshot;
   }
 
   function handleGenerate() {
@@ -142,13 +163,23 @@ export function Section5Questions({
       if (res.text != null) {
         // 戻ってきた整形済みテキストを 2 セクションに振り分け
         const split = splitSections(res.text);
+        let newNonTech = nonTech;
+        let newTech = tech;
         if (!split.nonTech && !split.tech) {
-          // 見出しが無ければ技術側に全部入れる
+          newTech = res.text;
           setTech(res.text);
         } else {
-          if (split.nonTech) setNonTech(split.nonTech);
-          if (split.tech) setTech(split.tech);
+          if (split.nonTech) {
+            newNonTech = split.nonTech;
+            setNonTech(split.nonTech);
+          }
+          if (split.tech) {
+            newTech = split.tech;
+            setTech(split.tech);
+          }
         }
+        // Server 側で saveQuestions 済み → クライアント状態も同期
+        lastSavedRef.current = joinSections(newNonTech, newTech);
       }
       setSavedAt(new Date().toISOString());
     });
@@ -175,12 +206,18 @@ export function Section5Questions({
       }
       if (res.text != null) {
         const split = splitSections(res.text);
+        let newNonTech = "";
+        let newTech = "";
         if (!split.nonTech && !split.tech) {
+          newTech = res.text;
           setTech(res.text);
         } else {
+          newNonTech = split.nonTech;
+          newTech = split.tech;
           setNonTech(split.nonTech);
           setTech(split.tech);
         }
+        lastSavedRef.current = joinSections(newNonTech, newTech);
       }
       setSavedAt(new Date().toISOString());
     });
@@ -232,7 +269,18 @@ export function Section5Questions({
         title="③ 質問リスト"
         hasData={!!initial?.rawText?.trim()}
       >
-        <ModeSwitch mode={mode} />
+        <ModeSwitch mode={mode} onChange={setMode} apiLabel="API生成" />
+        {isFull && mode === "api" && llmDefaults && (
+          <ProviderModelSelect
+            stage="questions"
+            defaultProvider={llmDefaults.defaultProvider}
+            defaultModel={llmDefaults.modelBy.questions}
+            value={llmOverride}
+            onChange={setLlmOverride}
+            hasKey={llmDefaults.hasKey}
+            disabled={isGenerating || isReformatting || isSaving}
+          />
+        )}
       </SectionHeaderBar>
 
       {mode === "api" && (
@@ -310,13 +358,17 @@ export function Section5Questions({
             <span className="px-2 py-0.5 rounded bg-emerald-100">非技術</span>
             <span className="text-zinc-500">候補者によらない共通質問</span>
           </div>
-          <Textarea
-            className="w-full text-sm font-mono bg-emerald-50"
-            rows={14}
-            placeholder={DEFAULT_NON_TECH_TEMPLATE}
-            value={nonTech}
-            onChange={(e) => setNonTech(e.target.value)}
-          />
+          <div className="relative">
+            <Textarea
+              className="w-full text-sm font-mono bg-emerald-50 pr-3 pb-6"
+              rows={14}
+              placeholder={DEFAULT_NON_TECH_TEMPLATE}
+              value={nonTech}
+              onChange={(e) => setNonTech(e.target.value)}
+              onBlur={handleAutoSave}
+            />
+            <AutoSaveIndicator state={state} />
+          </div>
         </div>
 
         {/* 右: 技術 */}
@@ -325,13 +377,17 @@ export function Section5Questions({
             <span className="px-2 py-0.5 rounded bg-blue-100">技術</span>
             <span className="text-zinc-500">候補者の経歴に合わせた専門質問</span>
           </div>
-          <Textarea
-            className="w-full text-sm font-mono bg-blue-50"
-            rows={14}
-            placeholder={TECH_PLACEHOLDER}
-            value={tech}
-            onChange={(e) => setTech(e.target.value)}
-          />
+          <div className="relative">
+            <Textarea
+              className="w-full text-sm font-mono bg-blue-50 pr-3 pb-6"
+              rows={14}
+              placeholder={TECH_PLACEHOLDER}
+              value={tech}
+              onChange={(e) => setTech(e.target.value)}
+              onBlur={handleAutoSave}
+            />
+            <AutoSaveIndicator state={state} />
+          </div>
         </div>
       </div>
 
@@ -346,22 +402,11 @@ export function Section5Questions({
       )}
 
       <div className="flex items-center gap-3 mt-2 flex-wrap">
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={busy}
-        >
-          {isSaving ? "保存中…" : "保存"}
-        </Button>
-        {savedAt && (
-          <span
-            role="status"
-            aria-live="polite"
-            className="text-xs text-zinc-500"
-          >
-            最終保存: {new Date(savedAt).toLocaleString("ja-JP")}
-          </span>
-        )}
+        <span className="text-xs text-zinc-400">
+          {savedAt
+            ? `最終保存: ${new Date(savedAt).toLocaleString("ja-JP")}`
+            : "未保存（フォーカスを外すと自動保存）"}
+        </span>
         <div className="flex-1" />
         <Tip content="Haiku 4.5 で ⭐/狙い/解答例 のフォーマットに整形して上書き">
           <Button
@@ -371,7 +416,7 @@ export function Section5Questions({
             onClick={handleReformat}
             disabled={busy || !combined.trim()}
           >
-            {isReformatting ? "整形中…" : "整形（API）"}
+            {isReformatting ? "整形中…" : "手入力を整形（API）"}
           </Button>
         </Tip>
         <Button
@@ -480,28 +525,44 @@ function CategoryCard({
           {items.map((q, i) => (
             <li
               key={i}
-              className={`bg-white border border-l-4 ${accent} rounded px-2 py-1.5 text-xs`}
+              className={`bg-white border border-l-4 ${accent} rounded px-2.5 py-2`}
             >
-              <div className="flex items-start gap-1">
-                <span className="text-zinc-400 tabular shrink-0">
+              <div className="flex items-start gap-1.5">
+                <span className="text-zinc-400 text-xs tabular shrink-0 pt-0.5">
                   {prefix}
                   {i + 1}
                 </span>
                 {q.star && (
-                  <span className="text-amber-500 shrink-0" title="必須質問">
+                  <span className="text-amber-500 shrink-0 pt-0.5" title="必須質問">
                     ⭐
                   </span>
                 )}
-                <span className="text-zinc-800 leading-snug">{q.question}</span>
+                <span className="text-sm font-medium text-zinc-800 leading-snug">
+                  {q.question}
+                </span>
               </div>
-              {q.aim && (
-                <div className="text-zinc-500 mt-1 pl-6">
-                  <span className="text-zinc-400">狙い:</span> {q.aim}
-                </div>
-              )}
-              {q.example && (
-                <div className="text-zinc-500 pl-6">
-                  <span className="text-zinc-400">解答例:</span> {q.example}
+              {(q.aim || q.example) && (
+                <div className="mt-1.5 pl-6 space-y-1">
+                  {q.aim && (
+                    <div className="border-l-2 border-amber-300 pl-2">
+                      <div className="text-[10px] text-amber-700 font-medium leading-tight">
+                        狙い
+                      </div>
+                      <div className="text-[11px] text-zinc-700 leading-snug">
+                        {q.aim}
+                      </div>
+                    </div>
+                  )}
+                  {q.example && (
+                    <div className="border-l-2 border-sky-300 pl-2">
+                      <div className="text-[10px] text-sky-700 font-medium leading-tight">
+                        解答例
+                      </div>
+                      <div className="text-[11px] text-zinc-700 leading-snug">
+                        {q.example}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </li>

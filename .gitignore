@@ -52,6 +52,10 @@ yarn-error.log*
 # superpowers brainstorming セッション（ローカル一時ファイル）
 /.superpowers/
 
+# ローカルプレビュー用の PNG / HTML / スクリプト（画面ショットや mockup など）
+/.preview/
+.preview*
+
 # vercel
 .vercel
 

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tip } from "@/components/ui/tooltip";
 import { SectionHeaderBar } from "./SectionHeaderBar";
 
 export function Section4Conditions({
@@ -60,6 +61,26 @@ export function Section4Conditions({
       hour: "2-digit",
       minute: "2-digit",
     });
+    const isLocked = snapshot.role.ロック === true;
+    const editButton = (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="inline-flex items-center gap-1 text-xs h-7 px-2.5"
+        disabled={isLocked}
+        onClick={() => {
+          setError(null);
+          setEditing(true);
+        }}
+      >
+        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4z" />
+        </svg>
+        修正
+      </Button>
+    );
     return (
       <div>
         <div className="border-l-4 border-emerald-500 bg-emerald-50/40 pl-3 pr-2 py-2 rounded-r-md mb-3 flex items-center justify-between gap-3 flex-wrap">
@@ -77,23 +98,23 @@ export function Section4Conditions({
               </svg>
               凍結 {frozenShort}
             </span>
+            {isLocked && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <rect x="5" y="11" width="14" height="10" rx="2" />
+                  <path d="M8 11V7a4 4 0 118 0v4" />
+                </svg>
+                ロック
+              </span>
+            )}
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="inline-flex items-center gap-1 text-xs h-7 px-2.5"
-            onClick={() => {
-              setError(null);
-              setEditing(true);
-            }}
-          >
-            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4z" />
-            </svg>
-            修正
-          </Button>
+          {isLocked ? (
+            <Tip content="この人材条件はマスタでロックされているため修正できません">
+              <span className="inline-block">{editButton}</span>
+            </Tip>
+          ) : (
+            editButton
+          )}
         </div>
         <ConditionsReadView snapshot={snapshot} />
       </div>
@@ -159,28 +180,33 @@ function ConditionsReadView({ snapshot }: { snapshot: ConditionsSnapshot }) {
           </strong>
         </div>
       </div>
-      <div>
-        <div className="font-medium">条件①: 基本人物像（常に評価）</div>
-        <ul className="list-disc list-inside text-zinc-700 text-xs grid grid-cols-1 md:grid-cols-2 gap-x-4 mt-1">
-          {role.条件1_基本人物像.map((c, i) => (
-            <li key={i}>{c}</li>
-          ))}
-        </ul>
-      </div>
-      {role.未経験可 ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
-          <div className="font-medium">条件②: 未経験者必須</div>
-          <ul className="list-disc list-inside text-zinc-700 text-xs grid grid-cols-1 md:grid-cols-2 gap-x-4 mt-1">
-            {role.条件2_未経験者必須.map((c, i) => (
+          <div className="font-medium">条件①: 基本人物像（常に評価）</div>
+          <ul className="list-disc list-inside text-zinc-700 text-xs mt-1 space-y-0.5">
+            {role.条件1_基本人物像.map((c, i) => (
               <li key={i}>{c}</li>
             ))}
           </ul>
         </div>
-      ) : (
-        <div className="text-xs text-zinc-500 pt-1">
-          条件②: 未経験者必須（未経験可=false のため評価対象外）
-        </div>
-      )}
+        {role.未経験可 ? (
+          <div>
+            <div className="font-medium">条件②: 未経験者必須</div>
+            <ul className="list-disc list-inside text-zinc-700 text-xs mt-1 space-y-0.5">
+              {role.条件2_未経験者必須.map((c, i) => (
+                <li key={i}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div>
+            <div className="font-medium text-zinc-400">条件②: 未経験者必須</div>
+            <div className="text-xs text-zinc-500 mt-1">
+              未経験可=false のため評価対象外
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

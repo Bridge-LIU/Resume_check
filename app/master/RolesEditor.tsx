@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { Lock, Pencil, Trash2 } from "lucide-react";
 import type { Role } from "@/lib/types";
 import {
   validateRoleMasterId,
@@ -37,6 +37,7 @@ function emptyRole(): DraftRole {
     未経験可: false,
     条件1_基本人物像: [],
     条件2_未経験者必須: [],
+    ロック: false,
     _isNew: true,
   };
 }
@@ -124,6 +125,7 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
       未経験可: editing.未経験可,
       条件1_基本人物像: editing.条件1_基本人物像,
       条件2_未経験者必須: editing.条件2_未経験者必須,
+      ...(editing.ロック === true ? { ロック: true } : {}),
     };
 
     setError(null);
@@ -237,13 +239,14 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
               <th className="text-left px-4 py-2 w-20">未経験可</th>
               <th className="text-right px-4 py-2 w-20">条件①</th>
               <th className="text-right px-4 py-2 w-20">条件②</th>
+              <th className="text-center px-4 py-2 w-16">ロック</th>
               <th className="px-4 py-2 w-40"></th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {roles.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-zinc-500">
+                <td colSpan={8} className="px-4 py-6 text-center text-zinc-500">
                   役割マスタがありません。右上の「＋ 新規役割」から追加してください。
                 </td>
               </tr>
@@ -265,8 +268,17 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
                 <td className="px-4 py-2 text-right tabular text-zinc-600">
                   {r.条件1_基本人物像.length}
                 </td>
-                <td className="px-4 py-2 text-right tabular text-zinc-600">
+<td className="px-4 py-2 text-right tabular text-zinc-600">
                   {r.条件2_未経験者必須.length}
+                </td>
+                <td className="px-4 py-2 text-center">
+                  {r.ロック ? (
+                    <Tip content="この役割はロック済み。新規セッションは自動で条件凍結、面談画面での修正不可">
+                      <Lock className="inline-block h-4 w-4 text-amber-600" aria-label="ロック中" />
+                    </Tip>
+                  ) : (
+                    <span className="text-zinc-300">—</span>
+                  )}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
                   <div className="inline-flex items-center gap-2">
@@ -395,17 +407,33 @@ function RoleEditForm({
         </label>
       </div>
 
-      <Label
-        htmlFor="role-mikeiken-ka"
-        className="inline-flex items-center gap-2 text-sm font-normal cursor-pointer"
-      >
-        <Checkbox
-          id="role-mikeiken-ka"
-          checked={editing.未経験可}
-          onCheckedChange={(v) => onChange({ ...editing, 未経験可: v === true })}
-        />
-        未経験可（OFF のとき条件②は評価対象外）
-      </Label>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <Label
+          htmlFor="role-mikeiken-ka"
+          className="inline-flex items-center gap-2 text-sm font-normal cursor-pointer"
+        >
+          <Checkbox
+            id="role-mikeiken-ka"
+            checked={editing.未経験可}
+            onCheckedChange={(v) => onChange({ ...editing, 未経験可: v === true })}
+          />
+          未経験可（OFF のとき条件②は評価対象外）
+        </Label>
+        <Tip content="ON にすると、この役割で作った新規セッションは自動で条件凍結され、面談画面で条件を修正できなくなります">
+          <Label
+            htmlFor="role-lock"
+            className="inline-flex items-center gap-2 text-sm font-normal cursor-pointer"
+          >
+            <Checkbox
+              id="role-lock"
+              checked={editing.ロック === true}
+              onCheckedChange={(v) => onChange({ ...editing, ロック: v === true })}
+            />
+            <Lock className="h-3.5 w-3.5 text-amber-600" />
+            編集ロック（面談画面で修正不可）
+          </Label>
+        </Tip>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>

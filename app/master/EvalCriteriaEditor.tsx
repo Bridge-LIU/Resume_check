@@ -232,7 +232,7 @@ export default function EvalCriteriaEditor({
                   addAxis();
                 }
               }}
-              placeholder="＋ 新しい軸（例: 主体性）"
+              placeholder="＋ 新しい軸（例: 非技術）"
               className="flex-1 max-w-xs"
             />
             <Button type="button" variant="outline" size="sm" onClick={addAxis}>
