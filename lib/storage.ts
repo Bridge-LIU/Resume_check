@@ -352,6 +352,17 @@ function fireSessionsMirror(): void {
     .catch((e) => console.warn("[storage] excelMirror.sessions 起動失敗:", e));
 }
 
+/**
+ * 1 セッションを 1 xlsx にまとめる session.xlsx を再生成する。
+ * fire-and-forget。session ディレクトリが無い場合はスキップ。
+ * 顧客に「JSON が読めない」ので閲覧用ミラーを同居させる目的（設計上、JSON が正本 / 一方向同期）。
+ */
+function fireSessionMirror(id: string): void {
+  void import("./excelMirror")
+    .then((m) => m.writeSessionMirror(id))
+    .catch((e) => console.warn(`[storage] excelMirror.session 起動失敗 (${id}):`, e));
+}
+
 /* ───────────── マスタ: 役割 ───────────── */
 
 const rolesDir = () => dataPath("master", "roles");
@@ -737,6 +748,7 @@ export const saveCandidate = (id: string, data: Candidate) => {
   assertSessionId(id);
   writeJson(sectionPath(id, "candidate.json"), data);
   fireSessionsMirror();
+  fireSessionMirror(id);
 };
 
 export const getConditionsSnapshot = (id: string) => {
@@ -749,6 +761,7 @@ export const getConditionsSnapshot = (id: string) => {
 export const saveConditionsSnapshot = (id: string, data: ConditionsSnapshot) => {
   assertSessionId(id);
   writeJson(sectionPath(id, "conditions_snapshot.json"), data);
+  fireSessionMirror(id);
 };
 
 export const getQuestions = (id: string) =>
@@ -756,6 +769,7 @@ export const getQuestions = (id: string) =>
 export const saveQuestions = (id: string, data: Questions) => {
   assertSessionId(id);
   writeJson(sectionPath(id, "questions.json"), data);
+  fireSessionMirror(id);
 };
 
 export const getMinutes = (id: string) =>
@@ -763,6 +777,7 @@ export const getMinutes = (id: string) =>
 export const saveMinutes = (id: string, data: Minutes) => {
   assertSessionId(id);
   writeJson(sectionPath(id, "minutes.json"), data);
+  fireSessionMirror(id);
 };
 
 export const getEvaluation = (id: string) =>
@@ -782,4 +797,5 @@ export const saveEvaluation = (id: string, data: Evaluation) => {
   } else {
     fireSessionsMirror();
   }
+  fireSessionMirror(id);
 };

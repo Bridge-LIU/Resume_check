@@ -23,18 +23,25 @@ import path from "node:path";
 import ExcelJS from "exceljs";
 import {
   getCandidate,
+  getConditionsSnapshot,
   getDataRoot,
   getEvalCriteria,
   getEvaluation,
+  getMinutes,
+  getQuestions,
+  getSessionMeta,
+  isValidSessionId,
   listRoles,
   listSessions,
   loadSettings,
   resolveEvalForRole,
 } from "./storage";
+import { parseQuestions } from "./questionParser";
 import { parseStructuredSummary } from "./summaryFormat";
 
 export const MASTER_FILE = "マスタ.xlsx";
 export const SESSIONS_FILE = "面談者一覧.xlsx";
+export const SESSION_FILE = "session.xlsx";
 export const MASTER_FILE_ASCII = "master.xlsx";
 export const SESSIONS_FILE_ASCII = "sessions.xlsx";
 
@@ -877,4 +884,512 @@ function getRoleIdFromLabel(label: string): string | null {
   if (exact) return exact.id;
   const prefix = roles.find((r) => label.startsWith(r.id));
   return prefix?.id ?? null;
+}
+
+/* ─────────────── session.xlsx（1 セッション = 1 ファイル） ─────────────── */
+
+/**
+ * 1 セッションを 1 xlsx にまとめる。5 sheet 構成:
+ *   ①候補者 / ②条件 / ③質問 / ④議事録 / ⑤評価
+ *
+ * JSON が正本、xlsx は閲覧専用のミラー（設計）。
+ * セクションが未作成の場合は、そのシートに「未入力」プレースホルダを置く。
+ */
+export async function buildSessionXlsx(id: string): Promise<Buffer | null> {
+  if (!isValidSessionId(id)) return null;
+  const meta = getSessionMeta(id);
+  if (!meta) return null;
+
+  const candidate = getCandidate(id);
+  const snap = getConditionsSnapshot(id);
+  const questions = getQuestions(id);
+  const minutes = getMinutes(id);
+  const evalu = getEvaluation(id);
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "面談AI評価ツール";
+  wb.created = new Date();
+  wb.title = `面談: ${meta.氏名} / ${meta.役割}`;
+  wb.subject = meta.status;
+  wb.keywords = [meta.氏名, meta.役割, meta.status].join(", ");
+
+  addCandidateSheet(wb, meta, candidate);
+  addConditionsSheet(wb, meta, snap);
+  addQuestionsSheet(wb, meta, questions);
+  addMinutesSheet(wb, meta, minutes);
+  addEvaluationSheet(wb, meta, evalu);
+
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}
+
+type SessionMeta = NonNullable<ReturnType<typeof getSessionMeta>>;
+
+/** sessions/<id>/session.xlsx に書き出す。失敗は console.warn のみ。 */
+export async function writeSessionMirror(id: string): Promise<void> {
+  try {
+    const buf = await buildSessionXlsx(id);
+    if (!buf) return;
+    const dir = path.join(getDataRoot(), "sessions", id);
+    if (!fs.existsSync(dir)) return; // セッション未生成/削除済ならスキップ
+    fs.writeFileSync(path.join(dir, SESSION_FILE), buf);
+  } catch (e) {
+    console.warn(`[excelMirror] session.xlsx 書込失敗 (${id}):`, e);
+  }
+}
+
+/* ── session.xlsx 内の各シート生成ヘルパー ── */
+
+function addSectionHeader(
+  ws: ExcelJS.Worksheet,
+  title: string,
+  meta: SessionMeta,
+  cols: number,
+): void {
+  // Row 1: タイトル + 閲覧専用の警告
+  ws.mergeCells(1, 1, 1, cols);
+  const t = ws.getCell(1, 1);
+  t.value = title;
+  t.fill = solidFill("FF1F2937");
+  t.font = { bold: true, size: 13, color: { argb: "FFFFFFFF" } };
+  t.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  ws.getRow(1).height = 26;
+
+  // Row 2: メタ帯（氏名 / 役割 / 状態 / 面談日）
+  ws.mergeCells(2, 1, 2, cols);
+  const m = ws.getCell(2, 1);
+  m.value = {
+    richText: [
+      { text: "候補者: ", font: { bold: true, size: 10, color: { argb: "FF475569" } } },
+      { text: `${meta.氏名}   `, font: { size: 11, color: { argb: "FF111827" } } },
+      { text: "役割: ", font: { bold: true, size: 10, color: { argb: "FF475569" } } },
+      { text: `${meta.役割}   `, font: { size: 11, color: { argb: "FF111827" } } },
+      { text: "状態: ", font: { bold: true, size: 10, color: { argb: "FF475569" } } },
+      { text: `${meta.status}   `, font: { size: 11, color: { argb: "FF111827" } } },
+      { text: "面談日: ", font: { bold: true, size: 10, color: { argb: "FF475569" } } },
+      {
+        text: meta.closedAt ? formatDate(meta.closedAt) : "（未設定）",
+        font: { size: 11, color: { argb: "FF111827" } },
+      },
+    ],
+  };
+  m.fill = solidFill("FFF8FAFC");
+  m.alignment = { vertical: "middle", horizontal: "left", indent: 1, wrapText: true };
+  ws.getRow(2).height = 22;
+
+  // Row 3: 閲覧専用の注意
+  ws.mergeCells(3, 1, 3, cols);
+  const w = ws.getCell(3, 1);
+  w.value =
+    "※ 本ファイルはシステムが自動生成する閲覧専用ミラーです。編集はシステム画面から行ってください（次回保存で上書きされます）。";
+  w.fill = solidFill("FFFEF3C7");
+  w.font = { italic: true, size: 9, color: { argb: "FF92400E" } };
+  w.alignment = { vertical: "middle", horizontal: "left", indent: 1, wrapText: true };
+  ws.getRow(3).height = 20;
+}
+
+/** ①候補者 シート */
+function addCandidateSheet(
+  wb: ExcelJS.Workbook,
+  meta: SessionMeta,
+  cand: ReturnType<typeof getCandidate>,
+): void {
+  const ws = wb.addWorksheet("①候補者", {
+    views: [{ state: "frozen", ySplit: 4, showGridLines: false }],
+  });
+  ws.columns = [{ width: 22 }, { width: 90 }];
+  addSectionHeader(ws, "① 候補者情報", meta, 2);
+
+  if (!cand) {
+    placeholder(ws, 4, 2, "候補者情報は未入力です。");
+    return;
+  }
+
+  // 統合要約から 経歴 / 主要スキル / 強み を分解。旧データ用 fallback は Candidate 直下フィールド。
+  const parsed = parseStructuredSummary(cand.要約 ?? "");
+  const 経歴 = (cand.経歴?.trim() ? cand.経歴 : parsed.経歴).trim();
+  const 主要スキル = (cand.主要スキル?.trim() ? cand.主要スキル : parsed.主要スキル).trim();
+  const 強み = (cand.強み?.trim() ? cand.強み : parsed.強み).trim();
+
+  let cursor = 4;
+  cursor = addKV(ws, cursor, "モード", cand.mode === "api" ? "API 自動要約" : "貼付");
+  if (cand.provider) cursor = addKV(ws, cursor, "使用 AI", providerLabel(cand.provider));
+  cursor = addKV(ws, cursor, "更新日時", formatDateTime(cand.updatedAt));
+  cursor += 1;
+  cursor = addLongText(ws, cursor, "経歴サマリ", 経歴 || "（未記入）", "FFE0E7FF", "FF3730A3");
+  cursor = addLongText(ws, cursor, "主要スキル", 主要スキル || "（未記入）", "FFDBEAFE", "FF1E40AF");
+  addLongText(ws, cursor, "強み", 強み || "（未記入）", "FFEDE9FE", "FF6D28D9");
+
+  applyBordersTo(ws);
+}
+
+/** ②条件 シート（凍結スナップショット） */
+function addConditionsSheet(
+  wb: ExcelJS.Workbook,
+  meta: SessionMeta,
+  snap: ReturnType<typeof getConditionsSnapshot>,
+): void {
+  const ws = wb.addWorksheet("②条件", {
+    views: [{ state: "frozen", ySplit: 4, showGridLines: false }],
+  });
+  ws.columns = [{ width: 22 }, { width: 90 }];
+  addSectionHeader(ws, "② 求める人材条件（凍結スナップショット）", meta, 2);
+
+  if (!snap) {
+    placeholder(ws, 4, 2, "条件はまだ凍結されていません。");
+    return;
+  }
+
+  const { role, eval: ev, frozenAt } = snap;
+  let cursor = 4;
+  cursor = addKV(ws, cursor, "凍結日時", formatDateTime(frozenAt));
+  cursor = addKV(ws, cursor, "役割", role.役割);
+  cursor = addKV(ws, cursor, "経験", role.経験);
+  cursor = addKV(ws, cursor, "未経験可", role.未経験可 ? "はい" : "いいえ");
+  cursor += 1;
+
+  cursor = addBulletList(
+    ws,
+    cursor,
+    "条件①: 基本人物像（常に評価）",
+    role.条件1_基本人物像,
+    "FF111827",
+    "FFF9FAFB",
+  );
+  if (role.未経験可) {
+    cursor = addBulletList(
+      ws,
+      cursor,
+      "条件②: 未経験者必須",
+      role.条件2_未経験者必須,
+      "FFB45309",
+      "FFFFFBEB",
+    );
+  } else {
+    cursor = addKV(ws, cursor, "条件②", "（未経験可=false のため評価対象外）");
+  }
+  cursor += 1;
+
+  // 評価軸重み
+  cursor = addKV(ws, cursor, "評価軸", ev.評価軸.map((a) => a.名前).join(" / "));
+  cursor = addKV(
+    ws,
+    cursor,
+    "軸重み",
+    ev.評価軸.map((a) => `${a.名前}=${a.重み}`).join(" / "),
+  );
+  cursor = addKV(ws, cursor, "合格ライン", ev.合格ライン.toFixed(2));
+  cursor = addKV(ws, cursor, "普通ライン", ev.普通ライン.toFixed(2));
+  addKV(
+    ws,
+    cursor,
+    "スケール",
+    `${ev.スケール.最小}〜${ev.スケール.最大}（刻み ${ev.スケール.刻み}）`,
+  );
+
+  applyBordersTo(ws);
+}
+
+/** ③質問 シート */
+function addQuestionsSheet(
+  wb: ExcelJS.Workbook,
+  meta: SessionMeta,
+  q: ReturnType<typeof getQuestions>,
+): void {
+  const ws = wb.addWorksheet("③質問", {
+    views: [{ state: "frozen", ySplit: 5, showGridLines: false }],
+  });
+  ws.columns = [{ width: 8 }, { width: 8 }, { width: 60 }, { width: 40 }, { width: 40 }];
+  addSectionHeader(ws, "③ 質問リスト", meta, 5);
+
+  if (!q || !q.rawText.trim()) {
+    placeholder(ws, 4, 5, "質問はまだ作成されていません。");
+    return;
+  }
+
+  // 表ヘッダ
+  const hdr = ws.getRow(4);
+  hdr.values = ["No.", "★", "質問", "狙い", "解答例"];
+  styleHeaderRow(hdr);
+  ws.getRow(4).height = 22;
+
+  // parseQuestions で構造化して 1 行 = 1 質問
+  const { nonTech, tech } = parseQuestions(q.rawText);
+  let cursor = 5;
+  const emit = (
+    items: typeof nonTech,
+    prefix: "Q" | "T",
+    bgTitle: string,
+    bgTitleColor: string,
+  ) => {
+    if (items.length === 0) return;
+    ws.mergeCells(cursor, 1, cursor, 5);
+    const c = ws.getCell(cursor, 1);
+    c.value = prefix === "Q" ? "非技術（共通質問）" : "技術（役割別）";
+    c.fill = solidFill(bgTitle);
+    c.font = { bold: true, size: 11, color: { argb: bgTitleColor } };
+    c.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    ws.getRow(cursor).height = 22;
+    cursor += 1;
+    items.forEach((item, i) => {
+      const row = ws.addRow([
+        `${prefix}${i + 1}`,
+        item.star ? "★" : "",
+        item.question,
+        item.aim,
+        item.example,
+      ]);
+      row.getCell(1).alignment = { vertical: "top", horizontal: "center" };
+      row.getCell(2).alignment = { vertical: "top", horizontal: "center" };
+      row.getCell(2).font = { color: { argb: "FFF59E0B" }, size: 12 };
+      for (let ci = 3; ci <= 5; ci++) {
+        row.getCell(ci).alignment = { vertical: "top", horizontal: "left", wrapText: true };
+      }
+      row.getCell(3).font = { size: 10, color: { argb: "FF111827" } };
+      row.getCell(4).font = { size: 9, color: { argb: "FF92400E" }, italic: true };
+      row.getCell(5).font = { size: 9, color: { argb: "FF1E40AF" }, italic: true };
+      const lines = Math.max(
+        (item.question || "").split(/\r?\n/).length,
+        (item.aim || "").split(/\r?\n/).length,
+        (item.example || "").split(/\r?\n/).length,
+      );
+      row.height = Math.max(28, Math.min(160, lines * 16 + 8));
+      cursor += 1;
+    });
+  };
+  emit(nonTech, "Q", "FFDCFCE7", "FF166534");
+  emit(tech, "T", "FFDBEAFE", "FF1E40AF");
+
+  applyBordersTo(ws);
+}
+
+/** ④議事録 シート */
+function addMinutesSheet(
+  wb: ExcelJS.Workbook,
+  meta: SessionMeta,
+  min: ReturnType<typeof getMinutes>,
+): void {
+  const ws = wb.addWorksheet("④議事録", {
+    views: [{ state: "frozen", ySplit: 4, showGridLines: false }],
+  });
+  ws.columns = [{ width: 22 }, { width: 100 }];
+  addSectionHeader(ws, "④ 議事録", meta, 2);
+
+  if (!min || !min.text.trim()) {
+    placeholder(ws, 4, 2, "議事録はまだ入力されていません。");
+    return;
+  }
+
+  let cursor = 4;
+  cursor = addKV(ws, cursor, "更新日時", formatDateTime(min.updatedAt));
+  if (min.summarized) cursor = addKV(ws, cursor, "AI 要約", "済");
+  cursor += 1;
+
+  // 議事録本文はセル 1 つに折返し表示
+  ws.mergeCells(cursor, 1, cursor, 2);
+  const body = ws.getCell(cursor, 1);
+  body.value = min.text;
+  body.alignment = { vertical: "top", horizontal: "left", wrapText: true, indent: 1 };
+  body.font = { size: 10, color: { argb: "FF1F2937" } };
+  const lines = min.text.split(/\r?\n/).length;
+  ws.getRow(cursor).height = Math.min(600, Math.max(80, lines * 15));
+
+  applyBordersTo(ws);
+}
+
+/** ⑤評価 シート */
+function addEvaluationSheet(
+  wb: ExcelJS.Workbook,
+  meta: SessionMeta,
+  ev: ReturnType<typeof getEvaluation>,
+): void {
+  const ws = wb.addWorksheet("⑤評価", {
+    views: [{ state: "frozen", ySplit: 4, showGridLines: false }],
+  });
+  ws.columns = [{ width: 22 }, { width: 12 }, { width: 76 }];
+  addSectionHeader(ws, "⑤ 評価・合否判定", meta, 3);
+
+  if (!ev) {
+    placeholder(ws, 4, 3, "評価はまだ入力されていません。");
+    return;
+  }
+
+  let cursor = 4;
+  cursor = addKV3(ws, cursor, "モード", ev.mode === "api" ? "API 評価" : "貼付", null);
+  if (ev.provider) cursor = addKV3(ws, cursor, "使用 AI", providerLabel(ev.provider), null);
+  cursor = addKV3(ws, cursor, "更新日時", formatDateTime(ev.updatedAt), null);
+  cursor += 1;
+
+  // 総合 / 合否 / 自己解決 のサマリ
+  const gradeColors: Record<string, { bg: string; fg: string }> = {
+    合格: { bg: "FFDCFCE7", fg: "FF166534" },
+    普通: { bg: "FFE4E4E7", fg: "FF3F3F46" },
+    不合格: { bg: "FFFEE2E2", fg: "FF991B1B" },
+  };
+  const g = gradeColors[ev.合否] ?? { bg: "FFF3F4F6", fg: "FF334155" };
+  cursor = addKV3(ws, cursor, "総合スコア", ev.総合スコア.toFixed(2), {
+    bg: "FFFEF3C7",
+    fg: "FF92400E",
+  });
+  cursor = addKV3(ws, cursor, "合否", ev.合否, g);
+  cursor = addKV3(ws, cursor, "自己解決レベル", `${ev.自己解決レベル} / 5`, null);
+  cursor += 1;
+
+  // 軸別評価テーブル
+  const hdr = ws.getRow(cursor);
+  hdr.values = ["軸", "スコア", "根拠"];
+  styleHeaderRow(hdr);
+  ws.getRow(cursor).height = 22;
+  cursor += 1;
+  for (const a of ev.軸評価) {
+    const { symbol, color } = scoreMark(a.スコア);
+    const row = ws.getRow(cursor);
+    row.getCell(1).value = a.軸;
+    row.getCell(1).font = { bold: true, size: 11 };
+    row.getCell(1).alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+    row.getCell(2).value = {
+      richText: [
+        { text: symbol + " ", font: { bold: true, color: { argb: color }, size: 13 } },
+        { text: a.スコア.toFixed(1), font: { color: { argb: "FF1F2937" }, size: 11 } },
+      ],
+    };
+    row.getCell(2).alignment = { vertical: "middle", horizontal: "center" };
+    row.getCell(3).value = a.根拠;
+    row.getCell(3).alignment = { vertical: "top", horizontal: "left", wrapText: true };
+    row.getCell(3).font = { size: 10, color: { argb: "FF374151" } };
+    const lines = (a.根拠 || "").split(/\r?\n/).length;
+    row.height = Math.max(28, Math.min(140, lines * 15 + 8));
+    cursor += 1;
+  }
+  cursor += 1;
+
+  cursor = addLongText(ws, cursor, "良い点", ev.良い点 || "（なし）", "FFDCFCE7", "FF166534");
+  cursor = addLongText(ws, cursor, "懸念点", ev.懸念点 || "（なし）", "FFFEE2E2", "FF991B1B");
+
+  applyBordersTo(ws);
+}
+
+/* ── session.xlsx 用の小道具 ── */
+
+function placeholder(ws: ExcelJS.Worksheet, row: number, cols: number, msg: string): void {
+  ws.mergeCells(row, 1, row, cols);
+  const c = ws.getCell(row, 1);
+  c.value = msg;
+  c.fill = solidFill("FFF3F4F6");
+  c.font = { italic: true, size: 11, color: { argb: "FF6B7280" } };
+  c.alignment = { vertical: "middle", horizontal: "center" };
+  ws.getRow(row).height = 40;
+}
+
+function addKV(
+  ws: ExcelJS.Worksheet,
+  row: number,
+  key: string,
+  value: string,
+): number {
+  const r = ws.getRow(row);
+  const k = r.getCell(1);
+  k.value = key;
+  k.fill = solidFill("FFF3F4F6");
+  k.font = { bold: true, size: 10, color: { argb: "FF475569" } };
+  k.alignment = { vertical: "middle", horizontal: "right", indent: 1 };
+  const v = r.getCell(2);
+  v.value = value;
+  v.font = { size: 11, color: { argb: "FF1F2937" } };
+  v.alignment = { vertical: "middle", horizontal: "left", indent: 1, wrapText: true };
+  r.height = 22;
+  return row + 1;
+}
+
+/** 3 列版の KV（label / value / 装飾）。value に背景色付けたい時に使う。 */
+function addKV3(
+  ws: ExcelJS.Worksheet,
+  row: number,
+  key: string,
+  value: string,
+  emphasis: { bg: string; fg: string } | null,
+): number {
+  const r = ws.getRow(row);
+  const k = r.getCell(1);
+  k.value = key;
+  k.fill = solidFill("FFF3F4F6");
+  k.font = { bold: true, size: 10, color: { argb: "FF475569" } };
+  k.alignment = { vertical: "middle", horizontal: "right", indent: 1 };
+
+  const v = r.getCell(2);
+  v.value = value;
+  v.alignment = { vertical: "middle", horizontal: "center" };
+  if (emphasis) {
+    v.fill = solidFill(emphasis.bg);
+    v.font = { bold: true, size: 12, color: { argb: emphasis.fg } };
+  } else {
+    v.font = { size: 11, color: { argb: "FF1F2937" } };
+  }
+
+  const rest = r.getCell(3);
+  rest.value = "";
+  rest.alignment = { vertical: "middle", horizontal: "left" };
+  r.height = 24;
+  return row + 1;
+}
+
+function addLongText(
+  ws: ExcelJS.Worksheet,
+  row: number,
+  title: string,
+  text: string,
+  titleBg: string,
+  titleFg: string,
+): number {
+  ws.mergeCells(row, 1, row, 2);
+  const h = ws.getCell(row, 1);
+  h.value = title;
+  h.fill = solidFill(titleBg);
+  h.font = { bold: true, size: 11, color: { argb: titleFg } };
+  h.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  ws.getRow(row).height = 22;
+
+  ws.mergeCells(row + 1, 1, row + 1, 2);
+  const body = ws.getCell(row + 1, 1);
+  body.value = text;
+  body.alignment = { vertical: "top", horizontal: "left", wrapText: true, indent: 1 };
+  body.font = { size: 10, color: { argb: "FF1F2937" } };
+  const lines = text.split(/\r?\n/).length;
+  ws.getRow(row + 1).height = Math.min(300, Math.max(40, lines * 15 + 8));
+
+  return row + 2;
+}
+
+function addBulletList(
+  ws: ExcelJS.Worksheet,
+  row: number,
+  title: string,
+  items: string[],
+  titleFg: string,
+  titleBg: string,
+): number {
+  ws.mergeCells(row, 1, row, 2);
+  const h = ws.getCell(row, 1);
+  h.value = title;
+  h.fill = solidFill(titleBg);
+  h.font = { bold: true, size: 11, color: { argb: titleFg } };
+  h.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  ws.getRow(row).height = 22;
+
+  const text = items.length ? items.map((s) => "• " + s).join("\n") : "（未記入）";
+  ws.mergeCells(row + 1, 1, row + 1, 2);
+  const body = ws.getCell(row + 1, 1);
+  body.value = text;
+  body.alignment = { vertical: "top", horizontal: "left", wrapText: true, indent: 1 };
+  body.font = { size: 10, color: { argb: "FF374151" } };
+  ws.getRow(row + 1).height = Math.min(300, Math.max(40, items.length * 18 + 8));
+
+  return row + 2;
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
