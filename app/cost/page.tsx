@@ -74,9 +74,9 @@ export default async function CostPage() {
             sub={`入 ${total.inputTokens.toLocaleString()} / 出 ${total.outputTokens.toLocaleString()}`}
           />
           <KpiCard
-            label="月平均"
-            value={fmtJpy(byMonth.length > 0 ? total.totalJpy / byMonth.length : 0)}
-            sub={`${byMonth.length} ヶ月分`}
+            label="1回あたり平均"
+            value={fmtJpy(total.count > 0 ? total.totalJpy / total.count : 0)}
+            sub={`月平均 ${fmtJpy(byMonth.length > 0 ? total.totalJpy / byMonth.length : 0)} / ${byMonth.length} ヶ月分`}
           />
         </div>
 
@@ -209,30 +209,35 @@ function CostTable({
           <th className="text-right px-2 py-1 w-28">出力 tok</th>
           <th className="text-right px-2 py-1 w-24">USD</th>
           <th className="text-right px-2 py-1 w-24">JPY</th>
+          <th className="text-right px-2 py-1 w-24">1回あたり</th>
         </tr>
       </thead>
       <tbody className="divide-y">
-        {rows.map((r, i) => (
-          <tr key={i}>
-            <td className={`px-2 py-1.5 ${monoLabel ? "font-mono text-[12px]" : ""}`}>
-              {r.label}
-              {r.note && (
-                <span className="ml-2 text-2xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1">
-                  {r.note}
-                </span>
-              )}
-            </td>
-            <td className="text-right tabular-nums">{r.agg.count}</td>
-            <td className="text-right tabular-nums text-zinc-600">
-              {r.agg.inputTokens.toLocaleString()}
-            </td>
-            <td className="text-right tabular-nums text-zinc-600">
-              {r.agg.outputTokens.toLocaleString()}
-            </td>
-            <td className="text-right tabular-nums">{fmtUsd(r.agg.totalUsd)}</td>
-            <td className="text-right tabular-nums font-medium">{fmtJpy(r.agg.totalJpy)}</td>
-          </tr>
-        ))}
+        {rows.map((r, i) => {
+          const avgJpy = r.agg.count > 0 ? r.agg.totalJpy / r.agg.count : 0;
+          return (
+            <tr key={i}>
+              <td className={`px-2 py-1.5 ${monoLabel ? "font-mono text-[12px]" : ""}`}>
+                {r.label}
+                {r.note && (
+                  <span className="ml-2 text-2xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-1">
+                    {r.note}
+                  </span>
+                )}
+              </td>
+              <td className="text-right tabular-nums">{r.agg.count}</td>
+              <td className="text-right tabular-nums text-zinc-600">
+                {r.agg.inputTokens.toLocaleString()}
+              </td>
+              <td className="text-right tabular-nums text-zinc-600">
+                {r.agg.outputTokens.toLocaleString()}
+              </td>
+              <td className="text-right tabular-nums">{fmtUsd(r.agg.totalUsd)}</td>
+              <td className="text-right tabular-nums font-medium">{fmtJpy(r.agg.totalJpy)}</td>
+              <td className="text-right tabular-nums text-zinc-600">{fmtJpy(avgJpy)}</td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );

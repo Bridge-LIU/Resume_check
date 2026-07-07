@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Lock } from "lucide-react";
 import type { Role } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,15 @@ import {
 } from "@/components/ui/select";
 import { validateName, validateRoleIdRef } from "@/lib/validation";
 import { createSessionAction } from "../actions";
+
+function pillClassFor(id: string): string {
+  if (id === "NW") return "pill pill-role-nw";
+  if (id === "Server") return "pill pill-role-sv";
+  if (id === "Special") return "pill pill-role-sp";
+  if (id === "PMO") return "pill pill-role-pm";
+  if (id === "ITSupport") return "pill pill-role-it";
+  return "pill bg-zinc-200 text-zinc-700";
+}
 
 export function NewSessionForm({ roles }: { roles: Role[] }) {
   const [roleId, setRoleId] = useState<string>("");
@@ -43,14 +53,34 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
         ) : (
           <>
             <Select value={roleId} onValueChange={setRoleId}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full h-auto py-2">
                 <SelectValue placeholder="— 選択してください —" />
               </SelectTrigger>
               <SelectContent>
                 {roles.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
-                    {r.役割}（{r.id}） / 経験: {r.経験} / 未経験可:{" "}
-                    {r.未経験可 ? "はい" : "いいえ"}
+                    <div className="flex items-center gap-2 min-w-0 py-0.5">
+                      <span className={`${pillClassFor(r.id)} shrink-0`}>
+                        {r.id}
+                      </span>
+                      <span className="font-medium text-zinc-800 truncate">
+                        {r.役割}
+                      </span>
+                      <span className="text-xs text-zinc-500 shrink-0">
+                        経験 {r.経験 || "—"}
+                      </span>
+                      {r.未経験可 && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                          未経験可
+                        </span>
+                      )}
+                      {r.ロック && (
+                        <Lock
+                          className="w-3.5 h-3.5 text-amber-600 shrink-0"
+                          aria-label="ロック済み"
+                        />
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

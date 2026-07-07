@@ -99,8 +99,39 @@ Resume_Claude/
 │   │   ├─ minutes.json
 │   │   └─ evaluation.json
 │   └─ analytics/<idHash>.json
-└─ files/面談AI評価ツール_設計書.md
+├─ manual/                  ← エンドユーザ向けマニュアル一式
+│   ├─ 運用ガイド.md         ← インストール / 起動 / データ場所 / トラブル
+│   ├─ 操作マニュアル.html   ← 画面操作の視覚マニュアル
+│   ├─ assets/               ← マニュアル用画面ショット
+│   └─ screenshot.sh         ← 画面ショット撮り直しスクリプト
+├─ scripts/                 ← 開発・運用補助スクリプト（seed / decrypt-backup 等）
+├─ public/                  ← 静的資源
+└─ files/                   ← 設計書・サンプル面談データ・履歴書チェック（gitignore）
+    └─ 面談AI評価ツール_設計書.md
 ```
+
+### 根直下のフォルダ / ファイル一覧
+
+| 対象 | 用途 | git |
+|---|---|---|
+| `app/` | Next.js App Router — 全ページ | ✅ |
+| `components/` | 共用 UI 部品（shadcn 系） | ✅ |
+| `lib/` | サーバー側ロジック | ✅ |
+| `config/` | 設定ファイル | 🚫 gitignore（APIキー保護） |
+| `data/` | ユーザーデータ（PII） | 🚫 gitignore |
+| `files/` | 設計書・サンプル | 🚫 gitignore |
+| `manual/` | エンドユーザ向けマニュアル | ✅ |
+| `scripts/` | 開発・運用補助スクリプト | ✅ |
+| `public/` | 静的資源 | ✅ |
+| `.preview/` | ローカル画面ショット・mockup | 🚫 gitignore |
+| `.superpowers/` | Claude Code 一時 | 🚫 gitignore |
+| `start-完全版.bat` / `start-貼付版.bat` | 起動スクリプト（ダブルクリック） | ✅ |
+| `start-dev.bat` | 開発モード起動 | ✅ |
+| `update-app.bat` | `git pull` → `npm install` → `next build` | ✅ |
+| `claude-Nsplit.bat` | Claude Code の分屏起動補助（個人ツール） | ✅ |
+| `README.md` | プロジェクト概要（開発者向け） | ✅ |
+| `AGENTS.md` / `CLAUDE.md` | エージェント作業規約 | ✅ |
+| `word-extractor.d.ts` | word-extractor（.doc 抽出）の型宣言 | ✅ |
 
 ## 厳守ルール
 
