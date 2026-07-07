@@ -79,9 +79,9 @@ export function Section2Candidate({
   }, [initial?.updatedAt, setSavedAt]);
   const [llmOverride, setLlmOverride] = useState<ProviderModelOverride | undefined>(undefined);
 
-  // API モード用
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [resumeKind, setResumeKind] = useState<ResumeKind | null>(null);
+  // API モード用（最大 2 ファイル: 履歴書 + 職務経歴書 等）
+  const MAX_RESUME_FILES = 2;
+  const [resumeFiles, setResumeFiles] = useState<{ file: File; kind: ResumeKind }[]>([]);
   const [pasteText, setPasteText] = useState("");
   const [summarizing, setSummarizing] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -120,9 +120,12 @@ export function Section2Candidate({
 
   async function handlePickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.files?.[0] ?? null;
-    if (!raw) {
-      setResumeFile(null);
-      setResumeKind(null);
+    // input はクリック直後にリセット（同じファイルの再選択・別ファイルの追加を許可）
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!raw) return;
+
+    if (resumeFiles.length >= MAX_RESUME_FILES) {
+      setApiError(`履歴書ファイルは最大 ${MAX_RESUME_FILES} 個までです。`);
       return;
     }
 
@@ -138,9 +141,6 @@ export function Section2Candidate({
         setApiError(
           `旧 .xls の変換に失敗しました。ファイルが破損しているか、対応外の形式の可能性があります。詳細: ${detail}`,
         );
-        setResumeFile(null);
-        setResumeKind(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
         setConverting(false);
         return;
       } finally {
@@ -153,9 +153,6 @@ export function Section2Candidate({
       setApiError(
         "対応していないファイル形式です。PDF / Word(.doc / .docx) / Excel(.xlsx / .xls) を選んでください。",
       );
-      setResumeFile(null);
-      setResumeKind(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     // base64 で +33% 増えるため、Server Action の 5MB 制限に収まるよう 3.7MB を上限に
@@ -164,25 +161,20 @@ export function Section2Candidate({
       setApiError(
         `ファイルサイズが大きすぎます（${(f.size / 1024 / 1024).toFixed(1)} MB）。3.7 MB 以下にしてください。`,
       );
-      setResumeFile(null);
-      setResumeKind(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     setApiError(null);
-    setResumeFile(f);
-    setResumeKind(kind);
+    setResumeFiles((prev) => [...prev, { file: f, kind }]);
   }
 
-  function clearFile() {
-    setResumeFile(null);
-    setResumeKind(null);
+  function removeFile(idx: number) {
+    setResumeFiles((prev) => prev.filter((_, i) => i !== idx));
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleSummarize() {
     setApiError(null);
-    if (!resumeFile && !pasteText.trim()) {
+    if (resumeFiles.length === 0 && !pasteText.trim()) {
       setApiError(
         "履歴書ファイル（PDF/Word/Excel）または貼付テキストのどちらかを指定してください。",
       );
@@ -190,12 +182,16 @@ export function Section2Candidate({
     }
     setSummarizing(true);
     try {
-      const fileBase64 = resumeFile ? await fileToBase64(resumeFile) : null;
+      const filesPayload = await Promise.all(
+        resumeFiles.map(async ({ file }) => ({
+          base64: await fileToBase64(file),
+          name: file.name,
+          mime: file.type,
+        })),
+      );
       const res = await summarizeCandidateApiAction(
         sessionId,
-        fileBase64,
-        resumeFile?.name ?? null,
-        resumeFile?.type ?? null,
+        filesPayload,
         pasteText,
         llmOverride,
       );
@@ -234,89 +230,96 @@ export function Section2Candidate({
       </SectionHeaderBar>
 
       {mode === "api" && (
-        <div className="border rounded-lg p-3 mb-3 bg-zinc-50 space-y-3">
-          <div className="text-xs text-zinc-600">
+        <div className="border rounded-lg p-3 mb-3 bg-muted space-y-3">
+          <div className="text-xs text-muted-foreground">
             履歴書（<strong>PDF / Word(.doc / .docx) / Excel(.xlsx / .xls)</strong>）をアップロードするか、
             テキストを貼り付けて「要約する（API）」を押すと AI が経歴・スキル・強み・懸念点で要約します。
             <br />
-            <span className="text-zinc-500">
+            <span className="text-muted-foreground">
               ※ ファイルはサーバー側でテキスト抽出してから送信します（PDF の生バイナリは送りません）。
-              旧 <code className="bg-white px-1 rounded border">.xls</code> はブラウザ内で自動的に <code className="bg-white px-1 rounded border">.xlsx</code> に変換されます。
+              旧 <code className="bg-card px-1 rounded border">.xls</code> はブラウザ内で自動的に <code className="bg-card px-1 rounded border">.xlsx</code> に変換されます。
             </span>
           </div>
 
           <div>
-            <div className="text-xs text-zinc-500 mb-1">
-              履歴書ファイル（任意・PDF / Word(.doc / .docx) / Excel(.xlsx / .xls)）
+            <div className="text-xs text-muted-foreground mb-1">
+              履歴書ファイル（任意・最大 {MAX_RESUME_FILES} 個・履歴書 + 職務経歴書など・PDF / Word(.doc / .docx) / Excel(.xlsx / .xls)）
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm" asChild>
-                <label htmlFor="candidate-file-input" className="cursor-pointer">
-                  📎 履歴書をアップ
-                </label>
-              </Button>
-              <input
-                id="candidate-file-input"
-                ref={fileInputRef}
-                type="file"
-                accept={RESUME_FILE_ACCEPT}
-                className="hidden"
-                onChange={handlePickFile}
-              />
-              {converting && (
-                <span className="inline-flex items-center gap-1 text-xs text-blue-700">
-                  <svg
-                    className="w-3 h-3 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  >
-                    <path d="M21 12a9 9 0 11-6.219-8.56" />
-                  </svg>
-                  .xls をブラウザで .xlsx に変換中…
-                </span>
-              )}
-              {!converting && resumeFile && resumeKind && (
-                <>
-                  <span className="text-xs text-zinc-700 truncate max-w-xs">
-                    {kindIcon(resumeKind)} {resumeFile.name}{" "}
-                    <span className="pill pill-eval ml-1">
-                      {kindLabel(resumeKind)}
-                    </span>{" "}
-                    <span className="text-zinc-400">
-                      ({(resumeFile.size / 1024).toFixed(1)} KB)
-                    </span>
+            <div className="space-y-2">
+              {resumeFiles.map((rf, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 text-xs text-foreground/85 bg-card border rounded px-2 py-1"
+                >
+                  <span className="text-muted-foreground opacity-70 tabular-nums w-4">{idx + 1}.</span>
+                  <span className="truncate flex-1">
+                    {kindIcon(rf.kind)} {rf.file.name}{" "}
+                    <span className="pill pill-eval ml-1">{kindLabel(rf.kind)}</span>{" "}
+                    <span className="text-muted-foreground opacity-70">({(rf.file.size / 1024).toFixed(1)} KB)</span>
                   </span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={clearFile}
+                    onClick={() => removeFile(idx)}
                     className="text-red-600 hover:bg-red-50 text-xs"
                   >
                     取消
                   </Button>
-                </>
-              )}
-              {!converting && !resumeFile && (
-                <span className="text-xs text-zinc-400">未選択</span>
-              )}
+                </div>
+              ))}
+              <div className="flex items-center gap-2 flex-wrap">
+                {resumeFiles.length < MAX_RESUME_FILES && (
+                  <Button variant="outline" size="sm" asChild>
+                    <label htmlFor="candidate-file-input" className="cursor-pointer">
+                      📎 履歴書をアップ{resumeFiles.length > 0 ? `（${resumeFiles.length}/${MAX_RESUME_FILES}）` : ""}
+                    </label>
+                  </Button>
+                )}
+                <input
+                  id="candidate-file-input"
+                  ref={fileInputRef}
+                  type="file"
+                  accept={RESUME_FILE_ACCEPT}
+                  className="hidden"
+                  onChange={handlePickFile}
+                />
+                {converting && (
+                  <span className="inline-flex items-center gap-1 text-xs text-blue-700">
+                    <svg
+                      className="w-3 h-3 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M21 12a9 9 0 11-6.219-8.56" />
+                    </svg>
+                    .xls をブラウザで .xlsx に変換中…
+                  </span>
+                )}
+                {!converting && resumeFiles.length === 0 && (
+                  <span className="text-xs text-muted-foreground opacity-70">未選択</span>
+                )}
+                {!converting && resumeFiles.length === MAX_RESUME_FILES && (
+                  <span className="text-xs text-emerald-700">{MAX_RESUME_FILES} 個選択済（これ以上追加できません）</span>
+                )}
+              </div>
             </div>
           </div>
 
           <div>
-            <div className="text-xs text-zinc-500 mb-1">
+            <div className="text-xs text-muted-foreground mb-1">
               貼付テキスト（ファイルが無いとき、または併用しない場合の代替）
             </div>
             <Textarea
-              className="w-full text-sm bg-white"
+              className="w-full text-sm bg-card"
               rows={4}
               placeholder="履歴書テキストを貼り付け（ファイルを選んだ場合は無視されます）"
               value={pasteText}
               onChange={(e) => setPasteText(e.target.value)}
-              disabled={!!resumeFile}
+              disabled={resumeFiles.length > 0}
             />
           </div>
 
@@ -338,7 +341,7 @@ export function Section2Candidate({
             >
               {summarizing ? "要約中…" : "要約する（API）"}
             </Button>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted-foreground">
               ※ 要約結果は下のテキスト欄に反映され、自動保存されます。
             </span>
           </div>
@@ -357,7 +360,7 @@ export function Section2Candidate({
         />
       )}
 
-      <div className="text-xs text-zinc-500 mb-1">要約</div>
+      <div className="text-xs text-muted-foreground mb-1">要約</div>
       <div className="relative">
         <Textarea
           className="w-full text-sm leading-relaxed pr-3 pb-6"
@@ -373,7 +376,7 @@ export function Section2Candidate({
         />
         <AutoSaveIndicator state={state} />
       </div>
-      <div className="text-xs text-zinc-400 mt-2">
+      <div className="text-xs text-muted-foreground opacity-70 mt-2">
         {savedAt
           ? `最終保存: ${new Date(savedAt).toLocaleString("ja-JP")}`
           : "未保存（テキスト欄からフォーカスを外すと自動保存）"}

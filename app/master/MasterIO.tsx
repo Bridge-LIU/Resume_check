@@ -53,12 +53,10 @@ export default function MasterIO() {
     }
   }
 
+  // 「マスタ管理」ヘッダ内にインラインで並べる想定。外側カードは持たない。
   return (
-    <section className="bg-white rounded-xl border shadow-sm">
-      <header className="px-6 py-3 border-b flex items-center gap-3">
-        <h2 className="font-bold text-sm">マスタ一括 export</h2>
-        <span className="text-xs text-zinc-500">役割 + 評価条件をまとめて書き出します</span>
-        <div className="flex-1" />
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
         <Tip content="役割 + 評価条件をまとめて JSON で書き出す">
           <Button
             type="button"
@@ -81,23 +79,18 @@ export default function MasterIO() {
             {busy === "xlsx" ? "書出中…" : "📊 Excel"}
           </Button>
         </Tip>
-      </header>
-
-      {(error || success) && (
-        <div className="px-6 py-3 space-y-2">
-          {error && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
-              {success}
-            </div>
-          )}
+      </div>
+      {error && (
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+          {error}
         </div>
       )}
-    </section>
+      {success && (
+        <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
+          {success}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -16,12 +16,13 @@ export interface Role {
   条件1_基本人物像: string[];
   条件2_未経験者必須: string[];
   /**
-   * true のときこの役割はロック済み。
+   * true のときこの役割は「編集不可」フラグが立つ。
    * - 新規セッション作成時に自動で ④凍結（`conditions_snapshot.json` を即時生成）
    * - セッション画面の「修正」ボタンは disabled 表示になり、ホバーで理由を表示
    * - 既存 JSON との後方互換のためオプショナル（未指定＝false）
+   * - v1.x 時代の旧フィールド名 `ロック` からのリネーム。read 側で旧名は 編集不可 に畳み込む。
    */
-  ロック?: boolean;
+  編集不可?: boolean;
 }
 
 /** 評価軸（名前 + 重み）。重みは相対値で 1〜5 を想定（既定 3）。 */
@@ -120,7 +121,7 @@ export interface Questions {
   updatedAt: string;
 }
 
-/** sessions/<id>/minutes.json — ⑥ 議事録 */
+/** sessions/<id>/minutes.json — ⑥ 面談内容 */
 export interface Minutes {
   text: string;
   updatedAt: string;

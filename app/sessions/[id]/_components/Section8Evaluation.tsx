@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tip } from "@/components/ui/tooltip";
+import { scoreBarColor } from "@/lib/uiClass";
 
 const SAMPLE = `{
   "軸評価": [
@@ -48,7 +50,7 @@ export function Section8Evaluation({
   llmDefaults?: LlmDefaults;
   /** ④凍結条件の frozenAt。評価より新しければ「最新ではない」と表示 */
   frozenAt?: string | null;
-  /** ⑥議事録の updatedAt。評価より新しければ「最新ではない」と表示 */
+  /** ⑥面談内容の updatedAt。評価より新しければ「最新ではない」と表示 */
   minutesUpdatedAt?: string | null;
 }) {
   const isFull = useIsFullEdition();
@@ -118,7 +120,7 @@ export function Section8Evaluation({
 
   const busy = isSaving || isEvaluating;
 
-  // 評価保存後に ④凍結条件 or ⑥議事録 が更新されていたら「最新ではない」
+  // 評価保存後に ④凍結条件 or ⑥面談内容 が更新されていたら「最新ではない」
   const staleReasons: string[] = [];
   if (current) {
     const evalT = Date.parse(current.updatedAt);
@@ -128,7 +130,7 @@ export function Section8Evaluation({
     }
     if (minutesUpdatedAt && Number.isFinite(evalT)) {
       const t = Date.parse(minutesUpdatedAt);
-      if (Number.isFinite(t) && t > evalT) staleReasons.push("議事録");
+      if (Number.isFinite(t) && t > evalT) staleReasons.push("面談内容");
     }
   }
 
@@ -154,9 +156,9 @@ export function Section8Evaluation({
       </SectionHeaderBar>
 
       {mode === "api" && (
-        <div className="border rounded-lg p-3 mb-3 bg-zinc-50 space-y-3">
-          <div className="text-xs text-zinc-600">
-            ② 凍結条件 + ④ 議事録を入力に、AI が BARS で採点します。
+        <div className="border rounded-lg p-3 mb-3 bg-muted space-y-3">
+          <div className="text-xs text-muted-foreground">
+            ② 凍結条件 + ④ 面談内容を入力に、AI が BARS で採点します。
             厳格モードでより高性能なモデルを使用。
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -169,7 +171,7 @@ export function Section8Evaluation({
             </Button>
             <Label
               htmlFor="eval-strict-mode"
-              className="flex items-center gap-2 text-sm font-normal text-zinc-700 cursor-pointer select-none"
+              className="flex items-center gap-2 text-sm font-normal text-foreground/85 cursor-pointer select-none"
             >
               <Switch
                 id="eval-strict-mode"
@@ -179,7 +181,7 @@ export function Section8Evaluation({
               />
               厳格モード（Opus 4.7）
             </Label>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted-foreground">
               ※ 結果は自動保存されます。
             </span>
           </div>
@@ -212,8 +214,9 @@ export function Section8Evaluation({
 
       {current && <EvaluationView evaluation={current} />}
 
-      <details className="mt-3" open={!current && mode === "paste"}>
-        <summary className="text-sm text-zinc-600 cursor-pointer">
+      {/* 既に current があっても JSON 貼直し UI が畳まれると動線が消えるので常に open */}
+      <details className="mt-3" open>
+        <summary className="text-sm text-muted-foreground cursor-pointer">
           {current ? "貼り直す（JSON）" : "評価結果 JSON を貼り付ける"}
         </summary>
         <div className="mt-2 space-y-2">
@@ -224,7 +227,7 @@ export function Section8Evaluation({
                 <>
                   Max チャットで評価する場合：プロンプトをコピー → Max が返した JSON をそのまま下へペースト → 保存。
                   <br />
-                  <span className="text-zinc-500">
+                  <span className="text-muted-foreground">
                     ※ Max が <code>```json</code> で囲んだら囲みを除いてから貼ってください（パーサーは素の JSON しか受け付けません）。
                   </span>
                 </>
@@ -261,7 +264,7 @@ export function Section8Evaluation({
             >
               サンプルを入れる
             </Button>
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-muted-foreground opacity-70">
               貼り付け後、テキスト欄からフォーカスを外すと自動保存
             </span>
           </div>
@@ -282,14 +285,8 @@ function passingClass(g: Evaluation["合否"] | string | undefined): { text: str
     case "不合格":
       return { text: "text-red-700", ring: "from-red-50 to-zinc-50" };
     default:
-      return { text: "text-zinc-700", ring: "from-zinc-50 to-zinc-100" };
+      return { text: "text-foreground/85", ring: "from-zinc-50 to-zinc-100" };
   }
-}
-
-function barColor(score: number): string {
-  if (score >= 4.2) return "bg-emerald-500";
-  if (score >= 3.5) return "bg-amber-500";
-  return "bg-red-500";
 }
 
 function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
@@ -297,31 +294,31 @@ function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
   const max = 5;
   return (
     <div
-      className={`border rounded p-4 bg-gradient-to-br ${cls.ring} space-y-3`}
+      className={`border rounded-lg p-4 bg-gradient-to-br ${cls.ring} space-y-3`}
     >
       <div className="flex items-baseline gap-6 flex-wrap">
         <div>
-          <span className="text-xs text-zinc-500">総合</span>
+          <span className="text-xs text-muted-foreground">総合</span>
           <div className="text-3xl font-bold tabular">
             {evaluation.総合スコア.toFixed(1)}
           </div>
         </div>
         <div>
-          <span className="text-xs text-zinc-500">合否</span>
+          <span className="text-xs text-muted-foreground">合否</span>
           <div className={`text-xl font-bold ${cls.text}`}>
             {evaluation.合否}
             {evaluation.合否 === "合格" && " ✓"}
           </div>
         </div>
         <div>
-          <span className="text-xs text-zinc-500">自己解決</span>
+          <span className="text-xs text-muted-foreground">自己解決</span>
           <div className="text-xl font-bold tabular">
             {evaluation.自己解決レベル}
-            <span className="text-sm text-zinc-400">/5</span>
+            <span className="text-sm text-muted-foreground opacity-70">/5</span>
           </div>
         </div>
         <div className="flex-1" />
-        <span className="text-xs text-zinc-400">
+        <span className="text-xs text-muted-foreground opacity-70">
           保存: {new Date(evaluation.updatedAt).toLocaleString("ja-JP")}
         </span>
       </div>
@@ -334,10 +331,12 @@ function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
               key={a.軸}
               className="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-sm"
             >
-              <div title={a.根拠}>{a.軸}</div>
-              <div className="h-1.5 bg-zinc-200 rounded-full overflow-hidden">
+              <Tip content={a.根拠 || null}>
+                <div className="cursor-help">{a.軸}</div>
+              </Tip>
+              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                 <div
-                  className={`h-1.5 rounded-full ${barColor(a.スコア)}`}
+                  className={`h-1.5 rounded-full ${scoreBarColor(a.スコア)}`}
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -347,22 +346,22 @@ function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
         })}
       </div>
 
-      <div className="text-sm space-y-1 pt-2 border-t border-zinc-200/60">
+      <div className="text-sm space-y-1 pt-2 border-t border-border/60">
         <div>
-          <span className="text-zinc-500">良い点:</span> {evaluation.良い点}
+          <span className="text-muted-foreground">良い点:</span> {evaluation.良い点}
         </div>
         <div>
-          <span className="text-zinc-500">懸念点:</span> {evaluation.懸念点}
+          <span className="text-muted-foreground">懸念点:</span> {evaluation.懸念点}
         </div>
       </div>
 
       {evaluation.軸評価.some((a) => a.根拠) && (
-        <details className="text-xs text-zinc-600 pt-2 border-t border-zinc-200/60">
+        <details className="text-xs text-muted-foreground pt-2 border-t border-border/60">
           <summary className="cursor-pointer">軸別の根拠を表示</summary>
           <dl className="mt-2 space-y-1">
             {evaluation.軸評価.map((a) => (
               <div key={a.軸} className="grid grid-cols-[110px_1fr] gap-2">
-                <dt className="text-zinc-500">{a.軸}</dt>
+                <dt className="text-muted-foreground">{a.軸}</dt>
                 <dd>{a.根拠}</dd>
               </div>
             ))}

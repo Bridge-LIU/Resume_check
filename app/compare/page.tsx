@@ -6,6 +6,8 @@ import {
   getEvalCriteria,
   getEvaluation,
   getSessionMeta,
+  listSessions,
+  saveSessionMeta,
 } from "@/lib/storage";
 import type {
   AxisEvaluation,
@@ -15,10 +17,20 @@ import type {
 } from "@/lib/types";
 import { CompareTransposed, type TransposedRow } from "./_components/CompareTransposed";
 import { RadarChart, type RadarCandidate } from "./_components/RadarChart";
+import { rolePillClass } from "@/lib/uiClass";
+import { SessionListFilters } from "../_components/SessionListFilters";
+import { SessionListTable } from "../_components/SessionListTable";
 
 const TRANSPOSE_THRESHOLD = 7;
 
-type SP = Promise<{ ids?: string }>;
+type SP = Promise<{
+  ids?: string;
+  state?: string;
+  role?: string;
+  result?: string;
+  verdict?: string;
+  q?: string;
+}>;
 
 type CompareCol = {
   meta: SessionMeta;
@@ -49,21 +61,12 @@ function computeWeightedTotal(
   return weightedSum / totalWeight;
 }
 
-function rolePillClass(役割: string) {
-  if (役割.startsWith("NW")) return "pill pill-role-nw";
-  if (役割.startsWith("Dev") || 役割.startsWith("開発")) return "pill pill-role-dev";
-  if (役割.startsWith("Server")) return "pill pill-role-sv";
-  if (役割.startsWith("Special")) return "pill pill-role-sp";
-  if (役割.startsWith("PMO")) return "pill pill-role-pm";
-  if (役割.startsWith("IT")) return "pill pill-role-it";
-  return "pill bg-zinc-100 text-zinc-700";
-}
 
 function passingPill(g: Evaluation["合否"] | null | undefined) {
   if (g === "合格") return <span className="pill pill-pass">合格</span>;
   if (g === "不合格") return <span className="pill pill-fail">不合格</span>;
   if (g === "普通") return <span className="pill pill-mid">普通</span>;
-  return <span className="text-zinc-400">―</span>;
+  return <span className="text-muted-foreground opacity-70">―</span>;
 }
 
 function scoreColor(score: number, pass: number, mid: number): string {
@@ -99,21 +102,75 @@ function buildAxisMap(cols: CompareCol[]): {
 }
 
 export default async function ComparePage({ searchParams }: { searchParams: SP }) {
-  const { ids: rawIds } = await searchParams;
+  const { ids: rawIds, state, role, result, verdict, q } = await searchParams;
   const ids = (rawIds ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
+  // ids 無し → セッション選択画面（/list と同じ filters + table を使い、比較モード）
   if (ids.length < 2) {
+    const all = listSessions();
+    const filtered = all.filter((s) => {
+      if (state && s.status !== state) return false;
+      if (role && s.役割 !== role) return false;
+      if (result && s.result !== result) return false;
+      if (verdict && s.合否 !== verdict) return false;
+      if (q && !s.氏名.includes(q)) return false;
+      return true;
+    });
+    const rows = filtered.map((meta) => {
+      const hasScore = typeof meta.総合スコア === "number";
+      const hasVerdict = meta.合否 != null;
+      if (hasScore && hasVerdict) return { meta, score: meta.総合スコア ?? null };
+      if (meta.status !== "評価済") return { meta, score: meta.総合スコア ?? null };
+      const ev = getEvaluation(meta.id);
+      if (!ev) return { meta, score: meta.総合スコア ?? null };
+      const patched: typeof meta = {
+        ...meta,
+        総合スコア: hasScore ? meta.総合スコア : ev.総合スコア,
+        合否: hasVerdict ? meta.合否 : ev.合否,
+      };
+      if (patched.総合スコア !== meta.総合スコア || patched.合否 !== meta.合否) {
+        saveSessionMeta(patched);
+      }
+      return { meta: patched, score: patched.総合スコア ?? null };
+    });
+    const roleOptions = Array.from(new Set(all.map((s) => s.役割)));
+
     return (
-      <div className="bg-white rounded-xl border shadow-sm">
-        <PageHeader title="横断比較" />
-        <div className="p-6 space-y-3">
-          <p className="text-sm text-zinc-600">
-            比較するには 2 件以上のセッションが必要です。
-          </p>
+      <div className="bg-card rounded-xl border shadow-sm p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <h1 className="font-bold text-lg">横断比較</h1>
+          <span className="text-xs text-muted-foreground">
+            評価済セッションを 2 件以上選んで比較
+          </span>
         </div>
+
+        <SessionListFilters
+          key={`${state ?? ""}|${role ?? ""}|${result ?? ""}|${verdict ?? ""}|${q ?? ""}`}
+          initialState={state}
+          initialRole={role}
+          initialResult={result}
+          initialVerdict={verdict}
+          initialQ={q}
+          roleOptions={roleOptions}
+          basePath="/compare"
+          hideStatus
+        />
+
+        {filtered.length === 0 ? (
+          <div className="border-2 border-dashed rounded-lg p-12 text-center space-y-3">
+            <div className="text-muted-foreground opacity-70 text-4xl">🔀</div>
+            <div className="text-sm text-muted-foreground">
+              {all.length > 0
+                ? "条件に合う面談がありません"
+                : "まだ面談がありません"}
+            </div>
+          </div>
+        ) : (
+          <SessionListTable rows={rows} total={all.length} mode="compare" />
+        )}
       </div>
     );
   }
@@ -139,7 +196,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
 
   if (cols.length === 0) {
     return (
-      <div className="bg-white rounded-xl border shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <PageHeader title="横断比較" />
         <div className="p-6 space-y-3">
           <p className="text-sm text-red-700">
@@ -208,7 +265,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
   for (const [k, v] of axisWeightMap) axisWeightRecord[k] = v;
 
   return (
-    <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
       <PageHeader
         title="横断比較"
         count={cols.length}
@@ -231,7 +288,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
           />
         ) : (
           <>
-        <div className="text-xs text-zinc-500 leading-relaxed">
+        <div className="text-xs text-muted-foreground leading-relaxed">
           評価軸ごとに最高値を <span className="text-emerald-700 font-medium">緑</span>、
           最低値を <span className="text-red-700 font-medium">赤</span> でハイライト。
           合格ライン {passLine} / 普通ライン {midLine}。未評価のセッションは空欄表示。
@@ -246,9 +303,9 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
 
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-zinc-50 text-zinc-600 text-xs">
+            <thead className="bg-muted text-muted-foreground text-xs">
               <tr>
-                <th className="text-left px-4 py-2 font-medium sticky left-0 bg-zinc-50 z-10 min-w-[140px]">
+                <th className="text-left px-4 py-2 font-medium sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-muted z-10 min-w-[140px]">
                   項目
                 </th>
                 {cols.map((c) => (
@@ -256,13 +313,13 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                     <div className="flex items-center gap-2">
                       <Link
                         href={`/sessions/${encodeURIComponent(c.meta.id)}`}
-                        className="font-semibold text-zinc-800 hover:underline"
+                        className="font-semibold text-foreground hover:underline"
                       >
                         {c.meta.氏名}
                       </Link>
                       <span className={rolePillClass(c.meta.役割)}>{c.meta.役割}</span>
                     </div>
-                    <div className="text-2xs text-zinc-400 tabular mt-0.5">
+                    <div className="text-2xs text-muted-foreground opacity-70 tabular mt-0.5">
                       {c.meta.id}
                     </div>
                   </th>
@@ -271,10 +328,10 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
             </thead>
             <tbody className="divide-y">
               {/* 総合スコア（Max が出した値） */}
-              <tr className="bg-zinc-50/50">
-                <td className="px-4 py-2 font-medium sticky left-0 bg-zinc-50/50">
+              <tr className="bg-muted/50">
+                <td className="px-4 py-2 font-medium sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-muted/50">
                   総合スコア
-                  <div className="text-2xs text-zinc-400 font-normal">Max 出力</div>
+                  <div className="text-2xs text-muted-foreground opacity-70 font-normal">Max 出力</div>
                 </td>
                 {cols.map((c, i) => {
                   const v = totals[i];
@@ -283,7 +340,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                   return (
                     <td key={c.meta.id} className="px-4 py-2">
                       {v == null ? (
-                        <span className="text-zinc-400">―</span>
+                        <span className="text-muted-foreground opacity-70">―</span>
                       ) : (
                         <span
                           className={`text-2xl font-bold tabular ${
@@ -304,9 +361,9 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
 
               {/* 重み付き総合スコア（再計算） */}
               <tr className="bg-blue-50/30">
-                <td className="px-4 py-2 font-medium sticky left-0 bg-blue-50/30">
+                <td className="px-4 py-2 font-medium sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-blue-50/30">
                   重み付き総合
-                  <div className="text-2xs text-zinc-400 font-normal">凍結重みで再計算</div>
+                  <div className="text-2xs text-muted-foreground opacity-70 font-normal">凍結重みで再計算</div>
                 </td>
                 {cols.map((c, i) => {
                   const v = weightedTotals[i];
@@ -318,7 +375,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                   return (
                     <td key={c.meta.id} className="px-4 py-2">
                       {v == null ? (
-                        <span className="text-zinc-400">―</span>
+                        <span className="text-muted-foreground opacity-70">―</span>
                       ) : (
                         <div className="flex items-baseline gap-2">
                           <span
@@ -353,7 +410,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
 
               {/* 合否 */}
               <tr>
-                <td className="px-4 py-2 font-medium sticky left-0 bg-white">合否</td>
+                <td className="px-4 py-2 font-medium sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-card">合否</td>
                 {cols.map((c) => (
                   <td key={c.meta.id} className="px-4 py-2">
                     {passingPill(c.evaluation?.合否 ?? null)}
@@ -369,10 +426,10 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                 const weight = axisWeightMap.get(axis);
                 return (
                   <tr key={axis}>
-                    <td className="px-4 py-2 font-medium sticky left-0 bg-white">
+                    <td className="px-4 py-2 font-medium sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-card">
                       {axis}
                       {weight != null && (
-                        <span className="ml-2 text-2xs text-zinc-400 font-normal tabular">
+                        <span className="ml-2 text-2xs text-muted-foreground opacity-70 font-normal tabular">
                           重み {weight}
                         </span>
                       )}
@@ -381,7 +438,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                       const c = cols[i];
                       if (!cell) {
                         return (
-                          <td key={c.meta.id} className="px-4 py-2 text-zinc-400">
+                          <td key={c.meta.id} className="px-4 py-2 text-muted-foreground opacity-70">
                             ―
                           </td>
                         );
@@ -403,7 +460,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                             >
                               {v.toFixed(1)}
                             </span>
-                            <div className="flex-1 h-1.5 bg-zinc-100 rounded overflow-hidden min-w-[60px]">
+                            <div className="flex-1 h-1.5 bg-muted rounded overflow-hidden min-w-[60px]">
                               <div
                                 className={`h-full ${
                                   isBest
@@ -421,7 +478,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                             </div>
                           </div>
                           {cell.根拠 && (
-                            <div className="text-xs text-zinc-500 mt-1 line-clamp-3">
+                            <div className="text-xs text-muted-foreground mt-1 line-clamp-3">
                               {cell.根拠}
                             </div>
                           )}
@@ -434,7 +491,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
 
               {/* 自己解決レベル */}
               <tr>
-                <td className="px-4 py-2 font-medium sticky left-0 bg-white">自己解決レベル</td>
+                <td className="px-4 py-2 font-medium sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-card">自己解決レベル</td>
                 {cols.map((c, i) => {
                   const v = selfs[i];
                   const isBest = v != null && v === selfsExt.best && selfsExt.best !== selfsExt.worst;
@@ -442,7 +499,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                   return (
                     <td key={c.meta.id} className="px-4 py-2 tabular">
                       {v == null ? (
-                        <span className="text-zinc-400">―</span>
+                        <span className="text-muted-foreground opacity-70">―</span>
                       ) : (
                         <span
                           className={
@@ -453,7 +510,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                                 : ""
                           }
                         >
-                          {v} <span className="text-xs text-zinc-400">/ 5</span>
+                          {v} <span className="text-xs text-muted-foreground opacity-70">/ 5</span>
                         </span>
                       )}
                     </td>
@@ -463,20 +520,20 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
 
               {/* 良い点 */}
               <tr className="align-top">
-                <td className="px-4 py-2 font-medium sticky left-0 bg-white">良い点</td>
+                <td className="px-4 py-2 font-medium sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-card">良い点</td>
                 {cols.map((c) => (
-                  <td key={c.meta.id} className="px-4 py-2 text-xs text-zinc-700 leading-relaxed">
-                    {c.evaluation?.良い点 || <span className="text-zinc-400">―</span>}
+                  <td key={c.meta.id} className="px-4 py-2 text-xs text-foreground/85 leading-relaxed">
+                    {c.evaluation?.良い点 || <span className="text-muted-foreground opacity-70">―</span>}
                   </td>
                 ))}
               </tr>
 
               {/* 懸念点 */}
               <tr className="align-top">
-                <td className="px-4 py-2 font-medium sticky left-0 bg-white">懸念点</td>
+                <td className="px-4 py-2 font-medium sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-card">懸念点</td>
                 {cols.map((c) => (
-                  <td key={c.meta.id} className="px-4 py-2 text-xs text-zinc-700 leading-relaxed">
-                    {c.evaluation?.懸念点 || <span className="text-zinc-400">―</span>}
+                  <td key={c.meta.id} className="px-4 py-2 text-xs text-foreground/85 leading-relaxed">
+                    {c.evaluation?.懸念点 || <span className="text-muted-foreground opacity-70">―</span>}
                   </td>
                 ))}
               </tr>

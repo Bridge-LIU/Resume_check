@@ -27,7 +27,7 @@ export const ROLE_ID_MAX_LEN = 30;
 
 /** ②候補者要約・⑤質問・汎用テキスト系の最大バイト数（UTF-16 単位ではなくバイト数で評価） */
 export const MAX_TEXT_BYTES = 1_000_000; // 約 100 万バイト ≒ 33 万字程度
-/** ⑥議事録は本文量が多いので別枠（最終的に Server Action 5MB の中に収まればよい） */
+/** ⑥面談内容は本文量が多いので別枠（最終的に Server Action 5MB の中に収まればよい） */
 export const MAX_MINUTES_BYTES = 2_000_000;
 /** ②履歴書アップロードの base64 文字列長（≒ 元バイナリ × 4/3 + 改行）。5MB ≒ 7MB base64 */
 export const MAX_RESUME_BASE64_LEN = 7_500_000;
@@ -221,8 +221,11 @@ export function validateRoleObject(
       error: `${prefix}条件2_未経験者必須 は文字列配列で指定してください`,
     };
   }
-  if (b.ロック !== undefined && typeof b.ロック !== "boolean") {
-    return { ok: false, error: `${prefix}ロックは真偽値で指定してください` };
+  // v1.x 時代の旧フィールド名 `ロック` を「編集不可」として受け入れる（片方向）
+  const editLocked =
+    b.編集不可 !== undefined ? b.編集不可 : b.ロック;
+  if (editLocked !== undefined && typeof editLocked !== "boolean") {
+    return { ok: false, error: `${prefix}編集不可は真偽値で指定してください` };
   }
   return {
     ok: true,
@@ -233,7 +236,7 @@ export function validateRoleObject(
       未経験可: b.未経験可,
       条件1_基本人物像: b.条件1_基本人物像 as string[],
       条件2_未経験者必須: b.条件2_未経験者必須 as string[],
-      ...(b.ロック === true ? { ロック: true } : {}),
+      ...(editLocked === true ? { 編集不可: true } : {}),
     },
   };
 }

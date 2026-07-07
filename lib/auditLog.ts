@@ -2,7 +2,7 @@
  * 監査ログ（Phase 4 §11）
  *
  * data/logs/audit.log に JSONL で1行ずつ追記。
- * PII（氏名・履歴書本文・議事録本文）は payload.meta に絶対に積まない（呼び出し側責任）。
+ * PII（氏名・履歴書本文・面談内容本文）は payload.meta に絶対に積まない（呼び出し側責任）。
  * 書き込み失敗は本処理を巻き戻さない方針。console.error のみ。
  */
 

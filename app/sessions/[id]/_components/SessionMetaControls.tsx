@@ -205,13 +205,13 @@ export function SessionMetaControls({
             <AlertDialogTitle>セッションを複製</AlertDialogTitle>
             <AlertDialogDescription>
               氏名・役割を編集できます。①要約と uploads/ は常に引き継ぎ、
-              ④議事録・⑤評価は引き継ぎません。
+              ④面談内容・⑤評価は引き継ぎません。
             </AlertDialogDescription>
           </AlertDialogHeader>
 
           <div className="space-y-3">
             <div>
-              <Label htmlFor="dup-name" className="text-xs text-zinc-500">
+              <Label htmlFor="dup-name" className="text-xs text-muted-foreground">
                 氏名
               </Label>
               <Input
@@ -222,7 +222,7 @@ export function SessionMetaControls({
               />
             </div>
             <div>
-              <Label htmlFor="dup-role" className="text-xs text-zinc-500">
+              <Label htmlFor="dup-role" className="text-xs text-muted-foreground">
                 役割
               </Label>
               <Select value={dup役割} onValueChange={setDup役割}>

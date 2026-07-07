@@ -36,14 +36,14 @@ function rolePillClass(役割: string) {
   if (役割.startsWith("Special")) return "pill pill-role-sp";
   if (役割.startsWith("PMO")) return "pill pill-role-pm";
   if (役割.startsWith("IT")) return "pill pill-role-it";
-  return "pill bg-zinc-100 text-zinc-700";
+  return "pill bg-muted text-foreground/85";
 }
 
 function passingPill(g: TransposedRow["pass"]) {
   if (g === "合格") return <span className="pill pill-pass">合格</span>;
   if (g === "不合格") return <span className="pill pill-fail">不合格</span>;
   if (g === "普通") return <span className="pill pill-mid">普通</span>;
-  return <span className="text-zinc-400">―</span>;
+  return <span className="text-muted-foreground opacity-70">―</span>;
 }
 
 const PASS_ORDER: Record<string, number> = { 合格: 3, 普通: 2, 不合格: 1 };
@@ -149,7 +149,7 @@ export function CompareTransposed({
   }, [axes, rows]);
 
   function sortMark(key: SortKey) {
-    if (sortKey !== key) return <span className="text-zinc-300">⇅</span>;
+    if (sortKey !== key) return <span className="text-muted-foreground opacity-50">⇅</span>;
     return (
       <span className="text-blue-600">{sortDir === "asc" ? "▲" : "▼"}</span>
     );
@@ -162,7 +162,7 @@ export function CompareTransposed({
 
   return (
     <div className="space-y-3">
-      <div className="text-xs text-zinc-500 leading-relaxed">
+      <div className="text-xs text-muted-foreground leading-relaxed">
         7 件以上は転置ビュー（候補者を行・項目を列）。列ヘッダクリックでソート、行クリックで根拠・コメントを展開。
         <span className="text-emerald-700 font-medium">緑</span>＝列内最高値、
         <span className="text-red-700 font-medium">赤</span>＝最低値。
@@ -170,9 +170,9 @@ export function CompareTransposed({
 
       <div className="border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-zinc-600 text-xs">
+          <thead className="bg-muted text-muted-foreground text-xs">
             <tr>
-              <Th onClick={() => toggleSort("name")} ariaSort={ariaSortOf("name")} className="text-left min-w-[180px] sticky left-0 bg-zinc-50 z-10">
+              <Th onClick={() => toggleSort("name")} ariaSort={ariaSortOf("name")} className="text-left min-w-[180px] sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-muted z-10">
                 候補者 {sortMark("name")}
               </Th>
               <Th onClick={() => toggleSort("role")} ariaSort={ariaSortOf("role")} className="text-left min-w-[100px]">
@@ -193,7 +193,7 @@ export function CompareTransposed({
                 >
                   {ax}
                   {axisWeights[ax] != null && (
-                    <span className="ml-1 text-2xs text-zinc-400 font-normal">
+                    <span className="ml-1 text-2xs text-muted-foreground opacity-70 font-normal">
                       ×{axisWeights[ax]}
                     </span>
                   )}{" "}
@@ -232,7 +232,7 @@ export function CompareTransposed({
         </table>
       </div>
 
-      <div className="text-xs text-zinc-500">{rows.length} 件を比較中</div>
+      <div className="text-xs text-muted-foreground">{rows.length} 件を比較中</div>
     </div>
   );
 }
@@ -261,7 +261,7 @@ function Th({
       aria-sort={ariaSort}
       onClick={onClick}
       onKeyDown={handleKeyDown}
-      className={`px-3 py-2 font-medium cursor-pointer hover:bg-zinc-100 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${className ?? ""}`}
+      className={`px-3 py-2 font-medium cursor-pointer hover:bg-accent select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${className ?? ""}`}
     >
       {children}
     </th>
@@ -299,7 +299,7 @@ function FragmentRow({
   ) {
     if (v == null) {
       return (
-        <td className={`px-3 py-2 text-${align} text-zinc-400`}>―</td>
+        <td className={`px-3 py-2 text-${align} text-muted-foreground opacity-70`}>―</td>
       );
     }
     const isBest = v === ext.best && ext.best !== ext.worst;
@@ -321,7 +321,7 @@ function FragmentRow({
     const ext = axisExt[axis];
     if (v == null) {
       return (
-        <td key={axis} className="px-3 py-2 text-right text-zinc-400">
+        <td key={axis} className="px-3 py-2 text-right text-muted-foreground opacity-70">
           ―
         </td>
       );
@@ -337,7 +337,7 @@ function FragmentRow({
       <td key={axis} className="px-3 py-2 align-middle">
         <div className="flex items-center gap-1.5 justify-end">
           <span className={`tabular font-semibold ${cls}`}>{v.toFixed(1)}</span>
-          <div className="h-1 bg-zinc-100 rounded overflow-hidden w-12">
+          <div className="h-1 bg-muted rounded overflow-hidden w-12">
             <div
               className={`h-full ${barColor(v, passLine, midLine)}`}
               style={{ width: `${Math.min(100, (v / 5) * 100)}%` }}
@@ -351,18 +351,18 @@ function FragmentRow({
   return (
     <>
       <tr
-        className="hover:bg-zinc-50 cursor-pointer"
+        className="hover:bg-accent cursor-pointer"
         onClick={onToggle}
       >
-        <td className="px-3 py-2 sticky left-0 bg-white z-10">
+        <td className="px-3 py-2 sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-card z-10">
           <Link
             href={`/sessions/${encodeURIComponent(row.id)}`}
-            className="font-medium text-zinc-900 hover:underline"
+            className="font-medium text-foreground hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
             {row.name}
           </Link>
-          <div className="text-2xs text-zinc-400 tabular">{row.id}</div>
+          <div className="text-2xs text-muted-foreground opacity-70 tabular">{row.id}</div>
         </td>
         <td className="px-3 py-2">
           <span className={rolePillClass(row.role)}>{row.role}</span>
@@ -372,7 +372,7 @@ function FragmentRow({
         {axes.map((ax) => axisCell(ax))}
         <td className="px-3 py-2 text-right tabular">
           {row.self == null ? (
-            <span className="text-zinc-400">―</span>
+            <span className="text-muted-foreground opacity-70">―</span>
           ) : (
             <span
               className={
@@ -385,29 +385,29 @@ function FragmentRow({
               }
             >
               {row.self}
-              <span className="text-xs text-zinc-400"> / 5</span>
+              <span className="text-xs text-muted-foreground opacity-70"> / 5</span>
             </span>
           )}
         </td>
         <td className="px-3 py-2 text-center">{passingPill(row.pass)}</td>
-        <td className="px-2 py-2 text-center text-zinc-400 text-xs select-none">
+        <td className="px-2 py-2 text-center text-muted-foreground opacity-70 text-xs select-none">
           {expanded ? "▼" : "▶"}
         </td>
       </tr>
       {expanded && (
-        <tr className="bg-zinc-50/50">
+        <tr className="bg-muted/50">
           <td colSpan={6 + axes.length} className="px-4 py-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed">
               <div>
-                <div className="text-zinc-500 font-medium mb-1">良い点</div>
-                <div className="text-zinc-700">
-                  {row.good || <span className="text-zinc-400">―</span>}
+                <div className="text-muted-foreground font-medium mb-1">良い点</div>
+                <div className="text-foreground/85">
+                  {row.good || <span className="text-muted-foreground opacity-70">―</span>}
                 </div>
               </div>
               <div>
-                <div className="text-zinc-500 font-medium mb-1">懸念点</div>
-                <div className="text-zinc-700">
-                  {row.concern || <span className="text-zinc-400">―</span>}
+                <div className="text-muted-foreground font-medium mb-1">懸念点</div>
+                <div className="text-foreground/85">
+                  {row.concern || <span className="text-muted-foreground opacity-70">―</span>}
                 </div>
               </div>
               {axes.map((ax) => {
@@ -415,10 +415,10 @@ function FragmentRow({
                 if (!rationale) return null;
                 return (
                   <div key={ax} className="md:col-span-2">
-                    <div className="text-zinc-500 font-medium mb-1">
+                    <div className="text-muted-foreground font-medium mb-1">
                       {ax} の根拠
                     </div>
-                    <div className="text-zinc-700">{rationale}</div>
+                    <div className="text-foreground/85">{rationale}</div>
                   </div>
                 );
               })}

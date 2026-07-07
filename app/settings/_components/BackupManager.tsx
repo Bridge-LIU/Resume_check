@@ -204,7 +204,7 @@ export function BackupManager({
 
   return (
     <div className="space-y-3">
-      <div className="text-xs text-zinc-500">
+      <div className="text-xs text-muted-foreground">
         sessions/ と master/ を tar.gz でまとめて data/_backups/ に保存します。
         パスワードで AES-256-GCM 暗号化します（設計書 §11／紛失時は復号不可）。
         <span className="text-amber-700">
@@ -215,7 +215,7 @@ export function BackupManager({
 
       <div className="flex items-end gap-2 flex-wrap">
         <div className="grow min-w-[200px]">
-          <Label htmlFor="backup-password" className="block text-xs text-zinc-500 mb-1">
+          <Label htmlFor="backup-password" className="block text-xs text-muted-foreground mb-1">
             暗号化パスワード <span className="text-red-600">*必須</span>
           </Label>
           <Input
@@ -256,8 +256,8 @@ export function BackupManager({
         </Button>
       </div>
 
-      <div className="text-xs text-zinc-500">
-        現在の世代ルール: <span className="font-medium text-zinc-700">{sweepRuleLabel}</span>
+      <div className="text-xs text-muted-foreground">
+        現在の世代ルール: <span className="font-medium text-foreground/85">{sweepRuleLabel}</span>
       </div>
 
       {error && (
@@ -273,7 +273,7 @@ export function BackupManager({
 
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-zinc-600 text-xs">
+          <thead className="bg-muted text-muted-foreground text-xs">
             <tr>
               <th className="text-left px-3 py-2">ファイル名</th>
               <th className="text-left px-3 py-2 w-40">作成日時</th>
@@ -285,25 +285,25 @@ export function BackupManager({
           <tbody className="divide-y">
             {backups === null && (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-center text-zinc-500 text-xs">
+                <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground text-xs">
                   読込中…
                 </td>
               </tr>
             )}
             {backups && backups.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-center text-zinc-500 text-xs">
+                <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground text-xs">
                   バックアップはまだありません。
                 </td>
               </tr>
             )}
             {backups?.map((b) => (
-              <tr key={b.path} className="hover:bg-zinc-50">
+              <tr key={b.path} className="hover:bg-accent">
                 <td className="px-3 py-2 font-mono text-xs">{fmtBasename(b.path)}</td>
-                <td className="px-3 py-2 text-zinc-600 text-xs">
+                <td className="px-3 py-2 text-muted-foreground text-xs">
                   {fmtDate(b.createdAt)}
                 </td>
-                <td className="px-3 py-2 text-right tabular text-zinc-600 text-xs">
+                <td className="px-3 py-2 text-right tabular text-muted-foreground text-xs">
                   {fmtSize(b.size)}
                 </td>
                 <td className="px-3 py-2 text-center">

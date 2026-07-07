@@ -61,7 +61,7 @@ export function Section4Conditions({
       hour: "2-digit",
       minute: "2-digit",
     });
-    const isLocked = snapshot.role.ロック === true;
+    const isLocked = snapshot.role.編集不可 === true;
     const editButton = (
       <Button
         type="button"
@@ -85,11 +85,11 @@ export function Section4Conditions({
       <div>
         <div className="border-l-4 border-emerald-500 bg-emerald-50/40 pl-3 pr-2 py-2 rounded-r-md mb-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-bold text-zinc-800">② 求める人材条件</h3>
+            <h3 className="font-bold text-foreground">② 求める人材条件</h3>
             <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
               {snapshot.role.役割}
             </span>
-            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-zinc-50 text-zinc-600 border border-zinc-200">
+            <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
               経験 {snapshot.role.経験}
             </span>
             <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -104,12 +104,12 @@ export function Section4Conditions({
                   <rect x="5" y="11" width="14" height="10" rx="2" />
                   <path d="M8 11V7a4 4 0 118 0v4" />
                 </svg>
-                ロック
+                編集不可
               </span>
             )}
           </div>
           {isLocked ? (
-            <Tip content="この人材条件はマスタでロックされているため修正できません">
+            <Tip content="この人材条件はマスタで編集不可に設定されているため修正できません">
               <span className="inline-block">{editButton}</span>
             </Tip>
           ) : (
@@ -169,8 +169,8 @@ export function Section4Conditions({
 function ConditionsReadView({ snapshot }: { snapshot: ConditionsSnapshot }) {
   const { role } = snapshot;
   return (
-    <div className="border rounded p-4 text-sm bg-zinc-50 space-y-3">
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-zinc-700">
+    <div className="border rounded p-4 text-sm bg-muted space-y-3">
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-foreground/85">
         <div>役割: {role.役割}</div>
         <div>経験: {role.経験}</div>
         <div>
@@ -183,7 +183,7 @@ function ConditionsReadView({ snapshot }: { snapshot: ConditionsSnapshot }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <div className="font-medium">条件①: 基本人物像（常に評価）</div>
-          <ul className="list-disc list-inside text-zinc-700 text-xs mt-1 space-y-0.5">
+          <ul className="list-disc list-inside text-foreground/85 text-xs mt-1 space-y-0.5">
             {role.条件1_基本人物像.map((c, i) => (
               <li key={i}>{c}</li>
             ))}
@@ -192,7 +192,7 @@ function ConditionsReadView({ snapshot }: { snapshot: ConditionsSnapshot }) {
         {role.未経験可 ? (
           <div>
             <div className="font-medium">条件②: 未経験者必須</div>
-            <ul className="list-disc list-inside text-zinc-700 text-xs mt-1 space-y-0.5">
+            <ul className="list-disc list-inside text-foreground/85 text-xs mt-1 space-y-0.5">
               {role.条件2_未経験者必須.map((c, i) => (
                 <li key={i}>{c}</li>
               ))}
@@ -200,8 +200,8 @@ function ConditionsReadView({ snapshot }: { snapshot: ConditionsSnapshot }) {
           </div>
         ) : (
           <div>
-            <div className="font-medium text-zinc-400">条件②: 未経験者必須</div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="font-medium text-muted-foreground opacity-70">条件②: 未経験者必須</div>
+            <div className="text-xs text-muted-foreground mt-1">
               未経験可=false のため評価対象外
             </div>
           </div>
@@ -298,15 +298,15 @@ function EditableConditions({
           {loadingMaster ? "読込中…" : "役割の標準条件を読み込む"}
         </Button>
       </SectionHeaderBar>
-      <div className="border rounded p-4 space-y-3 bg-zinc-50 text-sm">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-zinc-700 items-center">
+      <div className="border rounded p-4 space-y-3 bg-muted text-sm">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-foreground/85 items-center">
           <div>
-            <span className="text-zinc-500">役割:</span> {role.役割}
+            <span className="text-muted-foreground">役割:</span> {role.役割}
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-zinc-500">経験:</span>
+            <span className="text-muted-foreground">経験:</span>
             <Input
-              className="h-7 text-sm bg-white w-32"
+              className="h-7 text-sm bg-card w-32"
               value={role.経験}
               onChange={(e) => setRole({ ...role, 経験: e.target.value })}
             />
@@ -327,25 +327,25 @@ function EditableConditions({
         <div>
           <div className="font-medium mb-1">条件①: 基本人物像（常に評価）</div>
           <Textarea
-            className="w-full text-sm bg-white"
+            className="w-full text-sm bg-card"
             rows={6}
             value={text1}
             onChange={(e) => updateConditions1(e.target.value)}
           />
-          <div className="text-xs text-zinc-500">1行1項目</div>
+          <div className="text-xs text-muted-foreground">1行1項目</div>
         </div>
 
         <div className={role.未経験可 ? "" : "opacity-50"}>
           <div className="font-medium mb-1">
             条件②: 未経験者必須
             {!role.未経験可 && (
-              <span className="text-xs text-zinc-500 ml-2">
+              <span className="text-xs text-muted-foreground ml-2">
                 （未経験可=false のため評価対象外）
               </span>
             )}
           </div>
           <Textarea
-            className="w-full text-sm bg-white"
+            className="w-full text-sm bg-card"
             rows={4}
             value={text2}
             onChange={(e) => updateConditions2(e.target.value)}
@@ -382,9 +382,9 @@ function EditableConditions({
             キャンセル
           </Button>
         )}
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-muted-foreground">
           {revising
-            ? "再凍結しても ③質問・④議事録には影響しません。"
+            ? "再凍結しても ③質問・④面談内容には影響しません。"
             : "凍結後はマスタを変更してもこの面談には影響しません。"}
         </span>
       </div>

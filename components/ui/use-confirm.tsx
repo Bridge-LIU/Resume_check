@@ -50,9 +50,31 @@ export function useConfirm() {
     setState(null);
   };
 
+  // Enter → 確定 / Esc → キャンセル。
+  // Esc は Radix AlertDialog が onOpenChange(false) を呼ぶので既に効いている。
+  // Enter は既定だと Cancel ボタン (autoFocus) が押されて逆挙動になるので、
+  // capture phase で先取りしてボタンの onClick より前に確定させる。
+  // 入力欄内 (input/textarea/contenteditable) の Enter は無視する（改行や検索の邪魔になるため）。
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter") return;
+    const target = e.target as HTMLElement;
+    const tag = target.tagName;
+    if (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT" ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    handleClose(true);
+  };
+
   const ConfirmDialog = () => (
     <AlertDialog open={state !== null} onOpenChange={(open) => !open && handleClose(false)}>
-      <AlertDialogContent>
+      <AlertDialogContent onKeyDownCapture={handleKeyDown}>
         <AlertDialogHeader>
           <AlertDialogTitle>{state?.title ?? ""}</AlertDialogTitle>
           {state?.description && (

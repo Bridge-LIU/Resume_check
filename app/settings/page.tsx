@@ -194,7 +194,7 @@ export default async function Page({
   return (
     <div className="space-y-4">
       {/* 既存設定フォーム */}
-      <div className="bg-white rounded-xl border shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="p-6 space-y-6 max-w-3xl">
           <h1 className="font-bold text-lg">設定</h1>
 
@@ -232,7 +232,7 @@ export default async function Page({
                 <div className="font-medium text-sm">質問生成数</div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="q_nontech" className="text-xs text-zinc-500">
+                    <Label htmlFor="q_nontech" className="text-xs text-muted-foreground">
                       非技術
                     </Label>
                     <Input
@@ -243,12 +243,12 @@ export default async function Page({
                       max={50}
                       defaultValue={s.questionCounts.nontech}
                     />
-                    <div className="text-2xs text-zinc-400">
+                    <div className="text-2xs text-muted-foreground opacity-70">
                       自己紹介・キャリア・志望動機 等
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="q_tech" className="text-xs text-zinc-500">
+                    <Label htmlFor="q_tech" className="text-xs text-muted-foreground">
                       技術
                     </Label>
                     <Input
@@ -259,7 +259,7 @@ export default async function Page({
                       max={50}
                       defaultValue={s.questionCounts.tech}
                     />
-                    <div className="text-2xs text-zinc-400">
+                    <div className="text-2xs text-muted-foreground opacity-70">
                       候補者の経歴・条件に紐づく専門質問
                     </div>
                   </div>
@@ -270,7 +270,7 @@ export default async function Page({
             {/* 保存期間（編集可能化） */}
             <section className="space-y-3">
               <div className="font-medium text-sm">保存期間（§7.5）</div>
-              <div className="text-xs text-zinc-500">
+              <div className="text-xs text-muted-foreground">
                 判定確定日（closedAt）からの自動削除。0 = 自動削除しない。下の「スイープ実行」で手動起動できます（定期実行は今後）。
               </div>
 
@@ -289,7 +289,7 @@ export default async function Page({
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="days_採用" className="text-xs text-zinc-500">採用</Label>
+                  <Label htmlFor="days_採用" className="text-xs text-muted-foreground">採用</Label>
                   <Input
                     id="days_採用"
                     name="days_採用"
@@ -297,10 +297,10 @@ export default async function Page({
                     min={0}
                     defaultValue={s.retention.days["採用"] ?? 0}
                   />
-                  <div className="text-2xs text-zinc-400">日数（0=削除しない）</div>
+                  <div className="text-2xs text-muted-foreground opacity-70">日数（0=削除しない）</div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="days_不採用" className="text-xs text-zinc-500">不採用</Label>
+                  <Label htmlFor="days_不採用" className="text-xs text-muted-foreground">不採用</Label>
                   <Input
                     id="days_不採用"
                     name="days_不採用"
@@ -308,10 +308,10 @@ export default async function Page({
                     min={0}
                     defaultValue={s.retention.days["不採用"] ?? 180}
                   />
-                  <div className="text-2xs text-zinc-400">日数</div>
+                  <div className="text-2xs text-muted-foreground opacity-70">日数</div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="days_未確定" className="text-xs text-zinc-500">未確定</Label>
+                  <Label htmlFor="days_未確定" className="text-xs text-muted-foreground">未確定</Label>
                   <Input
                     id="days_未確定"
                     name="days_未確定"
@@ -319,13 +319,13 @@ export default async function Page({
                     min={0}
                     defaultValue={s.retention.days["未確定"] ?? 0}
                   />
-                  <div className="text-2xs text-zinc-400">通常 0 推奨</div>
+                  <div className="text-2xs text-muted-foreground opacity-70">通常 0 推奨</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="softDeleteGraceDays" className="text-xs text-zinc-500">
+                  <Label htmlFor="softDeleteGraceDays" className="text-xs text-muted-foreground">
                     ゴミ箱の猶予日数
                   </Label>
                   <Input
@@ -335,7 +335,7 @@ export default async function Page({
                     min={0}
                     defaultValue={s.retention.softDeleteGraceDays}
                   />
-                  <div className="text-2xs text-zinc-400">
+                  <div className="text-2xs text-muted-foreground opacity-70">
                     ソフト削除後この日数で完全削除
                   </div>
                 </div>
@@ -358,7 +358,7 @@ export default async function Page({
               {/* バックアップ世代の保持（§11 / 別タスクで自動掃除に連動） */}
               <div className="grid grid-cols-2 gap-3 pt-3 border-t">
                 <div className="space-y-1.5">
-                  <Label htmlFor="backupKeepDays" className="text-xs text-zinc-500">
+                  <Label htmlFor="backupKeepDays" className="text-xs text-muted-foreground">
                     バックアップ保存日数
                   </Label>
                   <Input
@@ -368,12 +368,12 @@ export default async function Page({
                     min={0}
                     defaultValue={s.retention.backupKeepDays ?? 90}
                   />
-                  <div className="text-2xs text-zinc-400">
+                  <div className="text-2xs text-muted-foreground opacity-70">
                     日数（0=自動削除しない）
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="backupMaxGenerations" className="text-xs text-zinc-500">
+                  <Label htmlFor="backupMaxGenerations" className="text-xs text-muted-foreground">
                     バックアップ世代上限
                   </Label>
                   <Input
@@ -383,7 +383,7 @@ export default async function Page({
                     min={0}
                     defaultValue={s.retention.backupMaxGenerations ?? 0}
                   />
-                  <div className="text-2xs text-zinc-400">
+                  <div className="text-2xs text-muted-foreground opacity-70">
                     件数（0=無制限）
                   </div>
                 </div>
@@ -398,7 +398,7 @@ export default async function Page({
       </div>
 
       {/* 操作カード: プレビュー・スイープ・ログ */}
-      <div className="bg-white rounded-xl border shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="p-6 space-y-3">
           <div className="flex items-center gap-3">
             <h3 className="font-bold">保存期間スイープ</h3>
@@ -411,12 +411,12 @@ export default async function Page({
             </span>
             <Link
               href="/trash"
-              className="ml-auto text-xs text-blue-600 hover:underline"
+              className="ml-auto text-xs text-primary hover:underline"
             >
               ゴミ箱を開く →
             </Link>
           </div>
-          <div className="text-xs text-zinc-500">
+          <div className="text-xs text-muted-foreground">
             設計書 §7.5 の二段階削除（sessions/ → _trash/ → 完全削除）。実行前に必ず「次に消える面談を確認」してください。移動済みの面談は猶予期間内ならゴミ箱から復元できます。
           </div>
           <RetentionManager />
@@ -424,11 +424,11 @@ export default async function Page({
       </div>
 
       {/* バックアップ管理（Phase 4 / §11） */}
-      <div className="bg-white rounded-xl border shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="p-6 space-y-3">
           <div className="flex items-center gap-3">
             <h3 className="font-bold">バックアップ</h3>
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted-foreground">
               data/sessions + data/master → data/_backups/
             </span>
           </div>

@@ -98,6 +98,7 @@ function advanceStatus(id: string, target: SessionMeta["status"]): void {
   if (STATUS_ORDER[meta.status] >= STATUS_ORDER[target]) return;
   saveSessionMeta({ ...meta, status: target });
   revalidatePath("/");
+  revalidatePath("/list");
 }
 
 /** ⑧評価が保存されたタイミングで status=評価済, closedAt=now を記録 */
@@ -110,6 +111,7 @@ function markEvaluated(id: string): void {
     closedAt: meta.closedAt ?? nowIso(),
   });
   revalidatePath("/");
+  revalidatePath("/list");
 }
 
 export async function toggleHoldAction(id: string, hold: boolean): Promise<void> {
@@ -118,6 +120,7 @@ export async function toggleHoldAction(id: string, hold: boolean): Promise<void>
   saveSessionMeta({ ...meta, hold });
   bumpSession(id);
   revalidatePath("/");
+  revalidatePath("/list");
 }
 
 export async function setResultAction(
@@ -133,6 +136,7 @@ export async function setResultAction(
   });
   bumpSession(id);
   revalidatePath("/");
+  revalidatePath("/list");
 }
 
 /**
@@ -177,7 +181,7 @@ export async function duplicateSessionAction(
     // 役割が指定されているならマスタ存在チェック（タイポによる詰みを防ぐ）
     if (role && role !== src.役割) {
       if (!getRole(role)) {
-        throw new Error(`役割マスタが見つかりません: ${role}`);
+        throw new Error(`求人情報が見つかりません: ${role}`);
       }
     }
     const meta = duplicateSession(id, { 氏名: name, 役割: role });
@@ -199,6 +203,7 @@ export async function duplicateSessionAction(
       },
     });
     revalidatePath("/");
+  revalidatePath("/list");
     console.log("[duplicateSessionAction] redirecting to", newId);
   } catch (e) {
     console.error("[duplicateSessionAction] failed", e);
@@ -215,9 +220,9 @@ export async function duplicateSessionAction(
  */
 export async function softDeleteSessionAction(id: string): Promise<void> {
   softDeleteSession(id);
-  revalidatePath("/");
+  revalidatePath("/list");
   revalidatePath("/trash");
-  redirect("/");
+  redirect("/list");
 }
 
 /**
@@ -253,6 +258,7 @@ export async function bulkSoftDeleteSessionsAction(
     }
   }
   revalidatePath("/");
+  revalidatePath("/list");
   revalidatePath("/trash");
   return { deleted };
 }
@@ -327,11 +333,11 @@ function composeCombinedSummary(parts: {
   return sections.join("\n\n");
 }
 
+// 履歴書は最大 2 ファイル（履歴書 + 職務経歴書 など）まで受け付ける
+// 定数・型 export は "use server" ファイルでは禁止なので inline に持つ
 export async function summarizeCandidateApiAction(
   id: string,
-  fileBase64: string | null,
-  fileName: string | null,
-  fileMime: string | null,
+  files: { base64: string; name: string; mime: string }[],
   fallbackText: string,
   override?: LlmOverride,
 ): Promise<{
@@ -339,9 +345,18 @@ export async function summarizeCandidateApiAction(
   error?: string;
   summary?: string;
 }> {
+  const MAX_RESUME_FILES = 2;
   // Server 側ガード: Client の 3.7MB 制約は ad-hoc 呼び出しでは無効。
+  if (files.length > MAX_RESUME_FILES) {
+    return {
+      ok: false,
+      error: `履歴書ファイルは最大 ${MAX_RESUME_FILES} 個までです（受信: ${files.length}）。`,
+    };
+  }
   try {
-    assertResumeUpload(fileBase64, fileMime);
+    for (const f of files) {
+      assertResumeUpload(f.base64, f.mime);
+    }
     assertTextWithinLimit(fallbackText, MAX_TEXT_BYTES, "貼付テキスト");
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -350,30 +365,37 @@ export async function summarizeCandidateApiAction(
   const { provider, model } = resolveLlm("summary", override);
   if (!hasKey(provider)) return noKeyError(provider);
 
-  // ファイルが指定されていればローカル抽出してテキスト化
+  // ファイルが指定されていればローカル抽出してテキスト化。
+  // 複数ファイル時は各パートに見出し（# 添付 N: ファイル名）を付けて LLM が区別できるようにする。
   let resumeText = fallbackText.trim();
   let kindNote = "";
-  if (fileBase64 && fileName) {
+  if (files.length > 0) {
+    const parts: string[] = [];
+    const kindNotes: string[] = [];
     try {
-      const extracted = await extractResumeText(
-        fileBase64,
-        fileMime ?? "",
-        fileName,
-      );
-      if (!extracted.text) {
-        return {
-          ok: false,
-          error: `${kindLabel(extracted.kind)} からテキストを抽出できませんでした（スキャン画像のみの PDF 等の可能性）。OCR が必要な場合は貼付モードを使ってください。`,
-        };
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const extracted = await extractResumeText(f.base64, f.mime ?? "", f.name);
+        if (!extracted.text) {
+          return {
+            ok: false,
+            error: `${kindLabel(extracted.kind)}（${f.name}）からテキストを抽出できませんでした（スキャン画像のみの PDF 等の可能性）。OCR が必要な場合は貼付モードを使ってください。`,
+          };
+        }
+        const header = files.length > 1 ? `# 添付 ${i + 1}: ${extracted.fileName}\n` : "";
+        parts.push(header + extracted.text);
+        kindNotes.push(
+          `[ファイル${files.length > 1 ? ` ${i + 1}` : ""}: ${extracted.fileName} / 形式: ${kindLabel(extracted.kind)}` +
+            (extracted.pageCount ? ` / ${extracted.pageCount}ページ` : "") +
+            (extracted.sheetCount ? ` / ${extracted.sheetCount}シート` : "") +
+            "]",
+        );
       }
-      resumeText = extracted.text;
-      kindNote = `[ファイル: ${extracted.fileName} / 形式: ${kindLabel(extracted.kind)}` +
-        (extracted.pageCount ? ` / ${extracted.pageCount}ページ` : "") +
-        (extracted.sheetCount ? ` / ${extracted.sheetCount}シート` : "") +
-        "]\n\n";
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
+    resumeText = parts.join("\n\n---\n\n");
+    kindNote = kindNotes.join("\n") + "\n\n";
   }
 
   if (!resumeText) {
@@ -673,16 +695,16 @@ export async function reformatQuestionsApiAction(
   return { ok: true, text };
 }
 
-/* ─────────── ⑥ 議事録 ─────────── */
+/* ─────────── ⑥ 面談内容 ─────────── */
 
 export async function saveMinutesAction(
   id: string,
   text: string,
 ): Promise<void> {
-  assertTextWithinLimit(text, MAX_MINUTES_BYTES, "議事録");
+  assertTextWithinLimit(text, MAX_MINUTES_BYTES, "面談内容");
   const data: Minutes = { text, updatedAt: nowIso() };
   saveMinutes(id, data);
-  // 設計書 §9：⑥議事録を登録（テキストが空でないとき）で 質問公開 → 面談済 へ
+  // 設計書 §9：⑥面談内容を登録（テキストが空でないとき）で 質問公開 → 面談済 へ
   if (text.trim().length > 0) {
     advanceStatus(id, "面談済");
   }
@@ -690,15 +712,15 @@ export async function saveMinutesAction(
 }
 
 const MINUTES_SUMMARIZE_SYSTEM =
-  "面談議事録を採点用に圧縮するアシスタント";
+  "面談面談内容を採点用に圧縮するアシスタント";
 
 const MINUTES_SUMMARIZE_INSTRUCTION =
-  "以下の議事録を、評価につながる発言だけを残して 1500 字以内に要約してください。" +
+  "以下の面談内容を、評価につながる発言だけを残して 1500 字以内に要約してください。" +
   "発言者・時系列は維持。誇張・推測なし、原文に無い情報は『要確認』と書く。\n\n" +
-  "--- 議事録ここから ---\n";
+  "--- 面談内容ここから ---\n";
 
 /**
- * ⑥ 議事録の任意 API 要約（設計書 §5 ⑥：既定 OFF）。
+ * ⑥ 面談内容の任意 API 要約（設計書 §5 ⑥：既定 OFF）。
  * 既存本文を要約結果で上書きし、summarized=true フラグを立てる。
  * 元の本文は履歴として残さない（PII の二重保有を避ける方針）。
  */
@@ -714,7 +736,7 @@ export async function summarizeMinutesApiAction(
     return {
       ok: false,
       error:
-        "④ 議事録が空です。要約する前に議事録を貼り付けて保存してください。",
+        "④ 面談内容が空です。要約する前に面談内容を貼り付けて保存してください。",
     };
   }
 
@@ -901,15 +923,14 @@ type PromptResult = { ok: true; prompt: string } | { ok: false; error: string };
 export async function buildSummaryPromptAction(_id: string): Promise<PromptResult> {
   void _id;
   const prompt =
-    "あなたは採用担当者のアシスタントです。以下に貼り付ける履歴書（PDF または本文テキスト）を、採用面談用に簡潔に要約してください。前置きなし、800字以内、箇条書きベース。\n\n" +
-    "# 出力フォーマット\n" +
-    "- 経歴サマリ（職種・年数・主要案件）\n" +
-    "- 保有スキル（技術・資格）\n" +
-    "- 強み（具体例つきで2〜3点）\n" +
-    "- 懸念（事実ベースで。憶測は「要確認」と明記）\n\n" +
-    "後でツールに貼り戻すので、推測を断定で書かないこと。情報が無い項目は『―』。\n\n" +
-    "--- 履歴書ここから ---\n" +
-    "（ここに履歴書PDFを添付 or テキスト貼付）";
+    "履歴書を採用面談用に800字以内・箇条書きで要約。前置き禁止、断定禁止（憶測は「要確認」）、無い項目は「―」。\n\n" +
+    "# 出力\n" +
+    "- 経歴（職種/年数/主要案件）\n" +
+    "- スキル（技術/資格）\n" +
+    "- 強み（具体例2〜3点）\n" +
+    "- 懸念（事実のみ）\n\n" +
+    "--- 履歴書 ---\n" +
+    "（PDF添付 or 貼付）";
   return { ok: true, prompt };
 }
 
@@ -951,7 +972,7 @@ export async function buildEvaluationPromptAction(id: string): Promise<PromptRes
   if (!minutes || !minutes.text.trim()) {
     return {
       ok: false,
-      error: "④ 議事録が空です。議事録を貼り付けて保存してからコピーしてください。",
+      error: "④ 面談内容が空です。面談内容を貼り付けて保存してからコピーしてください。",
     };
   }
   const prompt =
@@ -959,7 +980,7 @@ export async function buildEvaluationPromptAction(id: string): Promise<PromptRes
     "\n\n---\n\n" +
     "# 評価条件\n" +
     JSON.stringify(snapshot, null, 2) +
-    "\n\n# 面談議事録\n" +
+    "\n\n# 面談面談内容\n" +
     minutes.text +
     "\n\n# 出力スキーマ（このキー構造で返す）\n" +
     EVAL_OUTPUT_SCHEMA;
@@ -1000,14 +1021,14 @@ export async function evaluateInterviewApiAction(
   if (!minutes || !minutes.text.trim()) {
     return {
       ok: false,
-      error: "④ 議事録が空です。議事録を貼り付けて保存してから評価してください。",
+      error: "④ 面談内容が空です。面談内容を貼り付けて保存してから評価してください。",
     };
   }
 
   const user =
     "# 評価条件\n" +
     JSON.stringify(snapshot, null, 2) +
-    "\n\n# 面談議事録\n" +
+    "\n\n# 面談面談内容\n" +
     minutes.text +
     "\n\n# 出力スキーマ（このキー構造で返す）\n" +
     EVAL_OUTPUT_SCHEMA;

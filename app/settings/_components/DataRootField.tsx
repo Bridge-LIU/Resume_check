@@ -20,9 +20,9 @@ export function DataRootField({ defaultValue }: { defaultValue: string }) {
   return (
     <section className="space-y-2">
       <div className="font-medium text-sm">データ保存先</div>
-      <div className="text-xs text-zinc-500">
-        <code className="bg-zinc-100 px-1 rounded">master/</code>、
-        <code className="bg-zinc-100 px-1 rounded">sessions/</code> 等を置く場所。
+      <div className="text-xs text-muted-foreground">
+        <code className="bg-muted px-1 rounded">master/</code>、
+        <code className="bg-muted px-1 rounded">sessions/</code> 等を置く場所。
         相対パスはプロジェクトルート基準。
       </div>
 
@@ -36,9 +36,9 @@ export function DataRootField({ defaultValue }: { defaultValue: string }) {
           <Label htmlFor="dataRoot-project" className="font-normal cursor-pointer">
             <div>
               プロジェクト内{" "}
-              <code className="bg-zinc-100 px-1 rounded">./data/</code>
+              <code className="bg-muted px-1 rounded">./data/</code>
             </div>
-            <div className="text-xs text-zinc-500 font-normal">
+            <div className="text-xs text-muted-foreground font-normal">
               アプリと一緒に保存。お試し・1人運用向け。
             </div>
           </Label>
@@ -66,7 +66,7 @@ export function DataRootField({ defaultValue }: { defaultValue: string }) {
                 カスタムパスを入力してください（空のまま保存できません）
               </div>
             ) : (
-              <div className="text-xs text-zinc-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 ネットワークドライブや別パーティション等。絶対パス推奨。
               </div>
             )}

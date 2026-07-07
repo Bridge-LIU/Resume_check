@@ -20,7 +20,7 @@ export async function createSessionAction(formData: FormData): Promise<void> {
   if (!roleResult.ok) throw new ValidationError(roleResult.error);
 
   const role = getRole(roleResult.value);
-  if (!role) throw new ValidationError("役割マスタの読み込みに失敗しました");
+  if (!role) throw new ValidationError("求人情報の読み込みに失敗しました");
 
   const meta = createSession(nameResult.value, roleResult.value);
   writeAudit("session.create", {

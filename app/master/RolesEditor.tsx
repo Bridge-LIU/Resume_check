@@ -26,7 +26,7 @@ function pillClassFor(id: string): string {
   if (id === "Special") return "pill pill-role-sp";
   if (id === "PMO") return "pill pill-role-pm";
   if (id === "ITSupport") return "pill pill-role-it";
-  return "pill bg-zinc-200 text-zinc-700";
+  return "pill bg-secondary text-foreground/85";
 }
 
 function emptyRole(): DraftRole {
@@ -37,7 +37,7 @@ function emptyRole(): DraftRole {
     未経験可: false,
     条件1_基本人物像: [],
     条件2_未経験者必須: [],
-    ロック: false,
+    編集不可: false,
     _isNew: true,
   };
 }
@@ -125,7 +125,7 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
       未経験可: editing.未経験可,
       条件1_基本人物像: editing.条件1_基本人物像,
       条件2_未経験者必須: editing.条件2_未経験者必須,
-      ...(editing.ロック === true ? { ロック: true } : {}),
+      ...(editing.編集不可 === true ? { 編集不可: true } : {}),
     };
 
     setError(null);
@@ -195,12 +195,12 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
   }
 
   return (
-    <section className="bg-white rounded-xl border shadow-sm">
+    <section className="bg-card rounded-xl border shadow-sm">
       <header className="px-6 py-3 border-b flex items-center gap-3">
         <h2 className="font-bold text-sm">求める人材条件マスタ（役割別）</h2>
-        <span className="text-xs text-zinc-500">{roles.length} 件</span>
+        <span className="text-xs text-muted-foreground">{roles.length} 件</span>
         <div className="flex-1" />
-        <Tip content="現在の役割マスタを JSON で書き出す">
+        <Tip content="現在の求人情報を JSON で書き出す">
           <Button
             type="button"
             variant="outline"
@@ -231,7 +231,7 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
         )}
 
         <table className="w-full text-sm border rounded-lg overflow-hidden">
-          <thead className="bg-zinc-50 text-zinc-600 text-xs">
+          <thead className="bg-muted text-muted-foreground text-xs">
             <tr>
               <th className="text-left px-4 py-2 w-24">ID</th>
               <th className="text-left px-4 py-2">役割</th>
@@ -239,45 +239,45 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
               <th className="text-left px-4 py-2 w-20">未経験可</th>
               <th className="text-right px-4 py-2 w-20">条件①</th>
               <th className="text-right px-4 py-2 w-20">条件②</th>
-              <th className="text-center px-4 py-2 w-16">ロック</th>
+              <th className="text-center px-4 py-2 w-20">編集不可</th>
               <th className="px-4 py-2 w-40"></th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {roles.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-zinc-500">
-                  役割マスタがありません。右上の「＋ 新規役割」から追加してください。
+                <td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">
+                  求人情報がありません。右上の「＋ 新規役割」から追加してください。
                 </td>
               </tr>
             )}
             {roles.map((r) => (
-              <tr key={r.id} className="hover:bg-zinc-50">
+              <tr key={r.id} className="hover:bg-accent">
                 <td className="px-4 py-2">
                   <span className={pillClassFor(r.id)}>{r.id}</span>
                 </td>
                 <td className="px-4 py-2 font-medium">{r.役割}</td>
-                <td className="px-4 py-2 text-zinc-600">{r.経験 || "—"}</td>
+                <td className="px-4 py-2 text-muted-foreground">{r.経験 || "—"}</td>
                 <td className="px-4 py-2">
                   {r.未経験可 ? (
                     <span className="text-emerald-700">はい</span>
                   ) : (
-                    <span className="text-zinc-500">いいえ</span>
+                    <span className="text-muted-foreground">いいえ</span>
                   )}
                 </td>
-                <td className="px-4 py-2 text-right tabular text-zinc-600">
+                <td className="px-4 py-2 text-right tabular text-muted-foreground">
                   {r.条件1_基本人物像.length}
                 </td>
-<td className="px-4 py-2 text-right tabular text-zinc-600">
+<td className="px-4 py-2 text-right tabular text-muted-foreground">
                   {r.条件2_未経験者必須.length}
                 </td>
                 <td className="px-4 py-2 text-center">
-                  {r.ロック ? (
-                    <Tip content="この役割はロック済み。新規セッションは自動で条件凍結、面談画面での修正不可">
-                      <Lock className="inline-block h-4 w-4 text-amber-600" aria-label="ロック中" />
+                  {r.編集不可 ? (
+                    <Tip content="編集不可：新規面談は自動凍結・修正不可">
+                      <Lock className="inline-block h-4 w-4 text-amber-600" aria-label="編集不可" />
                     </Tip>
                   ) : (
-                    <span className="text-zinc-300">—</span>
+                    <span className="text-muted-foreground opacity-50">—</span>
                   )}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
@@ -357,7 +357,7 @@ function RoleEditForm({
   const editing = initial;
 
   return (
-    <div className="border rounded-lg p-4 bg-zinc-50 space-y-3">
+    <div className="border rounded-lg p-4 bg-muted space-y-3">
       <div className="flex items-center gap-2">
         <h3 className="font-bold text-sm">
           {editing._isNew ? "新規役割を追加" : `編集: ${editing._originalId}`}
@@ -379,30 +379,30 @@ function RoleEditForm({
 
       <div className="grid grid-cols-12 gap-3">
         <label className="col-span-3 text-sm">
-          <div className="text-xs text-zinc-500 mb-1">ID（ファイル名）</div>
+          <div className="text-xs text-muted-foreground mb-1">ID（ファイル名）</div>
           <Input
             value={editing.id}
             onChange={(e) => onChange({ ...editing, id: e.target.value })}
             placeholder="NW / Server など"
-            className="w-full bg-white"
+            className="w-full bg-card"
           />
         </label>
         <label className="col-span-6 text-sm">
-          <div className="text-xs text-zinc-500 mb-1">役割名</div>
+          <div className="text-xs text-muted-foreground mb-1">役割名</div>
           <Input
             value={editing.役割}
             onChange={(e) => onChange({ ...editing, 役割: e.target.value })}
             placeholder="NW（ネットワーク） など"
-            className="w-full bg-white"
+            className="w-full bg-card"
           />
         </label>
         <label className="col-span-3 text-sm">
-          <div className="text-xs text-zinc-500 mb-1">経験</div>
+          <div className="text-xs text-muted-foreground mb-1">経験</div>
           <Input
             value={editing.経験}
             onChange={(e) => onChange({ ...editing, 経験: e.target.value })}
             placeholder="3年以上 など"
-            className="w-full bg-white"
+            className="w-full bg-card"
           />
         </label>
       </div>
@@ -419,25 +419,25 @@ function RoleEditForm({
           />
           未経験可（OFF のとき条件②は評価対象外）
         </Label>
-        <Tip content="ON にすると、この役割で作った新規セッションは自動で条件凍結され、面談画面で条件を修正できなくなります">
+        <Tip content="ON: 新規面談を自動凍結し、面談画面で修正不可にする">
           <Label
-            htmlFor="role-lock"
+            htmlFor="role-uneditable"
             className="inline-flex items-center gap-2 text-sm font-normal cursor-pointer"
           >
             <Checkbox
-              id="role-lock"
-              checked={editing.ロック === true}
-              onCheckedChange={(v) => onChange({ ...editing, ロック: v === true })}
+              id="role-uneditable"
+              checked={editing.編集不可 === true}
+              onCheckedChange={(v) => onChange({ ...editing, 編集不可: v === true })}
             />
             <Lock className="h-3.5 w-3.5 text-amber-600" />
-            編集ロック（面談画面で修正不可）
+            編集不可（新規面談を自動凍結）
           </Label>
         </Tip>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <div className="text-xs text-zinc-500 mb-1">
+          <div className="text-xs text-muted-foreground mb-1">
             条件①: 基本人物像（常に評価）— 1 行 1 項目（先頭の「- 」は任意）
           </div>
           <Textarea
@@ -448,15 +448,15 @@ function RoleEditForm({
               setText1(t);
               onChange({ ...editing, 条件1_基本人物像: linesToArray(t) });
             }}
-            className="w-full bg-white font-mono"
+            className="w-full bg-card font-mono"
           />
-          <div className="text-xs text-zinc-500 mt-1">
+          <div className="text-xs text-muted-foreground mt-1">
             {editing.条件1_基本人物像.length} 項目
           </div>
         </div>
 
         <div className={editing.未経験可 ? "" : "opacity-60"}>
-          <div className="text-xs text-zinc-500 mb-1">
+          <div className="text-xs text-muted-foreground mb-1">
             条件②: 未経験者必須（未経験可=ON のときだけ評価対象）
           </div>
           <Textarea
@@ -467,9 +467,9 @@ function RoleEditForm({
               setText2(t);
               onChange({ ...editing, 条件2_未経験者必須: linesToArray(t) });
             }}
-            className="w-full bg-white font-mono"
+            className="w-full bg-card font-mono"
           />
-          <div className="text-xs text-zinc-500 mt-1">
+          <div className="text-xs text-muted-foreground mt-1">
             {editing.条件2_未経験者必須.length} 項目
           </div>
         </div>

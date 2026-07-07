@@ -20,13 +20,13 @@ export function SectionHeaderBar({
 }) {
   const tone = hasData
     ? "border-emerald-500 bg-emerald-50/40"
-    : "border-zinc-300 bg-zinc-50";
+    : "border-border bg-muted";
   return (
     <div
       className={`border-l-4 ${tone} pl-3 pr-2 py-2 rounded-r-md mb-3 flex items-center justify-between gap-3 flex-wrap min-h-[2.5rem]`}
     >
       <div className="flex items-center gap-2 flex-wrap min-w-0">
-        <h3 className="font-bold text-zinc-800 whitespace-nowrap">{title}</h3>
+        <h3 className="font-bold text-foreground whitespace-nowrap">{title}</h3>
         {extra}
         {hasData && (
           <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">

@@ -1,32 +1,16 @@
-import { PageHeader } from "@/app/_components/PageHeader";
 import {
   aggregateByAxis,
   aggregateByMonth,
   aggregateByRole,
   listAnonymizedSummaries,
 } from "@/lib/analytics";
+import { rolePillClass, scoreBarColor as barColor } from "@/lib/uiClass";
 import { DetailTable } from "./_components/DetailTable";
 
 export const dynamic = "force-dynamic";
 
 function pct(n: number): string {
   return (n * 100).toFixed(1) + "%";
-}
-
-function rolePillClass(役割: string) {
-  if (役割.startsWith("NW")) return "pill pill-role-nw";
-  if (役割.startsWith("Dev") || 役割.startsWith("開発")) return "pill pill-role-dev";
-  if (役割.startsWith("Server")) return "pill pill-role-sv";
-  if (役割.startsWith("Special")) return "pill pill-role-sp";
-  if (役割.startsWith("PMO")) return "pill pill-role-pm";
-  if (役割.startsWith("IT")) return "pill pill-role-it";
-  return "pill bg-zinc-100 text-zinc-700";
-}
-
-function barColor(score: number): string {
-  if (score >= 4.2) return "bg-emerald-500";
-  if (score >= 3.5) return "bg-amber-500";
-  return "bg-red-400";
 }
 
 export default async function AnalyticsPage() {
@@ -57,17 +41,17 @@ export default async function AnalyticsPage() {
 
   if (items.length === 0) {
     return (
-      <div className="bg-white rounded-xl border shadow-sm">
-        <PageHeader title="分析（匿名サマリ）" />
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="p-6 space-y-3">
-          <div className="text-sm text-zinc-500 leading-relaxed">
+          <h1 className="font-bold text-lg">分析（匿名サマリ）</h1>
+          <div className="text-sm text-muted-foreground leading-relaxed">
             匿名サマリがまだ 1 件もありません。
             <br />
             保存期間スイープが <code>analytics/</code> に匿名サマリを書き出した時点で
             このページに集計が出ます。
           </div>
-          <div className="text-xs text-zinc-500 border-t pt-3">
-            参考：このデータは PII（氏名・履歴書・議事録）を含まない匿名集計です。
+          <div className="text-xs text-muted-foreground border-t pt-3">
+            参考：このデータは PII（氏名・履歴書・面談内容）を含まない匿名集計です。
             設計書 §7.5。元のセッションが完全削除されても残せます。
           </div>
         </div>
@@ -79,15 +63,18 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border shadow-sm">
-        <PageHeader
-          title="分析（匿名サマリ）"
-          meta={`${items.length} 件 ・ ${overall.earliest?.slice(0, 10) ?? "—"} 〜 ${overall.latest?.slice(0, 10) ?? "—"}`}
-        />
+      <div className="bg-card rounded-xl border shadow-sm">
+        <div className="p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <h1 className="font-bold text-lg">分析（匿名サマリ）</h1>
+            <span className="text-xs text-muted-foreground">
+              {items.length} 件 ・ {overall.earliest?.slice(0, 10) ?? "—"} 〜 {overall.latest?.slice(0, 10) ?? "—"}
+            </span>
+          </div>
 
-        {/* KPI カード */}
-        <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard label="累計件数" value={overall.total.toString()} suffix="件" />
+          {/* KPI カード */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <KpiCard label="累計件数" value={overall.total.toString()} suffix="件" />
           <KpiCard
             label="合格率"
             value={pct(overall.pass / overall.total)}
@@ -99,18 +86,19 @@ export default async function AnalyticsPage() {
             suffix={`/ 5`}
           />
           <KpiCard label="役割数" value={byRole.length.toString()} suffix="種" />
+          </div>
         </div>
       </div>
 
       {/* 月別 */}
-      <div className="bg-white rounded-xl border shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="px-6 py-3 border-b flex items-center gap-3">
           <h3 className="font-bold">月別の合否（{monthly.length} 月分）</h3>
-          <span className="text-xs text-zinc-500">closedAt 基準</span>
+          <span className="text-xs text-muted-foreground">closedAt 基準</span>
         </div>
         <div className="p-6">
           <table className="w-full text-sm">
-            <thead className="text-xs text-zinc-500">
+            <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="text-left px-2 py-1 w-28">月</th>
                 <th className="text-right px-2 py-1 w-16">件数</th>
@@ -126,7 +114,7 @@ export default async function AnalyticsPage() {
                 const wMid = (m.mid / maxMonthlyTotal) * 100;
                 const wFail = (m.fail / maxMonthlyTotal) * 100;
                 return (
-                  <tr key={m.month} className="hover:bg-zinc-50">
+                  <tr key={m.month} className="hover:bg-accent">
                     <td className="px-2 py-2 font-medium tabular">{m.month}</td>
                     <td className="px-2 py-2 text-right tabular">{m.total}</td>
                     <td className="px-2 py-2 text-right tabular">
@@ -146,7 +134,7 @@ export default async function AnalyticsPage() {
                       </span>
                     </td>
                     <td className="px-2 py-2">
-                      <div className="flex h-3 rounded overflow-hidden bg-zinc-100">
+                      <div className="flex h-3 rounded overflow-hidden bg-muted">
                         <div
                           className="bg-emerald-400"
                           style={{ width: `${wPass}%` }}
@@ -163,7 +151,7 @@ export default async function AnalyticsPage() {
                           title={`不合格 ${m.fail}`}
                         />
                       </div>
-                      <div className="text-2xs text-zinc-400 mt-0.5 tabular">
+                      <div className="text-2xs text-muted-foreground opacity-70 mt-0.5 tabular">
                         合格 {m.pass} / 普通 {m.mid} / 不合格 {m.fail}
                       </div>
                     </td>
@@ -176,13 +164,13 @@ export default async function AnalyticsPage() {
       </div>
 
       {/* 役割別 */}
-      <div className="bg-white rounded-xl border shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="px-6 py-3 border-b flex items-center gap-3">
           <h3 className="font-bold">役割別</h3>
         </div>
         <div className="p-6">
           <table className="w-full text-sm">
-            <thead className="text-xs text-zinc-500">
+            <thead className="text-xs text-muted-foreground">
               <tr>
                 <th className="text-left px-2 py-1">役割</th>
                 <th className="text-right px-2 py-1 w-20">件数</th>
@@ -193,7 +181,7 @@ export default async function AnalyticsPage() {
             </thead>
             <tbody className="divide-y">
               {byRole.map((r) => (
-                <tr key={r.役割} className="hover:bg-zinc-50">
+                <tr key={r.役割} className="hover:bg-accent">
                   <td className="px-2 py-2">
                     <span className={rolePillClass(r.役割)}>{r.役割}</span>
                   </td>
@@ -223,10 +211,10 @@ export default async function AnalyticsPage() {
       </div>
 
       {/* 軸別 */}
-      <div className="bg-white rounded-xl border shadow-sm">
+      <div className="bg-card rounded-xl border shadow-sm">
         <div className="px-6 py-3 border-b flex items-center gap-3">
           <h3 className="font-bold">軸別の平均スコア</h3>
-          <span className="text-xs text-zinc-500">全候補者平均</span>
+          <span className="text-xs text-muted-foreground">全候補者平均</span>
         </div>
         <div className="p-6 space-y-2">
           {byAxis.map((a) => (
@@ -234,11 +222,11 @@ export default async function AnalyticsPage() {
               <div className="flex items-baseline gap-3 mb-1">
                 <span className="font-medium w-36">{a.軸}</span>
                 <span className="tabular text-base">{a.avgScore.toFixed(2)}</span>
-                <span className="text-xs text-zinc-400 tabular">
+                <span className="text-xs text-muted-foreground opacity-70 tabular">
                   範囲 {a.minScore.toFixed(1)}〜{a.maxScore.toFixed(1)} ({a.count} 件)
                 </span>
               </div>
-              <div className="h-2 bg-zinc-100 rounded overflow-hidden">
+              <div className="h-2 bg-muted rounded overflow-hidden">
                 <div
                   className={`h-full ${barColor(a.avgScore)}`}
                   style={{ width: `${(a.avgScore / 5) * 100}%` }}
@@ -252,9 +240,9 @@ export default async function AnalyticsPage() {
       {/* 明細（匿名 1 件ずつ） */}
       <DetailTable items={items} axes={byAxis} />
 
-      <div className="text-xs text-zinc-500 leading-relaxed">
+      <div className="text-xs text-muted-foreground leading-relaxed">
         ⚠️ 匿名サマリは <code>data/analytics/&lt;idHash&gt;.json</code> に保存。
-        氏名・履歴書・議事録は含みません（設計書 §7.5）。元セッションが完全削除されても
+        氏名・履歴書・面談内容は含みません（設計書 §7.5）。元セッションが完全削除されても
         統計だけは長期保持できます。<br />
         <span className="text-amber-700">
           ※ 役割名が <code>[FAKE]</code> で始まる行はダミーデータ（開発用）。/settings 末尾で削除できます。
@@ -277,10 +265,10 @@ function KpiCard({
 }) {
   return (
     <div className="border rounded-lg p-3">
-      <div className="text-xs text-zinc-500 mb-1">{label}</div>
+      <div className="text-xs text-muted-foreground mb-1">{label}</div>
       <div className="flex items-baseline gap-1">
         <span className={`text-2xl font-bold tabular ${tint ?? ""}`}>{value}</span>
-        {suffix && <span className="text-xs text-zinc-400">{suffix}</span>}
+        {suffix && <span className="text-xs text-muted-foreground opacity-70">{suffix}</span>}
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ export function ModeSwitch({
         className="text-xs flex items-center gap-1 min-h-8"
         aria-label="モード: 貼付（固定）"
       >
-        <span className="text-zinc-500 mr-1" aria-hidden="true">
+        <span className="text-muted-foreground mr-1" aria-hidden="true">
           モード:
         </span>
         <span className="pill pill-eval" aria-hidden="true">
@@ -43,14 +43,14 @@ export function ModeSwitch({
       role="radiogroup"
       aria-label="モード切替"
     >
-      <span className="text-zinc-500 mr-1">モード:</span>
+      <span className="text-muted-foreground mr-1">モード:</span>
       <button
         type="button"
         role="radio"
         aria-checked={mode === "paste"}
         onClick={() => onChange?.("paste")}
         className={`pill ${
-          mode === "paste" ? "pill-eval" : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+          mode === "paste" ? "pill-eval" : "bg-muted text-muted-foreground hover:bg-accent"
         }`}
       >
         ● 貼付
@@ -65,7 +65,7 @@ export function ModeSwitch({
         className={`pill ${
           mode === "api"
             ? "pill-qpub"
-            : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+            : "bg-muted text-muted-foreground hover:bg-accent"
         } ${!apiEnabled ? "opacity-50 cursor-not-allowed" : ""}`}
       >
         ● {apiLabel}

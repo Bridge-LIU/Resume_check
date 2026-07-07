@@ -85,7 +85,7 @@ export function ProviderModelSelect({
           const enabled = hasKey[pid];
           return (
             <SelectGroup key={pid}>
-              <SelectLabel className="text-xs text-zinc-500">
+              <SelectLabel className="text-xs text-muted-foreground">
                 {info.icon} {info.displayName}
                 {enabled ? "" : "（キー未設定）"}
               </SelectLabel>

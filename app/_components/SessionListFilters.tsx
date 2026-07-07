@@ -27,19 +27,32 @@ const STATUS_OPTIONS: SessionMeta["status"][] = [
   "評価済",
 ];
 const RESULT_OPTIONS: SessionMeta["result"][] = ["採用", "不採用", "未確定"];
+const VERDICT_OPTIONS: NonNullable<SessionMeta["合否"]>[] = [
+  "合格",
+  "普通",
+  "不合格",
+];
 
 export function SessionListFilters({
   initialState,
   initialRole,
   initialResult,
+  initialVerdict,
   initialQ,
   roleOptions,
+  basePath = "/list",
+  hideStatus = false,
 }: {
   initialState?: string;
   initialRole?: string;
   initialResult?: string;
+  initialVerdict?: string;
   initialQ?: string;
   roleOptions: string[];
+  /** フィルタ変更時の遷移先ルート。/compare でも使えるようにする */
+  basePath?: string;
+  /** 「状態」ドロップダウンを非表示にする（/compare は 評価済 前提のため） */
+  hideStatus?: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -47,24 +60,26 @@ export function SessionListFilters({
   const [state, setState] = useState(initialState ?? "");
   const [role, setRole] = useState(initialRole ?? "");
   const [result, setResult] = useState(initialResult ?? "");
+  const [verdict, setVerdict] = useState(initialVerdict ?? "");
   const [q, setQ] = useState(initialQ ?? "");
 
   // 親側で key を URL パラメータに連動させているため、URL 変更時はこのコンポーネント
   // ごと再マウントされ、上記 useState 初期値が initial* から再評価される。
 
   const push = useCallback(
-    (next: { state: string; role: string; result: string; q: string }) => {
+    (next: { state: string; role: string; result: string; verdict: string; q: string }) => {
       const params = new URLSearchParams();
       if (next.state) params.set("state", next.state);
       if (next.role) params.set("role", next.role);
       if (next.result) params.set("result", next.result);
+      if (next.verdict) params.set("verdict", next.verdict);
       if (next.q) params.set("q", next.q);
       const qs = params.toString();
       startTransition(() => {
-        router.push(qs ? `/?${qs}` : "/");
+        router.push(qs ? `${basePath}?${qs}` : basePath);
       });
     },
-    [router],
+    [router, basePath],
   );
 
   // q だけ debounce
@@ -73,7 +88,7 @@ export function SessionListFilters({
     if (q === (initialQ ?? "")) return;
     if (qTimer.current) clearTimeout(qTimer.current);
     qTimer.current = setTimeout(() => {
-      push({ state, role, result, q });
+      push({ state, role, result, verdict, q });
     }, 300);
     return () => {
       if (qTimer.current) clearTimeout(qTimer.current);
@@ -84,45 +99,53 @@ export function SessionListFilters({
   function handleState(v: string) {
     const next = v === ALL ? "" : v;
     setState(next);
-    push({ state: next, role, result, q });
+    push({ state: next, role, result, verdict, q });
   }
   function handleRole(v: string) {
     const next = v === ALL ? "" : v;
     setRole(next);
-    push({ state, role: next, result, q });
+    push({ state, role: next, result, verdict, q });
   }
   function handleResult(v: string) {
     const next = v === ALL ? "" : v;
     setResult(next);
-    push({ state, role, result: next, q });
+    push({ state, role, result: next, verdict, q });
+  }
+  function handleVerdict(v: string) {
+    const next = v === ALL ? "" : v;
+    setVerdict(next);
+    push({ state, role, result, verdict: next, q });
   }
   function reset() {
     setState("");
     setRole("");
     setResult("");
+    setVerdict("");
     setQ("");
-    startTransition(() => router.push("/"));
+    startTransition(() => router.push(basePath));
   }
 
-  const hasAnyFilter = !!(state || role || result || q);
+  const hasAnyFilter = !!(state || role || result || verdict || q);
 
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <FilterField label="状態">
-        <Select value={state || ALL} onValueChange={handleState}>
-          <SelectTrigger className="h-9 w-32 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>すべて</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </FilterField>
+      {!hideStatus && (
+        <FilterField label="状態">
+          <Select value={state || ALL} onValueChange={handleState}>
+            <SelectTrigger className="h-9 w-32 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>すべて</SelectItem>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterField>
+      )}
 
       <FilterField label="役割">
         <Select value={role || ALL} onValueChange={handleRole}>
@@ -134,6 +157,22 @@ export function SessionListFilters({
             {roleOptions.map((r) => (
               <SelectItem key={r} value={r}>
                 {r}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FilterField>
+
+      <FilterField label="合否">
+        <Select value={verdict || ALL} onValueChange={handleVerdict}>
+          <SelectTrigger className="h-9 w-32 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>すべて</SelectItem>
+            {VERDICT_OPTIONS.map((v) => (
+              <SelectItem key={v} value={v}>
+                {v}
               </SelectItem>
             ))}
           </SelectContent>
@@ -187,7 +226,7 @@ function FilterField({
 }) {
   return (
     <div className={`flex flex-col gap-1 ${className ?? ""}`}>
-      <span className="text-xs text-zinc-500 font-medium leading-none">
+      <span className="text-xs text-muted-foreground font-medium leading-none">
         {label}
       </span>
       {children}

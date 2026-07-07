@@ -97,7 +97,7 @@ export function AutoSaveIndicator({ state }: { state: AutoSaveState }) {
       <span
         role="status"
         aria-live="polite"
-        className={`${base} text-zinc-500`}
+        className={`${base} text-muted-foreground`}
       >
         <svg
           className="w-3 h-3 animate-spin"

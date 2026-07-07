@@ -14,7 +14,7 @@ function rolePillClass(役割: string) {
   if (役割.startsWith("Special")) return "pill pill-role-sp";
   if (役割.startsWith("PMO")) return "pill pill-role-pm";
   if (役割.startsWith("IT")) return "pill pill-role-it";
-  return "pill bg-zinc-100 text-zinc-700";
+  return "pill bg-muted text-foreground/85";
 }
 
 /** 各行から列値を取り出す */
@@ -149,21 +149,21 @@ export function DetailTable({
   const hasFilter = Object.keys(filters).length > 0;
 
   return (
-    <div className="bg-white rounded-xl border shadow-sm">
+    <div className="bg-card rounded-xl border shadow-sm">
       <div className="px-6 py-3 border-b flex items-center gap-3 flex-wrap">
         <h3 className="font-bold">明細</h3>
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-muted-foreground">
           匿名 1 件ずつ ・ 表示中{" "}
-          <span className="font-medium text-zinc-700 tabular">
+          <span className="font-medium text-foreground/85 tabular">
             {sorted.length}
           </span>{" "}
           / 全 {items.length} 件
         </span>
         <div className="ml-auto flex items-center gap-3 text-xs">
           {sort && (
-            <span className="text-zinc-500">
+            <span className="text-muted-foreground">
               並び:{" "}
-              <span className="text-zinc-700">
+              <span className="text-foreground/85">
                 {columns.find((c) => c.key === sort.key)?.label ?? sort.key}{" "}
                 {sort.dir === "asc" ? "↑" : "↓"}
               </span>
@@ -173,7 +173,7 @@ export function DetailTable({
             <button
               type="button"
               onClick={resetAll}
-              className="text-blue-600 hover:underline"
+              className="text-primary hover:underline"
             >
               並び替え/絞り込みをリセット
             </button>
@@ -183,12 +183,12 @@ export function DetailTable({
 
       <div className="p-6 overflow-x-auto">
         {sorted.length === 0 ? (
-          <div className="text-sm text-zinc-500 py-8 text-center">
+          <div className="text-sm text-muted-foreground py-8 text-center">
             条件に一致する明細はありません。
           </div>
         ) : (
           <table className="w-full text-sm border rounded-lg overflow-hidden">
-            <thead className="bg-zinc-50 text-zinc-600 text-xs">
+            <thead className="bg-muted text-muted-foreground text-xs">
               <tr>
                 {columns.map((col) => (
                   <HeaderCell
@@ -262,7 +262,7 @@ function HeaderCell({
 
   const isSorted = sort?.key === column.key;
   const sortIcon = !isSorted ? (
-    <ChevronsUpDown className="h-3 w-3 text-zinc-300 group-hover:text-zinc-500" />
+    <ChevronsUpDown className="h-3 w-3 text-muted-foreground opacity-50 group-hover:text-muted-foreground" />
   ) : sort.dir === "asc" ? (
     <ArrowUp className="h-3 w-3 text-blue-600" />
   ) : (
@@ -289,7 +289,7 @@ function HeaderCell({
           type="button"
           onClick={onOpenFilter}
           className={`inline-flex items-center hover:text-blue-600 ${
-            activeFilter ? "text-blue-600" : "text-zinc-300 hover:text-zinc-600"
+            activeFilter ? "text-blue-600" : "text-muted-foreground opacity-50 hover:text-muted-foreground"
           }`}
           aria-label={`${column.label} で絞り込み`}
           aria-haspopup="menu"
@@ -384,7 +384,7 @@ function FilterPopover({
   return (
     <div
       ref={ref}
-      className="absolute z-20 mt-1 left-0 top-full bg-white border rounded-lg shadow-lg p-2 w-56 text-zinc-700 normal-case font-normal"
+      className="absolute z-20 mt-1 left-0 top-full bg-card border rounded-lg shadow-lg p-2 w-56 text-foreground/85 normal-case font-normal"
       role="menu"
     >
       <input
@@ -398,28 +398,28 @@ function FilterPopover({
         <button
           type="button"
           onClick={selectAll}
-          className="text-blue-600 hover:underline"
+          className="text-primary hover:underline"
         >
           すべて選択
         </button>
         <button
           type="button"
           onClick={clearAll}
-          className="text-blue-600 hover:underline"
+          className="text-primary hover:underline"
         >
           すべて解除
         </button>
       </div>
       <div className="max-h-60 overflow-y-auto border-t pt-1">
         {visible.length === 0 ? (
-          <div className="text-xs text-zinc-400 px-2 py-3 text-center">
+          <div className="text-xs text-muted-foreground opacity-70 px-2 py-3 text-center">
             候補なし
           </div>
         ) : (
           <ul className="space-y-0.5">
             {visible.map((label) => (
               <li key={label}>
-                <label className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-zinc-50 cursor-pointer text-xs">
+                <label className="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-accent cursor-pointer text-xs">
                   <input
                     type="checkbox"
                     checked={isChecked(label)}
@@ -435,12 +435,12 @@ function FilterPopover({
           </ul>
         )}
       </div>
-      <div className="flex items-center justify-between mt-2 pt-2 border-t text-2xs text-zinc-500">
+      <div className="flex items-center justify-between mt-2 pt-2 border-t text-2xs text-muted-foreground">
         <span>{allChecked ? "全件表示中" : `${selected.size} 件選択`}</span>
         <button
           type="button"
           onClick={onClose}
-          className="text-blue-600 hover:underline"
+          className="text-primary hover:underline"
         >
           閉じる
         </button>
@@ -463,10 +463,10 @@ function Row({
   return (
     <tr
       className={
-        isFake ? "bg-amber-50/40 hover:bg-amber-50" : "hover:bg-zinc-50"
+        isFake ? "bg-amber-50/40 hover:bg-amber-50" : "hover:bg-accent"
       }
     >
-      <td className="px-2 py-1.5 text-zinc-600 text-xs tabular">
+      <td className="px-2 py-1.5 text-muted-foreground text-xs tabular">
         {it.closedAt ? it.closedAt.slice(0, 10) : "—"}
       </td>
       <td className="px-2 py-1.5">
@@ -484,13 +484,13 @@ function Row({
                 ? "pill pill-mid"
                 : it.合否 === "不合格"
                   ? "pill pill-fail"
-                  : "pill bg-zinc-100 text-zinc-600"
+                  : "pill bg-muted text-muted-foreground"
           }
         >
           {it.合否 ?? "―"}
         </span>
       </td>
-      <td className="px-2 py-1.5 text-center text-xs text-zinc-600">
+      <td className="px-2 py-1.5 text-center text-xs text-muted-foreground">
         {it.result}
       </td>
       <td className="px-2 py-1.5 text-right tabular">
@@ -501,13 +501,13 @@ function Row({
         return (
           <td
             key={a.軸}
-            className="px-2 py-1.5 text-right tabular text-xs text-zinc-700"
+            className="px-2 py-1.5 text-right tabular text-xs text-foreground/85"
           >
             {score === undefined ? "—" : score.toFixed(1)}
           </td>
         );
       })}
-      <td className="px-2 py-1.5 font-mono text-2xs text-zinc-400">
+      <td className="px-2 py-1.5 font-mono text-2xs text-muted-foreground opacity-70">
         {it.idHash.slice(0, 8)}
       </td>
     </tr>

@@ -41,7 +41,14 @@ import { parseStructuredSummary } from "./summaryFormat";
 
 export const MASTER_FILE = "マスタ.xlsx";
 export const SESSIONS_FILE = "面談者一覧.xlsx";
-export const SESSION_FILE = "session.xlsx";
+/** 各セッションフォルダ内の Excel ファイル名を計算する（フォルダ名 = セッション ID をそのまま使う）。
+ *   例: sessions/20260707_143022_山田太郎_NW/20260707_143022_山田太郎_NW.xlsx */
+export function sessionXlsxFileName(id: string): string {
+  return `${id}.xlsx`;
+}
+/** 旧形式（v1.x 以前）で全セッションが共通で "session.xlsx" だった時代の名残。
+ *   マイグレーション時に旧ファイルを削除するために保持。 */
+export const LEGACY_SESSION_FILE = "session.xlsx";
 export const MASTER_FILE_ASCII = "master.xlsx";
 export const SESSIONS_FILE_ASCII = "sessions.xlsx";
 
@@ -505,8 +512,28 @@ function axisBlockRichText(
   return { richText: blocks };
 }
 
-export async function buildSessionsXlsx(): Promise<Buffer> {
-  const sessions = listSessions();
+export interface SessionsFilter {
+  state?: string;
+  role?: string;
+  result?: string;
+  verdict?: string;
+  q?: string;
+}
+
+export async function buildSessionsXlsx(
+  filter?: SessionsFilter,
+): Promise<Buffer> {
+  const all = listSessions();
+  const sessions = filter
+    ? all.filter((s) => {
+        if (filter.state && s.status !== filter.state) return false;
+        if (filter.role && s.役割 !== filter.role) return false;
+        if (filter.result && s.result !== filter.result) return false;
+        if (filter.verdict && s.合否 !== filter.verdict) return false;
+        if (filter.q && !s.氏名.includes(filter.q)) return false;
+        return true;
+      })
+    : all;
   const ev = getEvalCriteria();
   const settings = loadSettings();
   const wb = new ExcelJS.Workbook();
@@ -520,58 +547,12 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
   ];
 
   const ws = wb.addWorksheet("①D_面談者一覧", {
-    views: [{ state: "frozen", ySplit: 1, xSplit: 1 }],
+    views: [{ state: "frozen", ySplit: 2, xSplit: 1, showGridLines: false }],
   });
 
   // 列構成（左→右、案B + 自己解決は軸別評価セルに統合 + 経歴を 3 列に分割）:
   //   候補者 | 役割 | 経歴サマリ | 主要スキル | 強み | 軸別評価 | 良い点 | 懸念点
   //     | 使用AI | 総合スコア | 合否 | 面談日 | 結果 | 状態 | 自動削除
-  const header = [
-    "候補者",
-    "役割",
-    "経歴サマリ",
-    "主要スキル",
-    "強み",
-    "軸別評価",
-    "良い点",
-    "懸念点",
-    "使用AI",
-    "総合スコア",
-    "合否",
-    "面談日",
-    "結果",
-    "状態",
-    "自動削除",
-  ];
-  ws.addRow(header);
-  styleHeaderRow(ws.getRow(1));
-
-  // ヘッダ列ごとの文字色（セマンティックグループに合わせる）
-  const headerColors = [
-    "FF334155", // 候補者 (slate-700)
-    "FF334155", // 役割
-    "FF1E40AF", // 経歴サマリ (blue-800)
-    "FF2563EB", // 主要スキル (blue-600)
-    "FF6D28D9", // 強み (violet-700)
-    "FF7C3AED", // 軸別評価 (violet-600)
-    "FF15803D", // 良い点 (emerald-700)
-    "FFB91C1C", // 懸念点 (red-700)
-    "FF475569", // 使用AI (slate-600)
-    "FF1F2937", // 総合スコア (gray-800)
-    "FF1F2937", // 合否
-    "FF334155", // 面談日
-    "FF475569", // 結果
-    "FF475569", // 状態
-    "FF6B7280", // 自動削除 (gray-500)
-  ];
-  const headerRow = ws.getRow(1);
-  headerColors.forEach((argb, i) => {
-    headerRow.getCell(i + 1).font = {
-      ...HEADER_FONT,
-      color: { argb },
-    };
-  });
-
   ws.columns = [
     { width: 18 }, // 候補者
     { width: 22 }, // 役割
@@ -590,6 +571,83 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
     { width: 12 }, // 自動削除
   ];
 
+  // ── Super header (row 1) — マスタと同じ 2 段ヘッダ様式 ──
+  // 列グループ:
+  //   [1-2]   候補者      slate-800 / white
+  //   [3-5]   履歴書要約  blue-100  / blue-800
+  //   [6-8]   評価内容    violet-100/ violet-800
+  //   [9-11]  評価結果    amber-100 / amber-800
+  //   [12-15] 面談メタ    gray-200  / gray-700
+  const superRow = ws.getRow(1);
+  superRow.getCell(1).value = "候補者";
+  superRow.getCell(3).value = "履歴書要約";
+  superRow.getCell(6).value = "評価内容";
+  superRow.getCell(9).value = "評価結果";
+  superRow.getCell(12).value = "面談メタ";
+  ws.mergeCells(1, 1, 1, 2);
+  ws.mergeCells(1, 3, 1, 5);
+  ws.mergeCells(1, 6, 1, 8);
+  ws.mergeCells(1, 9, 1, 11);
+  ws.mergeCells(1, 12, 1, 15);
+  const superGroups: { start: number; bg: string; fg: string }[] = [
+    { start: 1,  bg: "FF1F2937", fg: "FFFFFFFF" },
+    { start: 3,  bg: "FFDBEAFE", fg: "FF1E40AF" },
+    { start: 6,  bg: "FFEDE9FE", fg: "FF6D28D9" },
+    { start: 9,  bg: "FFFEF3C7", fg: "FF92400E" },
+    { start: 12, bg: "FFE5E7EB", fg: "FF334155" },
+  ];
+  superGroups.forEach(({ start, bg, fg }) => {
+    const c = superRow.getCell(start);
+    c.fill = solidFill(bg);
+    c.font = { bold: true, size: 11, color: { argb: fg } };
+    c.alignment = { vertical: "middle", horizontal: "center" };
+    c.border = BORDER_THIN;
+  });
+  for (let c = 1; c <= 15; c++) {
+    superRow.getCell(c).border = BORDER_THIN;
+  }
+  superRow.height = 28;
+
+  // ── Sub header (row 2) — 実際の列名 ──
+  const header = [
+    "候補者",
+    "役割",
+    "経歴サマリ",
+    "主要スキル",
+    "強み",
+    "軸別評価",
+    "良い点",
+    "懸念点",
+    "使用AI",
+    "総合スコア",
+    "合否",
+    "面談日",
+    "結果",
+    "状態",
+    "自動削除",
+  ];
+  const subRow = ws.getRow(2);
+  header.forEach((label, i) => {
+    subRow.getCell(i + 1).value = label;
+  });
+  styleHeaderRow(subRow);
+  subRow.height = 22;
+  // 列ごとに super header と同じトーンの淡色を当てる（グループ 5 種類）
+  const subGroupFills: { cols: number[]; bg: string; fg: string }[] = [
+    { cols: [1, 2],       bg: "FFF9FAFB", fg: "FF334155" }, // 候補者
+    { cols: [3, 4, 5],    bg: "FFEFF6FF", fg: "FF1E40AF" }, // 履歴書要約
+    { cols: [6, 7, 8],    bg: "FFF5F3FF", fg: "FF6D28D9" }, // 評価内容
+    { cols: [9, 10, 11],  bg: "FFFFFBEB", fg: "FF92400E" }, // 評価結果
+    { cols: [12, 13, 14, 15], bg: "FFF9FAFB", fg: "FF475569" }, // 面談メタ
+  ];
+  subGroupFills.forEach(({ cols, bg, fg }) => {
+    cols.forEach((col) => {
+      const c = subRow.getCell(col);
+      c.fill = solidFill(bg);
+      c.font = { bold: true, size: 11, color: { argb: fg } };
+    });
+  });
+
   // ソート：作成日時 desc（新しい順）。同日内では氏名昇順
   const sorted = [...sessions].sort((a, b) => {
     const ta = new Date(a.作成日時).getTime();
@@ -598,7 +656,7 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
     return a.氏名.localeCompare(b.氏名, "ja");
   });
 
-  for (const s of sorted) {
+  sorted.forEach((s, dataIdx) => {
     const candidate = getCandidate(s.id);
     const evalu = getEvaluation(s.id);
     // 使用AI: ⑧評価の provider を優先、無ければ②要約の provider、どちらも未設定なら defaultProvider。
@@ -680,8 +738,14 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
     };
     row.getCell(1).font = { bold: true };
 
-    // 2: 役割
-    row.getCell(2).alignment = { vertical: "middle", horizontal: "center" };
+    // 2: 役割 — pill 風の色付け（マスタと同じ配色）
+    const roleId = getRoleIdFromLabel(s.役割) ?? "";
+    const roleColor = ROLE_PILL_COLORS[roleId] ?? "FF64748B";
+    const roleCell = row.getCell(2);
+    roleCell.alignment = { vertical: "middle", horizontal: "center" };
+    roleCell.fill = solidFill(roleColor);
+    roleCell.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+    roleCell.border = BORDER_WHITE;
 
     // 3: 経歴サマリ
     row.getCell(3).alignment = {
@@ -748,7 +812,6 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
     if (typeof totalCell.value === "number") {
       totalCell.numFmt = "0.00";
       const score = totalCell.value;
-      const roleId = getRoleIdFromLabel(s.役割) ?? "";
       const goalLine =
         (ev && resolveEvalForRole(ev, roleId)?.合格ライン) ??
         ev?.合格ライン ??
@@ -828,13 +891,23 @@ export async function buildSessionsXlsx(): Promise<Buffer> {
       axisBlockLines,
     );
     row.height = Math.max(28, Math.min(400, maxLines * 16 + 12));
-  }
+
+    // ゼブラ縞: 偶数番目のデータ行 (dataIdx=1,3,5..) にゼブラ用の淡色を当てる。
+    // ただし 役割セル(2) と 総合スコア/合否/自動削除 は色付き済みなのでスキップ。
+    if (dataIdx % 2 === 1) {
+      for (const col of [1, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14]) {
+        const cell = row.getCell(col);
+        if (!cell.fill) cell.fill = solidFill("FFF9FAFB");
+      }
+    }
+  });
 
   applyBordersTo(ws);
 
+  // ソートは row 2（sub header）から。autoFilter も row 2 から掛ける
   ws.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: sorted.length + 1, column: header.length },
+    from: { row: 2, column: 1 },
+    to: { row: sorted.length + 2, column: 15 },
   };
 
   const buf = await wb.xlsx.writeBuffer();
@@ -890,7 +963,7 @@ function getRoleIdFromLabel(label: string): string | null {
 
 /**
  * 1 セッションを 1 xlsx にまとめる。5 sheet 構成:
- *   ①候補者 / ②条件 / ③質問 / ④議事録 / ⑤評価
+ *   ①候補者 / ②条件 / ③質問 / ④面談内容 / ⑤評価
  *
  * JSON が正本、xlsx は閲覧専用のミラー（設計）。
  * セクションが未作成の場合は、そのシートに「未入力」プレースホルダを置く。
@@ -925,16 +998,22 @@ export async function buildSessionXlsx(id: string): Promise<Buffer | null> {
 
 type SessionMeta = NonNullable<ReturnType<typeof getSessionMeta>>;
 
-/** sessions/<id>/session.xlsx に書き出す。失敗は console.warn のみ。 */
+/** sessions/<id>/<id>.xlsx に書き出す。失敗は console.warn のみ。
+ *   旧 sessions/<id>/session.xlsx が残っていれば同時に削除する（マイグレーション）。 */
 export async function writeSessionMirror(id: string): Promise<void> {
   try {
     const buf = await buildSessionXlsx(id);
     if (!buf) return;
     const dir = path.join(getDataRoot(), "sessions", id);
     if (!fs.existsSync(dir)) return; // セッション未生成/削除済ならスキップ
-    fs.writeFileSync(path.join(dir, SESSION_FILE), buf);
+    fs.writeFileSync(path.join(dir, sessionXlsxFileName(id)), buf);
+    // 旧名の残骸を掃除（存在するときだけ）
+    const legacy = path.join(dir, LEGACY_SESSION_FILE);
+    if (fs.existsSync(legacy)) {
+      try { fs.unlinkSync(legacy); } catch { /* 掃除失敗は致命的でないので握りつぶす */ }
+    }
   } catch (e) {
-    console.warn(`[excelMirror] session.xlsx 書込失敗 (${id}):`, e);
+    console.warn(`[excelMirror] session xlsx 書込失敗 (${id}):`, e);
   }
 }
 
@@ -1163,20 +1242,20 @@ function addQuestionsSheet(
   applyBordersTo(ws);
 }
 
-/** ④議事録 シート */
+/** ④面談内容 シート */
 function addMinutesSheet(
   wb: ExcelJS.Workbook,
   meta: SessionMeta,
   min: ReturnType<typeof getMinutes>,
 ): void {
-  const ws = wb.addWorksheet("④議事録", {
+  const ws = wb.addWorksheet("④面談内容", {
     views: [{ state: "frozen", ySplit: 4, showGridLines: false }],
   });
   ws.columns = [{ width: 22 }, { width: 100 }];
-  addSectionHeader(ws, "④ 議事録", meta, 2);
+  addSectionHeader(ws, "④ 面談内容", meta, 2);
 
   if (!min || !min.text.trim()) {
-    placeholder(ws, 4, 2, "議事録はまだ入力されていません。");
+    placeholder(ws, 4, 2, "面談内容はまだ入力されていません。");
     return;
   }
 
@@ -1185,7 +1264,7 @@ function addMinutesSheet(
   if (min.summarized) cursor = addKV(ws, cursor, "AI 要約", "済");
   cursor += 1;
 
-  // 議事録本文はセル 1 つに折返し表示
+  // 面談内容本文はセル 1 つに折返し表示
   ws.mergeCells(cursor, 1, cursor, 2);
   const body = ws.getCell(cursor, 1);
   body.value = min.text;

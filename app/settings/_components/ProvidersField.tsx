@@ -48,11 +48,11 @@ export function ProvidersField({ defaultProvider, providers, envStatus }: Props)
   return (
     <section className="space-y-3">
       <div className="font-medium text-sm">AI プロバイダ設定</div>
-      <div className="text-xs text-zinc-500 leading-relaxed">
+      <div className="text-xs text-muted-foreground leading-relaxed">
         各プロバイダの API キーを入力。<strong>既定</strong>に選ばれたプロバイダが ②⑤⑧ の API モード実行時に使われる。
-        環境変数（<code className="bg-zinc-100 px-1 rounded">ANTHROPIC_API_KEY</code> /{" "}
-        <code className="bg-zinc-100 px-1 rounded">OPENAI_API_KEY</code> /{" "}
-        <code className="bg-zinc-100 px-1 rounded">GOOGLE_API_KEY</code>）が設定されている場合はそちらが優先。
+        環境変数（<code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code> /{" "}
+        <code className="bg-muted px-1 rounded">OPENAI_API_KEY</code> /{" "}
+        <code className="bg-muted px-1 rounded">GOOGLE_API_KEY</code>）が設定されている場合はそちらが優先。
       </div>
 
       <RadioGroup
@@ -102,7 +102,7 @@ function ProviderCard({
     ? { label: "環境変数で設定済", cls: "text-emerald-700" }
     : hasFileKey
       ? { label: "✓ 設定済", cls: "text-emerald-600" }
-      : { label: "未設定", cls: "text-zinc-400" };
+      : { label: "未設定", cls: "text-muted-foreground opacity-70" };
 
   async function handleToggleEditing(checked: boolean) {
     if (checked && hasFileKey) {
@@ -151,7 +151,7 @@ function ProviderCard({
       </div>
 
       <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
-        <Label htmlFor={`key_${id}`} className="text-xs text-zinc-500">
+        <Label htmlFor={`key_${id}`} className="text-xs text-muted-foreground">
           API キー
         </Label>
         <div className="flex gap-2 items-center">
@@ -209,7 +209,7 @@ function ProviderCard({
         <div className="pl-[108px]">
           <Label
             htmlFor={`remove_${id}`}
-            className="inline-flex items-center gap-2 text-xs text-zinc-600 font-normal cursor-pointer"
+            className="inline-flex items-center gap-2 text-xs text-muted-foreground font-normal cursor-pointer"
           >
             <Checkbox id={`remove_${id}`} name={`remove_${id}`} value="on" />
             保存済キーを削除

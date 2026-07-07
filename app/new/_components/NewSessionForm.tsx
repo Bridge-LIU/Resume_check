@@ -19,10 +19,11 @@ import { createSessionAction } from "../actions";
 function pillClassFor(id: string): string {
   if (id === "NW") return "pill pill-role-nw";
   if (id === "Server") return "pill pill-role-sv";
+  if (id === "Dev") return "pill pill-role-dev";
   if (id === "Special") return "pill pill-role-sp";
   if (id === "PMO") return "pill pill-role-pm";
   if (id === "ITSupport") return "pill pill-role-it";
-  return "pill bg-zinc-200 text-zinc-700";
+  return "pill bg-secondary text-foreground/85";
 }
 
 export function NewSessionForm({ roles }: { roles: Role[] }) {
@@ -39,12 +40,12 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
   return (
     <form action={createSessionAction} className="p-6 space-y-5 max-w-xl">
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-zinc-700">
+        <label className="text-sm font-medium text-foreground/85">
           役割 <span className="text-red-500">*</span>
         </label>
         {roles.length === 0 ? (
           <div className="border rounded px-3 py-2 text-sm bg-amber-50 text-amber-800">
-            役割マスタが未登録です。先に{" "}
+            求人情報が未登録です。先に{" "}
             <Link href="/master" className="underline">
               /master
             </Link>{" "}
@@ -56,28 +57,38 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
               <SelectTrigger className="w-full h-auto py-2">
                 <SelectValue placeholder="— 選択してください —" />
               </SelectTrigger>
-              <SelectContent>
+              {/* max-h-96 の既定を撤廃。ビューポート近くまで縦に伸ばして
+                 スクロール発生を最小化する（Radix の衝突検出で自動的に画面内に収まる） */}
+              <SelectContent className="max-h-[calc(100vh-8rem)]">
                 {roles.map((r) => (
                   <SelectItem key={r.id} value={r.id}>
-                    <div className="flex items-center gap-2 min-w-0 py-0.5">
-                      <span className={`${pillClassFor(r.id)} shrink-0`}>
+                    <div className="flex items-center gap-2.5 min-w-0 py-0.5 w-full">
+                      {/* 左: pill (固定幅) */}
+                      <span
+                        className={`${pillClassFor(r.id)} shrink-0 w-20 text-center`}
+                      >
                         {r.id}
                       </span>
-                      <span className="font-medium text-zinc-800 truncate">
-                        {r.役割}
-                      </span>
-                      <span className="text-xs text-zinc-500 shrink-0">
-                        経験 {r.経験 || "—"}
-                      </span>
-                      {r.未経験可 && (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                          未経験可
-                        </span>
-                      )}
-                      {r.ロック && (
+                      {/* 中央: 役割名 (2 行構成) */}
+                      <div className="flex-1 min-w-0 leading-tight">
+                        <div className="font-medium text-foreground truncate">
+                          {r.役割 || <span className="text-muted-foreground opacity-70">（名称未設定）</span>}
+                        </div>
+                        <div className="text-2xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                          <span>経験 {r.経験 || "—"}</span>
+                          {r.未経験可 && (
+                            <>
+                              <span className="text-muted-foreground opacity-50">·</span>
+                              <span className="text-emerald-700">未経験可</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {/* 右: 編集不可アイコン */}
+                      {r.編集不可 && (
                         <Lock
                           className="w-3.5 h-3.5 text-amber-600 shrink-0"
-                          aria-label="ロック済み"
+                          aria-label="編集不可"
                         />
                       )}
                     </div>
@@ -89,13 +100,13 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
             <input type="hidden" name="役割" value={roleId} />
           </>
         )}
-        <div className="text-xs text-zinc-500">
+        <div className="text-xs text-muted-foreground">
           役割を選ぶと ④ にマスタが読み込まれ、確定後に凍結されます。
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-zinc-700" htmlFor="new-session-name">
+        <label className="text-sm font-medium text-foreground/85" htmlFor="new-session-name">
           氏名 <span className="text-red-500">*</span>
         </label>
         <Input
@@ -117,7 +128,7 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
             {nameError}
           </div>
         ) : (
-          <div id="new-session-name-help" className="text-xs text-zinc-500">
+          <div id="new-session-name-help" className="text-xs text-muted-foreground">
             フォルダ名と一覧表示に使われます（60文字以内・記号 / \ : * ? &quot; &lt; &gt; | は不可）。
           </div>
         )}
@@ -125,20 +136,20 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
 
       <div className="flex items-center gap-2 border-t pt-4">
         <Button asChild variant="outline" size="sm">
-          <Link href="/">キャンセル</Link>
+          <Link href="/list">キャンセル</Link>
         </Button>
         <div className="flex-1" />
         <Button
           type="submit"
           disabled={roles.length === 0 || !canSubmit}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           作成して開く →
         </Button>
       </div>
-      <div className="text-xs text-zinc-500">
+      <div className="text-xs text-muted-foreground">
         作成 →{" "}
-        <code className="bg-zinc-100 px-1 rounded">
+        <code className="bg-muted px-1 rounded">
           data/sessions/&lt;日時&gt;_&lt;氏名&gt;_&lt;役割&gt;/
         </code>{" "}
         生成 → セッション画面へ

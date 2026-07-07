@@ -131,7 +131,7 @@ const TECH_QUESTIONS_BY_ROLE = {
   ],
 };
 
-// ─────────────────── 議事録の回答テンプレ ───────────────────
+// ─────────────────── 面談内容の回答テンプレ ───────────────────
 // 各質問 × プロファイル（high/mid/low）で回答内容を差別化。
 // 「【Q番号: 質問短縮】」ヘッダの下に 3〜5 個の bullet で回答内容を書く。
 const RESPONSE_TEMPLATES = {
@@ -833,7 +833,7 @@ function generateOne(i) {
     });
   }
 
-  // ─── ⑥ 議事録 ───
+  // ─── ⑥ 面談内容 ───
   let minutesVars = null;
   if (status === "面談済" || status === "評価済") {
     const m = buildMinutes(role, 氏名, 作成日時, profile);

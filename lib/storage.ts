@@ -104,11 +104,11 @@ function migrateSettings(raw: unknown): Settings {
   const questionCounts = {
     nontech: Math.max(
       1,
-      Math.min(50, Math.floor(s.questionCounts?.nontech ?? 7)),
+      Math.min(50, Math.floor(s.questionCounts?.nontech ?? 10)),
     ),
     tech: Math.max(
       1,
-      Math.min(50, Math.floor(s.questionCounts?.tech ?? 8)),
+      Math.min(50, Math.floor(s.questionCounts?.tech ?? 10)),
     ),
   };
 
@@ -395,7 +395,16 @@ export function listRoles(): Role[] {
 
 export function getRole(id: string): Role | null {
   assertRoleId(id);
-  return readJson<Role>(path.join(rolesDir(), `${id}.json`));
+  const raw = readJson<Role & { ロック?: boolean }>(
+    path.join(rolesDir(), `${id}.json`),
+  );
+  if (!raw) return null;
+  // v1.x 時代の旧フィールド名 `ロック` を「編集不可」に畳み込む（read 側の後方互換）。
+  if (raw.編集不可 === undefined && raw.ロック !== undefined) {
+    raw.編集不可 = raw.ロック;
+  }
+  delete raw.ロック;
+  return raw;
 }
 
 export function saveRole(role: Role): void {
@@ -639,12 +648,12 @@ export function createSession(氏名: string, 役割: string): SessionMeta {
     hold: false,
   };
   saveSessionMeta(meta);
-  // 役割マスタが「ロック」状態なら、④凍結を即時実行して conditions_snapshot を先出しする。
+  // 役割マスタが「編集不可」状態なら、④凍結を即時実行して conditions_snapshot を先出しする。
   // 目的：セッション画面で編集/凍結ボタンを一切見せず、常に読取表示にするため。
   // マスタ or 評価条件が欠けていれば静かにスキップ（従来通り手動凍結にフォールバック）。
   const role = getRole(役割);
   const evalCriteria = getEvalCriteria();
-  if (role?.ロック && evalCriteria) {
+  if (role?.編集不可 && evalCriteria) {
     const snapshot: ConditionsSnapshot = {
       role,
       eval: resolveEvalForRole(evalCriteria, role.id),
@@ -667,7 +676,7 @@ export function deleteSession(id: string): void {
  * - 引き継ぎ: ②要約 / uploads/（履歴書は役割に依らない）
  * - 同じ役割なら ④凍結条件 / ⑤質問 も引き継ぐ
  * - 役割を変えた場合 ④⑤ は破棄（旧役割向けに作られたものなので意味がない）
- * - ⑥議事録 / ⑧評価は常に引き継がない（別ラウンドのため）
+ * - ⑥面談内容 / ⑧評価は常に引き継がない（別ラウンドのため）
  *
  * @param srcId 複製元のセッション ID
  * @param opts.氏名 上書きする氏名（省略時は元と同じ）

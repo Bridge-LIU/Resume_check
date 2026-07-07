@@ -40,9 +40,9 @@ export function MaxPromptCopy({
 
   return (
     <div
-      className={`border border-dashed rounded p-2 bg-zinc-50 flex items-center gap-3 text-xs ${className}`}
+      className={`border border-dashed rounded p-2 bg-muted flex items-center gap-3 text-xs ${className}`}
     >
-      {hint && <span className="text-zinc-600 flex-1">{hint}</span>}
+      {hint && <span className="text-muted-foreground flex-1">{hint}</span>}
       <div className="flex flex-col gap-1 items-end">
         <Button
           type="button"

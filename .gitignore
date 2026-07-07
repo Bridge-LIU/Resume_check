@@ -40,7 +40,7 @@ yarn-error.log*
 # 機密：APIキー・dataRoot を含むローカル設定。サンプルは config/settings.example.json
 /config/settings.json
 
-# 機密：PII（履歴書・議事録・評価）はローカル保存。git には上げない
+# 機密：PII（履歴書・面談内容・評価）はローカル保存。git には上げない
 /data/
 
 # 履歴書抽出のローカル検証用サンプル（scripts/gen-resume-samples.mjs 自動生成）

@@ -35,14 +35,14 @@ export function RadarChart({
 }) {
   if (axes.length < 3) {
     return (
-      <div className="border rounded-lg p-6 text-sm text-zinc-500 text-center">
+      <div className="border rounded-lg p-6 text-sm text-muted-foreground text-center">
         レーダーチャートは評価軸が 3 つ以上必要です（現在 {axes.length} 軸）。
       </div>
     );
   }
   if (candidates.length === 0) {
     return (
-      <div className="border rounded-lg p-6 text-sm text-zinc-500 text-center">
+      <div className="border rounded-lg p-6 text-sm text-muted-foreground text-center">
         評価済の候補者がありません。
       </div>
     );
@@ -78,7 +78,7 @@ export function RadarChart({
   }
 
   return (
-    <div className="border rounded-lg p-4 bg-white">
+    <div className="border rounded-lg p-4 bg-card">
       <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
         <svg
           width={size}
@@ -188,7 +188,7 @@ export function RadarChart({
         </svg>
 
         <div className="flex-1 space-y-2 text-sm">
-          <div className="font-medium text-zinc-700">凡例</div>
+          <div className="font-medium text-foreground/85">凡例</div>
           <ul className="space-y-1.5">
             {candidates.map((cand, idx) => {
               const color = PALETTE[idx % PALETTE.length];
@@ -204,7 +204,7 @@ export function RadarChart({
               );
             })}
           </ul>
-          <div className="text-xs text-zinc-500 pt-2 border-t mt-3">
+          <div className="text-xs text-muted-foreground pt-2 border-t mt-3">
             軸の値域は 0〜{scaleMax}。未評価の軸は中心（0）として描画されます。
           </div>
         </div>

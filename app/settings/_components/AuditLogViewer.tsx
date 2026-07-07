@@ -9,8 +9,8 @@ const EVENT_LABEL: Record<AuditEvent, string> = {
   "session.duplicate": "セッション複製",
   "session.freezeConditions": "④条件凍結",
   "session.saveEvaluation": "⑧評価保存",
-  "master.role.upsert": "役割マスタ更新",
-  "master.role.delete": "役割マスタ削除",
+  "master.role.upsert": "求人情報更新",
+  "master.role.delete": "求人情報削除",
   "master.criteria.update": "評価条件更新",
   "master.import": "マスタ取込",
   "backup.create": "バックアップ作成",
@@ -20,7 +20,7 @@ const EVENT_LABEL: Record<AuditEvent, string> = {
   "session.candidateSummarize": "②候補者 API 要約",
   "session.questionsGenerate": "⑤質問 API 生成",
   "session.questionsReformat": "⑤質問 API 整形",
-  "session.minutesSummarize": "⑥議事録 API 要約",
+  "session.minutesSummarize": "⑥面談内容 API 要約",
   "analytics.fake.generate": "ダミー匿名サマリ生成",
   "analytics.fake.clear": "ダミー匿名サマリ削除",
 };
@@ -32,13 +32,13 @@ const EVENT_PILL: Partial<Record<AuditEvent, string>> = {
   "session.restore": "bg-blue-100 text-blue-800",
   "session.freezeConditions": "bg-violet-100 text-violet-800",
   "session.saveEvaluation": "bg-blue-100 text-blue-800",
-  "master.role.upsert": "bg-zinc-100 text-zinc-700",
+  "master.role.upsert": "bg-muted text-foreground/85",
   "master.role.delete": "bg-red-100 text-red-800",
-  "master.criteria.update": "bg-zinc-100 text-zinc-700",
+  "master.criteria.update": "bg-muted text-foreground/85",
   "master.import": "bg-violet-100 text-violet-800",
   "backup.create": "bg-emerald-100 text-emerald-800",
   "backup.delete": "bg-red-100 text-red-800",
-  "retention.schedulerStart": "bg-zinc-100 text-zinc-700",
+  "retention.schedulerStart": "bg-muted text-foreground/85",
   "retention.sweep.auto": "bg-amber-100 text-amber-800",
   "session.candidateSummarize": "bg-blue-100 text-blue-800",
   "session.questionsGenerate": "bg-blue-100 text-blue-800",
@@ -46,10 +46,24 @@ const EVENT_PILL: Partial<Record<AuditEvent, string>> = {
   "session.minutesSummarize": "bg-blue-100 text-blue-800",
 };
 
+// audit.log の ts は UTC ISO 8601（"2026-07-07T05:25:51.872Z" など）。
+// サーバ TZ に依存せず、常に JST で描画する。
+const JST_FORMAT = new Intl.DateTimeFormat("ja-JP", {
+  timeZone: "Asia/Tokyo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hour12: false,
+});
+
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  if (Number.isNaN(d.getTime())) return iso;
+  // ja-JP は "2026/07/07 14:25:51" 形式で返る。"/" を "-" に置換。
+  return JST_FORMAT.format(d).replace(/\//g, "-");
 }
 
 function metaSummary(entry: AuditLogEntry): string {
@@ -77,11 +91,11 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border shadow-sm">
+    <div className="bg-card rounded-xl border shadow-sm">
       <details className="group">
-        <summary className="p-6 cursor-pointer list-none flex items-center gap-3 hover:bg-zinc-50/50 rounded-xl">
+        <summary className="p-6 cursor-pointer list-none flex items-center gap-3 hover:bg-accent/50 rounded-xl">
           <svg
-            className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-90"
+            className="h-4 w-4 text-muted-foreground opacity-70 transition-transform group-open:rotate-90"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
@@ -89,26 +103,26 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
             <path d="M7.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L10.586 10 7.293 6.707a1 1 0 010-1.414z" />
           </svg>
           <h3 className="font-bold">直近の監査ログ</h3>
-          <span className="text-xs text-zinc-500">
+          <span className="text-xs text-muted-foreground">
             最新 {limit} 件 ・ {entries.length}件記録
           </span>
           <div className="flex-1" />
-          <span className="text-xs text-zinc-400 font-mono">
+          <span className="text-xs text-muted-foreground opacity-70 font-mono">
             data/logs/audit.log
           </span>
         </summary>
         <div className="px-6 pb-6 space-y-3">
-          <div className="text-xs text-zinc-500">
-            PII（氏名・履歴書本文・議事録本文）は記録しない方針。表示は時刻降順。
+          <div className="text-xs text-muted-foreground">
+            PII（氏名・履歴書本文・面談内容本文）は記録しない方針。表示は時刻降順。
           </div>
           {entries.length === 0 ? (
-            <div className="border-2 border-dashed rounded-lg p-8 text-center text-sm text-zinc-500">
+            <div className="border-2 border-dashed rounded-lg p-8 text-center text-sm text-muted-foreground">
               まだ監査ログがありません
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-zinc-50 text-zinc-600">
+                <thead className="bg-muted text-muted-foreground">
                   <tr>
                     <th className="text-left px-3 py-2 font-medium w-44">時刻</th>
                     <th className="text-left px-3 py-2 font-medium w-36">イベント</th>
@@ -118,23 +132,23 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
                 </thead>
                 <tbody className="divide-y">
                   {entries.map((e, i) => (
-                    <tr key={`${e.ts}-${i}`} className="hover:bg-zinc-50">
-                      <td className="px-3 py-1.5 tabular text-zinc-600">
+                    <tr key={`${e.ts}-${i}`} className="hover:bg-accent">
+                      <td className="px-3 py-1.5 tabular text-muted-foreground">
                         {formatTime(e.ts)}
                       </td>
                       <td className="px-3 py-1.5">
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-2xs font-medium ${
-                            EVENT_PILL[e.event] ?? "bg-zinc-100 text-zinc-700"
+                            EVENT_PILL[e.event] ?? "bg-muted text-foreground/85"
                           }`}
                         >
                           {EVENT_LABEL[e.event] ?? e.event}
                         </span>
                       </td>
-                      <td className="px-3 py-1.5 font-mono text-xs text-zinc-700 break-all">
+                      <td className="px-3 py-1.5 font-mono text-xs text-foreground/85 break-all">
                         {e.sessionId ?? "—"}
                       </td>
-                      <td className="px-3 py-1.5 text-zinc-600 break-all">
+                      <td className="px-3 py-1.5 text-muted-foreground break-all">
                         {metaSummary(e) || "—"}
                       </td>
                     </tr>

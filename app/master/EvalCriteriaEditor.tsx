@@ -187,10 +187,10 @@ export default function EvalCriteriaEditor({
   }
 
   return (
-    <section className="bg-white rounded-xl border shadow-sm">
+    <section className="bg-card rounded-xl border shadow-sm">
       <header className="px-6 py-3 border-b flex items-center gap-3">
         <h2 className="font-bold text-sm">評価条件マスタ（BARS）</h2>
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-muted-foreground">
           軸は全役割共通／重み・合格ラインは役割別
         </span>
         <div className="flex-1" />
@@ -213,7 +213,7 @@ export default function EvalCriteriaEditor({
 
         {/* ─── ① 軸定義（pill 風、軽量エディタ） ─── */}
         <div>
-          <div className="text-xs text-zinc-500 mb-2">
+          <div className="text-xs text-muted-foreground mb-2">
             評価軸（名前と並び順のみ。重みは下の役割別表で設定）
           </div>
           <AxisPillList
@@ -264,15 +264,15 @@ export default function EvalCriteriaEditor({
 
         {/* ─── ④ 詳細（折りたたみ） ─── */}
         <details className="text-sm">
-          <summary className="text-zinc-600 hover:text-zinc-900 cursor-pointer text-xs">
+          <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs">
             スケール・自己解決レベル・出力項目（詳細）
           </summary>
           <div className="mt-3 space-y-4">
             <div>
-              <div className="text-xs text-zinc-500 mb-2">スケール</div>
+              <div className="text-xs text-muted-foreground mb-2">スケール</div>
               <div className="grid grid-cols-4 gap-3 max-w-2xl">
                 <label className="text-sm">
-                  <div className="text-xs text-zinc-500 mb-1">最小</div>
+                  <div className="text-xs text-muted-foreground mb-1">最小</div>
                   <Input
                     type="number"
                     step="0.1"
@@ -282,7 +282,7 @@ export default function EvalCriteriaEditor({
                   />
                 </label>
                 <label className="text-sm">
-                  <div className="text-xs text-zinc-500 mb-1">最大</div>
+                  <div className="text-xs text-muted-foreground mb-1">最大</div>
                   <Input
                     type="number"
                     step="0.1"
@@ -292,7 +292,7 @@ export default function EvalCriteriaEditor({
                   />
                 </label>
                 <label className="text-sm">
-                  <div className="text-xs text-zinc-500 mb-1">刻み</div>
+                  <div className="text-xs text-muted-foreground mb-1">刻み</div>
                   <Input
                     type="number"
                     step="0.1"
@@ -302,19 +302,19 @@ export default function EvalCriteriaEditor({
                   />
                 </label>
                 <label className="text-sm">
-                  <div className="text-xs text-zinc-500 mb-1">段階数（自動）</div>
+                  <div className="text-xs text-muted-foreground mb-1">段階数（自動）</div>
                   <Input
                     type="number"
                     value={draft.スケール.段階数}
                     readOnly
-                    className="w-full tabular bg-zinc-100 text-zinc-600"
+                    className="w-full tabular bg-muted text-muted-foreground"
                   />
                 </label>
               </div>
             </div>
 
             <label className="text-sm block max-w-xl">
-              <div className="text-xs text-zinc-500 mb-1">
+              <div className="text-xs text-muted-foreground mb-1">
                 自己解決レベル（説明文）
               </div>
               <Input
@@ -327,18 +327,18 @@ export default function EvalCriteriaEditor({
             </label>
 
             <div>
-              <div className="text-xs text-zinc-500 mb-2">出力項目（固定）</div>
+              <div className="text-xs text-muted-foreground mb-2">出力項目（固定）</div>
               <div className="flex flex-wrap gap-2">
                 {draft.出力.map((item) => (
                   <span
                     key={item}
-                    className="inline-block bg-zinc-100 text-zinc-700 text-xs px-3 py-1 rounded-full border"
+                    className="inline-block bg-muted text-foreground/85 text-xs px-3 py-1 rounded-full border"
                   >
                     {item}
                   </span>
                 ))}
               </div>
-              <div className="text-xs text-zinc-400 mt-1">
+              <div className="text-xs text-muted-foreground opacity-70 mt-1">
                 ※ 設計書 §6 準拠
               </div>
             </div>
@@ -365,35 +365,35 @@ function CommonDefaultBar({
   return (
     <div className="border border-amber-200 bg-amber-50 rounded-lg px-3 py-2 flex items-center gap-4 text-sm flex-wrap">
       <span className="text-amber-900 font-medium text-xs">共通既定</span>
-      <span className="text-zinc-700">
+      <span className="text-foreground/85">
         軸重み ={" "}
         <strong className="tabular text-amber-900">
           {GLOBAL_DEFAULT_WEIGHT}
         </strong>
-        <span className="text-zinc-400 text-xs ml-1">（固定）</span>
+        <span className="text-muted-foreground opacity-70 text-xs ml-1">（固定）</span>
       </span>
-      <span className="text-zinc-300">｜</span>
-      <label className="text-zinc-700 flex items-center gap-1">
+      <span className="text-muted-foreground opacity-50">｜</span>
+      <label className="text-foreground/85 flex items-center gap-1">
         合格ライン{" "}
         <Input
           type="number"
           step="0.1"
           value={baseGoal}
           onChange={(e) => onBaseGoal(Number(e.target.value))}
-          className="w-16 h-7 tabular text-center bg-white"
+          className="w-16 h-7 tabular text-center bg-card"
         />
       </label>
-      <label className="text-zinc-700 flex items-center gap-1">
+      <label className="text-foreground/85 flex items-center gap-1">
         普通ライン{" "}
         <Input
           type="number"
           step="0.1"
           value={basePass}
           onChange={(e) => onBasePass(Number(e.target.value))}
-          className="w-16 h-7 tabular text-center bg-white"
+          className="w-16 h-7 tabular text-center bg-card"
         />
       </label>
-      <span className="text-zinc-400 text-xs ml-auto">
+      <span className="text-muted-foreground opacity-70 text-xs ml-auto">
         下の役割行で空欄のセルはこの値を使用
       </span>
     </div>
@@ -437,7 +437,7 @@ function AxisPillList({
 
   if (axes.length === 0) {
     return (
-      <div className="border rounded-lg px-4 py-6 text-center text-zinc-500 text-sm">
+      <div className="border rounded-lg px-4 py-6 text-center text-muted-foreground text-sm">
         評価軸が未設定です。下の入力欄から追加してください。
       </div>
     );
@@ -496,8 +496,8 @@ function SortableAxisPill({
     <div
       ref={setNodeRef}
       style={style}
-      className={`inline-flex items-center gap-1 bg-white border rounded-full px-2 py-0.5 shadow-sm transition-shadow ${
-        isDragging ? "shadow-lg border-blue-400" : "border-zinc-200 hover:border-zinc-300"
+      className={`inline-flex items-center gap-1 bg-card border rounded-full px-2 py-0.5 shadow-sm transition-shadow ${
+        isDragging ? "shadow-lg border-blue-400" : "border-border hover:border-border"
       }`}
     >
       <button
@@ -506,21 +506,21 @@ function SortableAxisPill({
         {...listeners}
         title="ドラッグで並び替え"
         aria-label={`${axis.名前} を並び替え`}
-        className="text-zinc-400 hover:text-blue-600 cursor-grab active:cursor-grabbing px-0.5 flex items-center touch-none"
+        className="text-muted-foreground opacity-70 hover:text-blue-600 cursor-grab active:cursor-grabbing px-0.5 flex items-center touch-none"
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
       <input
         value={axis.名前}
         onChange={(e) => onRename(index, e.target.value)}
-        className="bg-transparent text-sm border-0 outline-none focus:bg-zinc-50 focus:rounded px-1 min-w-[5rem]"
+        className="bg-transparent text-sm border-0 outline-none focus:bg-muted focus:rounded px-1 min-w-[5rem]"
         style={{ width: `${Math.max(axis.名前.length, 4)}ch` }}
       />
       <button
         type="button"
         onClick={() => onRemove(axis.名前)}
         title="削除"
-        className="text-zinc-400 hover:text-red-600 text-xs px-1"
+        className="text-muted-foreground opacity-70 hover:text-red-600 text-xs px-1"
       >
         ×
       </button>
@@ -556,21 +556,21 @@ function RoleOverrideTable({
   }
   if (roles.length === 0) {
     return (
-      <div className="border rounded-lg px-4 py-6 text-center text-zinc-500 text-sm">
-        役割マスタが空です。上の「求める人材条件マスタ」で役割を追加すると、ここに 1 行ずつ並びます。
+      <div className="border rounded-lg px-4 py-6 text-center text-muted-foreground text-sm">
+        求人情報が空です。上の「求める人材条件マスタ」で役割を追加すると、ここに 1 行ずつ並びます。
       </div>
     );
   }
   return (
     <div>
-      <div className="text-xs text-zinc-500 mb-2">
+      <div className="text-xs text-muted-foreground mb-2">
         役割別の重み・合格ライン
-        <span className="text-zinc-400 ml-2">
+        <span className="text-muted-foreground opacity-70 ml-2">
           ※ 空欄＝共通既定を使用（プレースホルダで予告表示）。④凍結時に反映
         </span>
       </div>
       <table className="w-full text-sm border rounded-lg overflow-hidden">
-        <thead className="bg-zinc-50 text-zinc-600 text-xs">
+        <thead className="bg-muted text-muted-foreground text-xs">
           <tr>
             <th className="text-left px-3 py-2 w-44">役割</th>
             {axes.map((a) => (
@@ -591,10 +591,10 @@ function RoleOverrideTable({
             const pass = ov?.普通ライン;
             const hasOverride = !!ov && Object.keys(ov).length > 0;
             return (
-              <tr key={role.id} className="hover:bg-zinc-50">
+              <tr key={role.id} className="hover:bg-accent">
                 <td className="px-3 py-2">
                   <div className="font-medium">{role.役割}</div>
-                  <div className="text-xs text-zinc-500">{role.id}</div>
+                  <div className="text-xs text-muted-foreground">{role.id}</div>
                 </td>
                 {axes.map((_, axisIndex) => {
                   const w = weights[axisIndex];
@@ -649,7 +649,7 @@ function RoleOverrideTable({
                   {hasOverride && (
                     <button
                       type="button"
-                      className="text-zinc-400 hover:text-red-600 text-sm"
+                      className="text-muted-foreground opacity-70 hover:text-red-600 text-sm"
                       onClick={() => onClear(role.id)}
                       title="この役割の上書きをクリア"
                     >

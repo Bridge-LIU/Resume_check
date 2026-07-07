@@ -673,44 +673,48 @@
 
 <div class="layout">
 
-  <!-- ─── LEFT NAV ─── -->
+  <!-- ─── LEFT NAV (アプリの左サイドバー準拠) ─── -->
   <aside class="left" id="left-nav">
-    <div class="group">入門</div>
+    <div class="group">🏠 ホーム</div>
     <ul>
       <li><a href="#intro" data-page="intro">はじめに</a></li>
       <li><a href="#start" data-page="start">起動方法</a></li>
       <li><a href="#layout" data-page="layout">画面構成</a></li>
     </ul>
-    <div class="group">基本フロー</div>
+    <div class="group">📊 一覧 / 面談</div>
     <ul>
-      <li><a href="#flow" data-page="flow">全体像</a></li>
+      <li><a href="#list" data-page="list">一覧画面</a></li>
+      <li><a href="#flow" data-page="flow">面談フロー全体像</a></li>
       <li><a href="#step1" data-page="step1">新規面談を作る</a></li>
       <li><a href="#step2" data-page="step2">① 候補者情報を貼る</a></li>
       <li><a href="#step4" data-page="step4">② 条件を凍結する</a></li>
       <li><a href="#step5" data-page="step5">③ 質問を貼る</a></li>
-      <li><a href="#step6" data-page="step6">④ 議事録を貼る</a></li>
+      <li><a href="#step6" data-page="step6">④ 面談内容を貼る</a></li>
       <li><a href="#step8" data-page="step8">⑤ 評価を貼る</a></li>
       <li><a href="#status" data-page="status">ステータスの流れ</a></li>
-    </ul>
-    <div class="group">準備・設定</div>
-    <ul>
-      <li><a href="#master" data-page="master">マスタ管理</a></li>
-      <li><a href="#settings" data-page="settings">設定</a></li>
-    </ul>
-    <div class="group">日常運用</div>
-    <ul>
-      <li><a href="#list" data-page="list">一覧画面</a></li>
       <li><a href="#duplicate" data-page="duplicate">複製と役割変更</a></li>
+      <li><a href="#export" data-page="export">Excel エクスポート</a></li>
     </ul>
-    <div class="group">分析・出力</div>
+    <div class="group">📉 分析</div>
     <ul>
       <li><a href="#analytics" data-page="analytics">分析画面</a></li>
       <li><a href="#compare" data-page="compare">横断比較</a></li>
-      <li><a href="#export" data-page="export">Excel エクスポート</a></li>
     </ul>
-    <div class="group">運用管理</div>
+    <div class="group">🗂️ マスタ</div>
+    <ul>
+      <li><a href="#master" data-page="master">求人情報管理</a></li>
+    </ul>
+    <div class="group">💴 コスト</div>
+    <ul>
+      <li><a href="#cost" data-page="cost">コスト試算</a></li>
+    </ul>
+    <div class="group">🗑️ ゴミ箱</div>
     <ul>
       <li><a href="#trash" data-page="trash">ゴミ箱と復元</a></li>
+    </ul>
+    <div class="group">⚙️ 設定</div>
+    <ul>
+      <li><a href="#settings" data-page="settings">設定</a></li>
       <li><a href="#backup" data-page="backup">バックアップ</a></li>
       <li><a href="#audit" data-page="audit">監査ログ</a></li>
     </ul>
@@ -726,7 +730,7 @@
 
   <article class="page" id="p-intro">
     <h1>面談AI評価ツール</h1>
-    <p class="subtitle">採用面談 1 件あたりの「候補者要約 → 条件凍結 → 質問づくり → 議事録 → 評価」をローカル PC で完結させるツールです。</p>
+    <p class="subtitle">採用面談 1 件あたりの「候補者要約 → 条件凍結 → 質問づくり → 面談内容 → 評価」をローカル PC で完結させるツールです。</p>
 
     <h2 id="intro-about">このマニュアルについて</h2>
     <p>左側のメニューで章を切り替えます。各章は <strong>独立したページ</strong> として表示され、右側の「このページ内」は<strong>その章の小節</strong>だけを案内します。右上の 🔍 または <kbd>Ctrl</kbd>+<kbd>K</kbd> で全ページから横断検索できます。</p>
@@ -734,7 +738,7 @@
     <h2 id="intro-features">主な機能</h2>
     <ul>
       <li>面談ごとに専用 URL を作って、関連情報を 1 ヶ所に集約</li>
-      <li>履歴書要約・議事録・評価結果を <strong>貼付</strong> で保存（AI に直接投げる必要なし）</li>
+      <li>履歴書要約・面談内容・評価結果を <strong>貼付</strong> で保存（AI に直接投げる必要なし）</li>
       <li>役割（NW / Server / Dev / PMO / ITSupport / Special）ごとに別々の評価条件</li>
       <li>面談時点の条件を <strong>凍結</strong> → 後でマスタを変えても過去面談に影響しない</li>
       <li>過去面談を <strong>匿名サマリ</strong>として集計・分析</li>
@@ -773,34 +777,48 @@
 
   <article class="page" id="p-layout">
     <h1>画面構成</h1>
-    <p class="subtitle">上部に固定ヘッダ＋ナビ、その下に各ページの本文。右上の「+ 新規面談」でいつでも新規作成できます。</p>
+    <p class="subtitle">左端に <strong>アイコン付きサイドバー</strong>、上部に <strong>タイトル + 新規面談ボタン + テーマ切替 + ユーザーアバターの TopBar</strong>、その下に各ページの本文が並びます。</p>
 
     <h2 id="layout-screenshot">画面全体</h2>
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/list.png" alt="一覧画面">
+        <img src="assets/home.png" alt="ホーム画面（ダッシュボード）">
       </div>
-      <figcaption>一覧画面 (<code>/</code>) — ヘッダ + フィルタ + セッション一覧</figcaption>
+      <figcaption>ホーム画面 (<code>/</code>) — 左サイドバー + 上部 TopBar + ダッシュボード本文</figcaption>
     </figure>
 
-    <h2 id="layout-pages">ページ一覧</h2>
-    <p>ヘッダの上部ナビからは <strong>一覧 / 分析 / マスタ / 設定 / ＋ 新規面談</strong> の 5 つに直接遷移できます。ゴミ箱・比較は各ページ内のボタンや設定画面のリンクから開きます。</p>
+    <h2 id="layout-theme">テーマ切替（ライト / ダーク）</h2>
+    <p>TopBar 右上に月アイコン 🌙 のトグルボタンがあります。クリックで <strong>ライト ⇄ ダーク</strong>を切り替え、選択はブラウザに保存されます。初回訪問時は OS の設定（<code>prefers-color-scheme</code>）を自動追従します。</p>
+    <div class="tip">
+      <p>ダークモードは長時間ダッシュボードを開きっぱなしにする運用（面談中の面談内容貼付など）で目が疲れにくくなります。</p>
+    </div>
+
+    <h2 id="layout-pages">ページ一覧（左サイドバー準拠）</h2>
+    <p>画面左端の縦型サイドバーから主要ページに直接遷移できます。上段が主要メニュー、下段（フッター位置）が運用系メニューです。</p>
+    <table>
+      <thead><tr><th>アイコン</th><th>ページ</th><th>URL</th><th>用途</th></tr></thead>
+      <tbody>
+        <tr><td>🏠</td><td>ホーム</td><td><code>/</code></td><td>ダッシュボード（今週の面談 / 合格率 / 平均スコア / 評価待ち / 最近の活動）</td></tr>
+        <tr><td>📊</td><td>一覧</td><td><code>/list</code></td><td>セッション一覧、フィルタ、新規面談作成、一括比較</td></tr>
+        <tr><td>📉</td><td>分析</td><td><code>/analytics</code></td><td>過去面談を匿名集計</td></tr>
+        <tr><td>🗂️</td><td>マスタ</td><td><code>/master</code></td><td>求人情報・評価条件の編集</td></tr>
+        <tr><td>💴</td><td>コスト</td><td><code>/cost</code></td><td>LLM API のコスト集計（完全版のみ）</td></tr>
+        <tr><td>🗑️</td><td>ゴミ箱</td><td><code>/trash</code></td><td>削除セッションの復元・完全削除</td></tr>
+        <tr><td>⚙️</td><td>設定</td><td><code>/settings</code></td><td>保存先・保存期間・バックアップ・監査ログ</td></tr>
+      </tbody>
+    </table>
+    <p>以下のページはサイドバーからは直接開けず、他ページから遷移します。</p>
     <table>
       <thead><tr><th>ページ</th><th>URL</th><th>到達手段</th><th>用途</th></tr></thead>
       <tbody>
-        <tr><td>一覧</td><td><code>/</code></td><td>ヘッダ「一覧」</td><td>セッション一覧、フィルタ、検索</td></tr>
-        <tr><td>新規</td><td><code>/new</code></td><td>ヘッダ「＋ 新規面談」</td><td>面談を新規作成</td></tr>
-        <tr><td>セッション</td><td><code>/sessions/&lt;id&gt;</code></td><td>一覧の「詳細」</td><td>面談 1 件の本体（①②③④⑤）</td></tr>
-        <tr><td>マスタ</td><td><code>/master</code></td><td>ヘッダ「マスタ」</td><td>役割マスタ・評価条件の編集</td></tr>
-        <tr><td>設定</td><td><code>/settings</code></td><td>ヘッダ「設定」</td><td>保存先・保存期間・バックアップ・監査ログ</td></tr>
-        <tr><td>分析</td><td><code>/analytics</code></td><td>ヘッダ「分析」</td><td>過去面談を匿名集計</td></tr>
+        <tr><td>新規面談</td><td><code>/new</code></td><td>一覧画面の「＋ 新規面談」ボタン</td><td>面談を新規作成</td></tr>
+        <tr><td>セッション</td><td><code>/sessions/&lt;id&gt;</code></td><td>一覧の「詳細」</td><td>面談 1 件の本体（①〜⑤）</td></tr>
         <tr><td>比較</td><td><code>/compare</code></td><td>一覧で複数選択 →「比較」</td><td>複数評価済セッションを並べて比較</td></tr>
-        <tr><td>ゴミ箱</td><td><code>/trash</code></td><td>設定 or 直接 URL</td><td>削除セッションの復元・完全削除</td></tr>
       </tbody>
     </table>
     <div class="note">
-      <p><code>/analytics</code>・<code>/compare</code> は左上に「← 一覧」戻りボタン付きの統一ヘッダーで表示されます。</p>
+      <p>ルート <code>/</code> はホーム画面（ダッシュボード）です。日常運用の候補者一覧は左サイドバー 📊 <code>/list</code> から開きます。</p>
     </div>
   </article>
 
@@ -814,7 +832,7 @@
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
         <img src="assets/session.png" alt="セッション本体">
       </div>
-      <figcaption>1 つのセッションには ①候補者 / ②条件 / ③質問 / ④議事録 / ⑤評価 が縦に並ぶ</figcaption>
+      <figcaption>1 つのセッションには ①候補者 / ②条件 / ③質問 / ④面談内容 / ⑤評価 が縦に並ぶ</figcaption>
     </figure>
 
     <h2 id="flow-status">ステータスの自動更新</h2>
@@ -822,7 +840,7 @@
     <ul>
       <li>新規作成 → <span class="pill pill-edit">編集中</span></li>
       <li>② 条件凍結 → <span class="pill pill-pub">質問公開</span></li>
-      <li>④ 議事録保存 → <span class="pill pill-itv">面談済</span></li>
+      <li>④ 面談内容保存 → <span class="pill pill-itv">面談済</span></li>
       <li>⑤ 評価保存 → <span class="pill pill-eval">評価済</span></li>
     </ul>
 
@@ -870,17 +888,31 @@
   </article>
 
   <article class="page" id="p-step2">
-    <h1>① 候補者情報を貼る <span class="pill pill-edit">編集中</span></h1>
-    <p class="subtitle">履歴書を AI で要約して、結果をこのエリアに貼ります。</p>
+    <h1>① 面談者情報 <span class="pill pill-edit">編集中</span></h1>
+    <p class="subtitle">履歴書を AI で要約して、結果をこのエリアに貼ります。API モード（完全版）では最大 <strong>2 ファイル</strong>まで直接アップロードして自動要約できます。</p>
 
-    <h2 id="step2-howto">手順</h2>
+    <h2 id="step2-howto">貼付モードの手順（既定）</h2>
     <ol>
       <li>① エリア上の <strong>「📋 コピー」</strong> ボタンで履歴書要約プロンプトをクリップボードへ</li>
       <li>Claude などの AI チャットに貼付 → 履歴書ファイル（PDF / Word / Excel）を添付</li>
       <li>AI が出した要約をすべてコピー（<kbd>Ctrl</kbd>+<kbd>A</kbd> → <kbd>Ctrl</kbd>+<kbd>C</kbd>）</li>
       <li>① エリアの「要約」テキスト枠に貼付（<kbd>Ctrl</kbd>+<kbd>V</kbd>）</li>
-      <li><strong>「保存」</strong> をクリック</li>
+      <li>フォーカスを外すと <strong>自動保存</strong>（右下に「保存済」インジケータ表示）</li>
     </ol>
+
+    <h2 id="step2-api-files">API モード: 最大 2 ファイルまで自動要約</h2>
+    <p>完全版で API モードに切り替えると、履歴書ファイルを直接アップロードして AI に要約してもらえます。<strong>履歴書 + 職務経歴書</strong>のように 2 種類のファイルを合わせて 1 名分の要約に統合するのが典型的な使い方です。</p>
+    <ul>
+      <li><strong>対応形式</strong>: PDF / Word (.doc / .docx) / Excel (.xlsx / .xls)</li>
+      <li><strong>1 ファイル上限</strong>: 3.7 MB（Server Action の 5 MB body 制限に収まるよう base64 換算で 3.7 MB）</li>
+      <li><strong>ファイル数上限</strong>: 2 ファイルまで（既定「履歴書」+「職務経歴書」を想定）</li>
+      <li><strong>UI</strong>: 1 個目を選ぶと積み上げリストに表示、追加ボタンが「📎 履歴書をアップ（2/2）」に変わる。2 個目を入れると追加ボタンが消える</li>
+      <li><strong>取消</strong>: 各ファイル行の <strong>「取消」</strong> ボタンで個別に外せる</li>
+      <li><strong>要約時</strong>: 複数ファイル時は AI プロンプトに <code>#添付 1</code> / <code>#添付 2</code> の見出しが付き、AI が区別して統合要約する</li>
+    </ul>
+    <div class="tip">
+      <p>旧 <code>.xls</code> ファイルはブラウザ内で自動的に <code>.xlsx</code> に変換されてから送信されます（サーバー側では扱えないため）。変換中は「.xls をブラウザで .xlsx に変換中…」表示。</p>
+    </div>
 
     <h2 id="step2-excel">Excel 自動分割</h2>
     <div class="tip">
@@ -890,10 +922,10 @@
 
   <article class="page" id="p-step4">
     <h1>② 条件を凍結する <span class="pill pill-pub">→ 質問公開</span></h1>
-    <p class="subtitle">役割マスタの条件と評価軸をこの面談に固定します。</p>
+    <p class="subtitle">求人情報の条件と評価軸をこの面談に固定します。</p>
 
     <h2 id="step4-what">何をするのか</h2>
-    <p>役割マスタの「<strong>求める人材条件</strong>」と「<strong>評価条件</strong>」を、この面談に <strong>スナップショット</strong>として固定します。後でマスタを変えてもこの面談には影響しません。</p>
+    <p>求人情報の「<strong>求める人材条件</strong>」と「<strong>評価条件</strong>」を、この面談に <strong>スナップショット</strong>として固定します。後でマスタを変えてもこの面談には影響しません。</p>
 
     <h2 id="step4-howto">手順</h2>
     <ol>
@@ -906,7 +938,7 @@
     <div class="note">
       <p><strong>「凍結」＝今の評価条件を写真のように コピーして保存すること。</strong></p>
       <p>あとでマスタの重み・軸・合格ラインを変えても、<strong>この面談は当時の条件で評価され続けます</strong>。</p>
-      <p>例：マスタで「<strong>NW は問題解決力の重みを 3 → 4 に上書き</strong>」している状態で凍結すれば、その面談の問題解決力は <strong>4 で固定</strong>。<br>
+      <p>例：マスタで「<strong>NW はコミュニケーション力の重みを 3 → 2 に下げる</strong>」設定にしていれば、その面談のコミュニケーション力の重みは <strong>2 で固定</strong>。<br>
       あとから NW の重みを 3 に戻しても、<strong>この面談だけは 4 で計算されます</strong>。</p>
     </div>
 
@@ -958,7 +990,7 @@
   </article>
 
   <article class="page" id="p-step6">
-    <h1>④ 議事録を貼る <span class="pill pill-itv">→ 面談済</span></h1>
+    <h1>④ 面談内容を貼る <span class="pill pill-itv">→ 面談済</span></h1>
     <p class="subtitle">面談本番の文字起こしや手書きメモをここに貼り付けます。</p>
 
     <h2 id="step6-howto">手順</h2>
@@ -969,7 +1001,7 @@
       <li>ステータスが <span class="pill pill-itv">面談済</span> に変わる</li>
     </ol>
 
-    <h2 id="step6-sample">議事録の例（貼付イメージ）</h2>
+    <h2 id="step6-sample">面談内容の例（貼付イメージ）</h2>
     <p>フォーマットは自由（Teams 文字起こしそのまま／手書きメモ／整形済みどれでも可）。上限は約 200 万文字なので、通常の 60 分面談なら余裕で収まります。参考までに整形版の例：</p>
     <pre class="sample">日時: 2026-06-30(月) 14:00-15:00
 面談官: 採用担当 A / 現場リード B
@@ -1031,12 +1063,12 @@ T5. 得意な言語と、その言語で気をつけていること
 
   <article class="page" id="p-step8">
     <h1>⑤ 評価を貼る <span class="pill pill-eval">→ 評価済</span></h1>
-    <p class="subtitle">議事録と凍結条件から AI に評価 JSON を生成してもらい、結果を貼ります。</p>
+    <p class="subtitle">面談内容と凍結条件から AI に評価 JSON を生成してもらい、結果を貼ります。</p>
 
     <h2 id="step8-howto">手順</h2>
     <ol>
       <li>⑤ エリアの「評価結果 JSON を貼り付ける」を開き、<strong>「📋 コピー」</strong> ボタンで評価プロンプトをクリップボードへ</li>
-      <li>Claude などの AI に貼付 → <strong>議事録 + 凍結条件</strong>を組み合わせて JSON 形式で評価結果を生成</li>
+      <li>Claude などの AI に貼付 → <strong>面談内容 + 凍結条件</strong>を組み合わせて JSON 形式で評価結果を生成</li>
       <li>AI が返す JSON を評価 JSON 枠に貼付 → <strong>「保存」</strong>
         <ul>
           <li>AI が <code>```json</code> のフェンスで囲んでいたら囲みを除いてから貼ってください（素の JSON のみ受け付けます）</li>
@@ -1061,8 +1093,8 @@ T5. 得意な言語と、その言語で気をつけていること
       <thead><tr><th>ステータス</th><th>意味</th><th>次に進む条件</th></tr></thead>
       <tbody>
         <tr><td><span class="pill pill-edit">編集中</span></td><td>新規作成直後、まだ条件凍結前</td><td>②で条件凍結</td></tr>
-        <tr><td><span class="pill pill-pub">質問公開</span></td><td>条件凍結済み、質問が編集可能</td><td>④議事録を保存</td></tr>
-        <tr><td><span class="pill pill-itv">面談済</span></td><td>議事録が保存された</td><td>⑤評価を保存</td></tr>
+        <tr><td><span class="pill pill-pub">質問公開</span></td><td>条件凍結済み、質問が編集可能</td><td>④面談内容を保存</td></tr>
+        <tr><td><span class="pill pill-itv">面談済</span></td><td>面談内容が保存された</td><td>⑤評価を保存</td></tr>
         <tr><td><span class="pill pill-eval">評価済</span></td><td>評価が確定し、採否が決まった</td><td>—（終了）</td></tr>
       </tbody>
     </table>
@@ -1077,7 +1109,7 @@ T5. 得意な言語と、その言語で気をつけていること
 
   <article class="page" id="p-list">
     <h1>一覧画面</h1>
-    <p class="subtitle">トップページ <code>/</code> はすべてのセッションを一覧します。</p>
+    <p class="subtitle"><code>/list</code> はすべてのセッションを一覧します。</p>
 
     <h2 id="list-screenshot">画面</h2>
     <figure class="shot">
@@ -1131,28 +1163,86 @@ T5. 得意な言語と、その言語で気をつけていること
         <tr><td>uploads/ 履歴書ファイル</td><td>✓ 引き継ぎ</td><td>✓ 引き継ぎ</td></tr>
         <tr><td>② 凍結条件</td><td>✓ 引き継ぎ</td><td>✗ 破棄（新役割向けに再凍結）</td></tr>
         <tr><td>③ 質問</td><td>✓ 引き継ぎ</td><td>✗ 破棄</td></tr>
-        <tr><td>④ 議事録</td><td>✗ 破棄</td><td>✗ 破棄</td></tr>
+        <tr><td>④ 面談内容</td><td>✗ 破棄</td><td>✗ 破棄</td></tr>
         <tr><td>⑤ 評価</td><td>✗ 破棄</td><td>✗ 破棄</td></tr>
       </tbody>
     </table>
 
-    <div class="tip"><p>議事録・評価は「別ラウンド」になるため、同じ役割でも常に破棄されます。</p></div>
+    <div class="tip"><p>面談内容・評価は「別ラウンド」になるため、同じ役割でも常に破棄されます。</p></div>
+  </article>
+
+  <article class="page" id="p-cost">
+    <h1>💴 コスト試算</h1>
+    <p class="subtitle"><code>/cost</code> で LLM API 呼び出しの概算コストを集計します（完全版のみ表示）。</p>
+
+    <h2 id="cost-when">表示されるタイミング</h2>
+    <p>本ツールは Phase 1 では <strong>貼付モード</strong>で運用しており、API を叩かないため <code>/cost</code> は「呼び出し記録がまだありません」と表示されます。Phase 2 で API モードを有効化してから記録が蓄積されていきます。</p>
+    <div class="note">
+      <p>貼付版（lite エディション）では <code>/cost</code> メニュー自体が非表示になります。</p>
+    </div>
+
+    <h2 id="cost-screenshot">画面</h2>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="assets/cost.png" alt="コスト試算">
+      </div>
+      <figcaption>/cost — KPI + 月別 / プロバイダ別 / モデル別 / 工程別 + 直近呼び出し</figcaption>
+    </figure>
+
+    <h2 id="cost-view">画面の見方</h2>
+    <ul>
+      <li><strong>KPI カード</strong>：累計金額 / 呼び出し回数 / 累計トークン / <strong>1 回あたり平均</strong></li>
+      <li><strong>月別</strong>：呼び出し月ごとの合計</li>
+      <li><strong>プロバイダ別</strong>：Anthropic / OpenAI / Google の合計</li>
+      <li><strong>モデル別</strong>：モデル ID ごとの合計</li>
+      <li><strong>工程別</strong>：① 要約 / ③ 質問生成 / ③ 質問整形 / ④ 面談内容要約 / ⑤ 評価 の合計</li>
+      <li><strong>直近呼び出し</strong>：最新 50 件の明細</li>
+    </ul>
+    <p>すべての集計表の右端に「<strong>1 回あたり</strong>」列があり、その工程・モデル・プロバイダの平均単価が一目でわかります。</p>
+
+    <h2 id="cost-formula">概算のロジック</h2>
+    <ul>
+      <li>文字数 → token 換算：<strong>1 token ≈ 2.5 文字</strong>（日本語想定）</li>
+      <li>為替：<strong>USD $1 = ¥160</strong> 固定</li>
+      <li>単価表：2026-06 時点の公開単価（<code>lib/pricing.ts</code>）</li>
+      <li>キャッシュ割引・Batch 割引は<strong>未計算</strong>のため「上限見積り」として扱ってください</li>
+    </ul>
+
+    <h2 id="cost-typical">1 面談あたりの目安（既定モデル Claude Sonnet 4.6）</h2>
+    <table>
+      <thead><tr><th>工程</th><th>入力目安</th><th>出力目安</th><th>1 回の JPY</th></tr></thead>
+      <tbody>
+        <tr><td>① 要約</td><td>3〜15 K字</td><td>0.8〜1.5 K字</td><td>¥1〜5</td></tr>
+        <tr><td>③ 質問生成（15問）</td><td>2.5〜4.5 K字</td><td>10〜17 K字</td><td>¥10〜18</td></tr>
+        <tr><td>③ 質問整形（任意）</td><td>2〜4 K字</td><td>2〜5 K字</td><td>¥2〜6</td></tr>
+        <tr><td>④ 面談内容要約（任意）</td><td>5〜20 K字</td><td>≤1500 字</td><td>¥2〜5</td></tr>
+        <tr><td>⑤ 評価</td><td>5〜15 K字</td><td>5〜9 K字</td><td>¥6〜11</td></tr>
+      </tbody>
+    </table>
+    <div class="tip">
+      <p>必須 3 工程（① 要約 + ③ 生成 + ⑤ 評価）のみで <strong>¥17〜33 / 面談</strong>、整形・面談内容要約を含めたフル構成でも <strong>¥22〜45 / 面談</strong>が目安です。月 100 面談で ¥2,500〜4,500 程度。</p>
+    </div>
+    <p>モデルを Haiku 4.5（$1/$5）に落とすと約 1/3、Opus 4.7（$15/$75）に上げると約 5 倍になります。</p>
+
+    <h2 id="cost-source">記録される情報</h2>
+    <p>各 API 呼び出しの <code>provider</code> / <code>model</code> / 入力文字数 / 出力文字数 が <code>data/logs/audit.log</code> に記録されます（PII なし）。<code>/cost</code> はこのログを走査して集計するため、audit.log を消すと集計もリセットされます。</p>
   </article>
 
   <article class="page" id="p-master">
-    <h1>マスタ管理</h1>
-    <p class="subtitle"><code>/master</code> で 役割マスタ と 評価条件 を編集します。</p>
+    <h1>求人情報管理</h1>
+    <p class="subtitle"><code>/master</code> で 求人情報 と 評価条件 を編集します。</p>
 
     <h2 id="master-screenshot">画面</h2>
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/master.png" alt="マスタ管理">
+        <img src="assets/master.png" alt="求人情報管理">
       </div>
-      <figcaption>/master — 上：役割マスタ、下：評価条件（BARS）</figcaption>
+      <figcaption>/master — 上：求人情報、下：評価条件（BARS）</figcaption>
     </figure>
 
-    <h2 id="master-roles">役割マスタ</h2>
+    <h2 id="master-roles">求人情報</h2>
     <ul>
       <li>役割の <strong>追加 / 編集 / 削除</strong></li>
       <li>各役割の「<strong>求める人材条件</strong>」（基本人物像 + 未経験者必須）</li>
@@ -1160,26 +1250,58 @@ T5. 得意な言語と、その言語で気をつけていること
     </ul>
     <p>役割 ID は <code>NW</code> <code>Server</code> <code>Dev</code> 等の英数字（半角英数 + ハイフン / アンダーバーのみ）。</p>
 
-    <h2 id="master-criteria">評価条件（BARS）</h2>
+    <h2 id="master-criteria">評価条件（BARS）— 5 軸バランス型</h2>
+    <p>既定は以下の <strong>5 軸</strong>。総合スコアはこれらの重み付き平均で自動計算されます。</p>
+    <table>
+      <thead><tr><th>軸</th><th>意味</th><th>既定重み</th><th>質問例</th></tr></thead>
+      <tbody>
+        <tr><td><strong>技術力</strong></td><td>職種スキル・専門知識・実装力</td><td>3〜4</td><td>「得意な言語で気をつけていること」</td></tr>
+        <tr><td><strong>問題解決力</strong></td><td>分析・課題設定・打ち手選定</td><td>3〜4</td><td>「困難だった場面と乗り越え方」</td></tr>
+        <tr><td><strong>主体性 / 意欲</strong></td><td>自走・提案・オーナーシップ</td><td>3</td><td>「自分から提案して改善した事例」</td></tr>
+        <tr><td><strong>コミュニケーション力</strong></td><td>説明力・傾聴・調整</td><td>3</td><td>「対人でこじれた場面の解決」</td></tr>
+        <tr><td><strong>学習意欲 / 成長性</strong></td><td>キャッチアップ速度、学び方</td><td>3</td><td>「新技術を独学で身につけた経験」</td></tr>
+      </tbody>
+    </table>
     <ul>
-      <li><strong>評価軸</strong>：「主体性」「問題解決力」「対人影響力」「柔軟性」など（自由追加可）</li>
-      <li><strong>軸ごとの重み</strong>：1〜5（既定 3）</li>
-      <li><strong>合格ライン / 普通ライン</strong>：総合スコアのしきい値</li>
-      <li><strong>スケール</strong>：0.3〜5.0、0.5刻み、全 10 段階</li>
+      <li><strong>重みレンジ</strong>：1〜5（既定 3〜4）</li>
+      <li><strong>合格ライン / 普通ライン</strong>：総合スコアのしきい値（既定 合格 4.2 / 普通 3.5）</li>
+      <li><strong>スケール</strong>：0.3〜5.0、0.5 刻み、全 10 段階</li>
+      <li>軸の追加・削除・改名は <code>/master</code> の評価条件エディタから可能</li>
     </ul>
 
-    <h2 id="master-override">役割別の重み上書き</h2>
-    <p>役割ごとに重み・合格ラインを差し替えできます。例：</p>
+    <h2 id="master-override">役割別の重み上書き（既定セット）</h2>
+    <p>役割ごとに重み・合格ラインを差し替えできます。既定は以下の通り。</p>
+    <table>
+      <thead><tr><th>役割</th><th>技術力</th><th>問題解決</th><th>主体性</th><th>コミュ</th><th>学習</th><th>合格ライン</th></tr></thead>
+      <tbody>
+        <tr><td><strong>NW</strong></td><td>4</td><td>4</td><td>3</td><td>2</td><td>3</td><td>4.2</td></tr>
+        <tr><td><strong>Server</strong></td><td>4</td><td>4</td><td>3</td><td>2</td><td>3</td><td>4.0</td></tr>
+        <tr><td><strong>Dev</strong></td><td>5</td><td>4</td><td>3</td><td>3</td><td>3</td><td>4.2</td></tr>
+        <tr><td><strong>PMO</strong></td><td>2</td><td>3</td><td>4</td><td>4</td><td>3</td><td>3.8</td></tr>
+        <tr><td><strong>ITSupport</strong></td><td>3</td><td>3</td><td>3</td><td>4</td><td>3</td><td>3.6</td></tr>
+        <tr><td><strong>Special</strong></td><td>3</td><td>3</td><td>3</td><td>3</td><td>3</td><td>4.3</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <p>役割別に上書きされた重みは ④凍結時にセッションに <strong>スナップショット</strong>として固定されます。あとからマスタの重みを変えても過去の面談スコアの意味は変わりません。</p>
+    </div>
+
+    <h2 id="master-uneditable">編集不可 フラグ</h2>
+    <p>役割単位で <strong>「編集不可」チェックボックス</strong>を ON にすると、その役割で作成された新規面談は以下のように動作します。</p>
     <ul>
-      <li><strong>NW</strong>：問題解決力の重み 3→<strong>4</strong></li>
-      <li><strong>Server</strong>：合格 4.2→<strong>4.0</strong> に緩和</li>
-      <li><strong>PMO</strong>：対人影響力・柔軟性とも 3→<strong>4</strong></li>
+      <li>新規セッション作成時に <strong>④ 求める人材条件が自動で凍結</strong>される（<code>conditions_snapshot.json</code> を即時生成）</li>
+      <li>セッション画面の <strong>「修正」ボタンが無効化</strong>され、条件を書き換えできない</li>
+      <li>ホバーで「マスタで編集不可に設定されているため修正できません」と理由が表示される</li>
     </ul>
+    <p>用途: 契約先が決めた評価条件を面談官が勝手に変えないよう固定したい場合、監査観点で凍結条件の一貫性を保証したい場合など。</p>
+    <div class="tip">
+      <p>編集不可の役割は 🔒 アイコンが表示されます（一覧表・新規面談の役割選択・セッションの ② ヘッダ）。</p>
+    </div>
 
     <h2 id="master-import">エクスポート</h2>
     <p>マスタ全体（役割 + 評価条件）を JSON / Excel ファイルとして書き出しできます。編集前のスナップショット保存や、他 PC への引き継ぎ元として利用してください。</p>
     <ul>
-      <li>役割マスタセクション右上の <strong>「エクスポート」</strong> ボタン — 役割マスタのみ JSON</li>
+      <li>求人情報セクション右上の <strong>「エクスポート」</strong> ボタン — 求人情報のみ JSON</li>
       <li>ページ末尾の <strong>「マスタ一括 export」</strong>：<strong>「📥 JSON」</strong> — 役割 + 評価条件をまとめて JSON</li>
       <li>同じく <strong>「📊 Excel」</strong> — テンプレ準拠の .xlsx（人事担当への配布用）</li>
     </ul>
@@ -1259,7 +1381,7 @@ T5. 得意な言語と、その言語で気をつけていること
     </div>
 
     <h2 id="trash-anon">匿名サマリは残せる</h2>
-    <p>設定で「匿名サマリを analytics/ に残す」を ON にすると、完全削除しても <strong>氏名・履歴書・議事録を含まない統計データ</strong>は残り、<a href="#analytics">分析画面</a> で使えます。</p>
+    <p>設定で「匿名サマリを analytics/ に残す」を ON にすると、完全削除しても <strong>氏名・履歴書・面談内容を含まない統計データ</strong>は残り、<a href="#analytics">分析画面</a> で使えます。</p>
   </article>
 
   <article class="page" id="p-backup">
@@ -1329,7 +1451,7 @@ T5. 得意な言語と、その言語で気をつけていること
 
     <h2 id="analytics-privacy">プライバシー</h2>
     <div class="note">
-      <p>分析データは <strong>氏名・履歴書・議事録を含まない</strong>匿名サマリです。元の面談を完全削除しても統計だけは長期保存できます。</p>
+      <p>分析データは <strong>氏名・履歴書・面談内容を含まない</strong>匿名サマリです。元の面談を完全削除しても統計だけは長期保存できます。</p>
     </div>
   </article>
 
@@ -1372,10 +1494,11 @@ T5. 得意な言語と、その言語で気をつけていること
 
     <h2 id="export-files">自動更新ファイル</h2>
     <ul>
-      <li><code>data/exports/マスタ.xlsx</code> — 役割マスタ + 評価条件</li>
+      <li><code>data/exports/マスタ.xlsx</code> — 求人情報 + 評価条件</li>
       <li><code>data/exports/面談者一覧.xlsx</code> — 全候補者 1 件 1 行</li>
+      <li><code>data/sessions/&lt;セッションID&gt;/&lt;セッションID&gt;.xlsx</code> — 面談 1 件ごとの詳細シート（旧 <code>session.xlsx</code> から改名。ファイル名がフォルダ名と一致するので、Explorer でコピペしても衝突しません）</li>
     </ul>
-    <p>マスタやセッションを保存するたびに <strong>自動再生成</strong> されるので、いつ開いても最新です。</p>
+    <p>マスタやセッションを保存するたびに <strong>自動再生成</strong> されるので、いつ開いても最新です。旧 <code>session.xlsx</code> が残っているセッションは、次に保存したタイミングで新形式に置き換わり、旧ファイルは自動削除されます。</p>
 
     <h2 id="export-split">3 列自動分割</h2>
     <div class="tip">
@@ -1439,7 +1562,7 @@ T5. 得意な言語と、その言語で気をつけていること
 
     <details class="faq">
       <summary>データは PC のどこに保存されている？</summary>
-      <div class="a">既定では <code>data/</code> フォルダ配下（役割マスタ・面談セッション・監査ログ・バックアップ）。保存先を変えたい場合は <code>/settings</code> の <strong>「データ保存先」</strong> で任意フォルダを指定できます。OneDrive など同期フォルダに変えれば別 PC からも同じデータを開けます。</div>
+      <div class="a">既定では <code>data/</code> フォルダ配下（求人情報・面談セッション・監査ログ・バックアップ）。保存先を変えたい場合は <code>/settings</code> の <strong>「データ保存先」</strong> で任意フォルダを指定できます。OneDrive など同期フォルダに変えれば別 PC からも同じデータを開けます。</div>
     </details>
 
     <details class="faq">

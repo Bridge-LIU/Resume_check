@@ -33,11 +33,11 @@ export function Section6Minutes({
   return (
     <div>
       <SectionHeaderBar
-        title="④ 議事録"
+        title="④ 面談内容"
         hasData={!!initial?.text?.trim()}
         extra={
           <>
-            <span className="text-xs text-zinc-500">(Teamsからコピペ)</span>
+            <span className="text-xs text-muted-foreground">(Teamsからコピペ)</span>
             {summarized && (
               <Tip content="AI 要約済（過去データ）">
                 <span className="pill pill-pass">要約済</span>
@@ -50,14 +50,14 @@ export function Section6Minutes({
         <Textarea
           className="w-full text-sm pr-3 pb-6"
           rows={10}
-          placeholder="議事録テキストを貼り付け"
+          placeholder="面談内容テキストを貼り付け"
           value={text}
           onChange={(e) => setText(e.target.value)}
           onBlur={handleAutoSave}
         />
         <AutoSaveIndicator state={state} />
       </div>
-      <div className="flex items-center gap-3 mt-2 text-xs text-zinc-500">
+      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
         <span>
           {savedAt
             ? `最終保存: ${new Date(savedAt).toLocaleString("ja-JP")}`

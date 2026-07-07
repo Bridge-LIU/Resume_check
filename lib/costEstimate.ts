@@ -3,7 +3,7 @@
  *
  * 入力は writeAudit に積んだ meta:
  *   - provider, model, inputChars, outputChars
- * を持つ AuditEvent（②候補者要約 / ⑤質問生成・整形 / ⑥議事録要約 / ⑧評価API）。
+ * を持つ AuditEvent（②候補者要約 / ⑤質問生成・整形 / ⑥面談内容要約 / ⑧評価API）。
  *
  * 概算ロジック: 文字数 → token は CHARS_PER_TOKEN（≈2.5字/token）の固定換算。
  * 実額は Console / 請求書 を正とし、本表示はあくまで「上限見積り」として使う。
@@ -27,14 +27,14 @@ export type Stage =
   | "②要約"
   | "⑤生成"
   | "⑤整形"
-  | "⑥議事録"
+  | "⑥面談内容"
   | "⑧評価";
 
 const EVENT_TO_STAGE: Partial<Record<AuditEvent, Stage>> = {
   "session.candidateSummarize": "②要約",
   "session.questionsGenerate": "⑤生成",
   "session.questionsReformat": "⑤整形",
-  "session.minutesSummarize": "⑥議事録",
+  "session.minutesSummarize": "⑥面談内容",
   "session.saveEvaluation": "⑧評価",
 };
 

@@ -83,8 +83,11 @@ shoot() {
 mkdir -p "$OUT_DIR"
 rm -f "$OUT_DIR"/*.png
 
+# ホーム画面（ダッシュボード）— / = home に変わったため追加
+shoot "home"      1200 1000 "$BASE/"
+
 # 短いページ
-shoot "list"      1200 700  "$BASE/"
+shoot "list"      1200 700  "$BASE/list"
 shoot "new"       1200 600  "$BASE/new"
 shoot "trash"     1200 600  "$BASE/trash"
 

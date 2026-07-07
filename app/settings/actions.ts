@@ -22,6 +22,7 @@ export async function previewSweepAction(): Promise<PreviewItem[]> {
 export async function runSweepAction(): Promise<SweepResult> {
   const result = runSweep();
   revalidatePath("/");
+  revalidatePath("/list");
   revalidatePath("/settings");
   revalidatePath("/trash");
   return result;
@@ -39,6 +40,7 @@ export async function restoreSessionAction(id: string): Promise<{ ok: boolean; e
   try {
     restoreFromTrash(id);
     revalidatePath("/");
+    revalidatePath("/list");
     revalidatePath("/trash");
     return { ok: true };
   } catch (e) {
@@ -58,4 +60,28 @@ export async function purgeSessionAction(id: string): Promise<{ ok: boolean; err
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
+}
+
+/**
+ * ゴミ箱内のすべての退避セッションを完全削除する。
+ * 途中で 1 件失敗しても他は続行し、成功件数と失敗内容をまとめて返す。
+ */
+export async function purgeAllFromTrashAction(): Promise<{
+  ok: boolean;
+  purgedCount: number;
+  failed: { id: string; error: string }[];
+}> {
+  const items = listTrash();
+  const failed: { id: string; error: string }[] = [];
+  let purgedCount = 0;
+  for (const it of items) {
+    try {
+      purgeFromTrash(it.id);
+      purgedCount++;
+    } catch (e) {
+      failed.push({ id: it.id, error: (e as Error).message });
+    }
+  }
+  revalidatePath("/trash");
+  return { ok: failed.length === 0, purgedCount, failed };
 }

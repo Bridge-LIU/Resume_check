@@ -72,7 +72,7 @@ function verdictPill(v: Verdict) {
 export default function PreviewPage() {
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border shadow-sm p-4 text-sm text-zinc-600">
+      <div className="bg-card rounded-xl border shadow-sm p-4 text-sm text-muted-foreground">
         <div className="flex items-center gap-3">
           <span className="text-2xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
             プレビュー
@@ -81,17 +81,17 @@ export default function PreviewPage() {
             サイドバー案（実装はしていません — 見た目確認用の静的モック）
           </span>
           <div className="flex-1" />
-          <Link href="/" className="text-blue-600 hover:underline">
+          <Link href="/" className="text-primary hover:underline">
             現行の一覧に戻る →
           </Link>
         </div>
       </div>
 
       {/* ↓ ここから mockup 本体 */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
         <div className="flex min-h-[720px]">
           <SideBar />
-          <div className="flex-1 flex flex-col bg-zinc-50">
+          <div className="flex-1 flex flex-col bg-muted">
             <TopBar />
             <div className="p-6 space-y-6">
               <SectionTitle title="面談パイプライン" />
@@ -122,8 +122,8 @@ function SideBar() {
     { icon: "❔", label: "ヘルプ" },
   ];
   return (
-    <aside className="w-20 bg-zinc-900 text-zinc-300 flex flex-col items-center py-4">
-      <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-white font-bold mb-6">
+    <aside className="w-20 bg-zinc-900 text-muted-foreground opacity-50 flex flex-col items-center py-4">
+      <div className="w-10 h-10 rounded-lg bg-card/10 flex items-center justify-center text-white font-bold mb-6">
         面
       </div>
       <div className="flex flex-col gap-1 w-full px-2">
@@ -134,8 +134,8 @@ function SideBar() {
             className={
               "flex flex-col items-center gap-1 py-2 rounded-lg text-2xs " +
               (it.active
-                ? "bg-white/10 text-white"
-                : "hover:bg-white/5 hover:text-white")
+                ? "bg-card/10 text-white"
+                : "hover:bg-card/5 hover:text-white")
             }
           >
             <span className="text-lg leading-none">{it.icon}</span>
@@ -149,7 +149,7 @@ function SideBar() {
           <button
             key={it.label}
             type="button"
-            className="flex flex-col items-center gap-1 py-2 rounded-lg text-2xs hover:bg-white/5 hover:text-white"
+            className="flex flex-col items-center gap-1 py-2 rounded-lg text-2xs hover:bg-card/5 hover:text-white"
           >
             <span className="text-lg leading-none">{it.icon}</span>
             <span>{it.label}</span>
@@ -162,22 +162,22 @@ function SideBar() {
 
 function TopBar() {
   return (
-    <div className="h-14 px-6 border-b bg-white flex items-center gap-4">
-      <span className="font-bold text-zinc-700">面談AI評価ツール</span>
+    <div className="h-14 px-6 border-b bg-card flex items-center gap-4">
+      <span className="font-bold text-foreground/85">面談AI評価ツール</span>
       <div className="flex-1 max-w-md">
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">🔍</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground opacity-70 text-sm">🔍</span>
           <input
             type="text"
             placeholder="候補者を検索…"
-            className="w-full border rounded-lg pl-9 pr-3 py-1.5 text-sm bg-zinc-50 focus:bg-white"
+            className="w-full border rounded-lg pl-9 pr-3 py-1.5 text-sm bg-muted focus:bg-card"
           />
         </div>
       </div>
       <div className="flex-1" />
       <button
         type="button"
-        className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5 rounded font-medium"
+        className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm px-4 py-1.5 rounded font-medium"
       >
         ＋ 新規面談
       </button>
@@ -193,7 +193,7 @@ function SectionTitle({ title }: { title: string }) {
       <div className="flex-1" />
       <button
         type="button"
-        className="border hover:bg-zinc-50 text-sm px-3 py-1 rounded"
+        className="border hover:bg-accent text-sm px-3 py-1 rounded"
       >
         エクスポート
       </button>
@@ -222,9 +222,9 @@ function StageCards() {
 
 function CandidateTable() {
   return (
-    <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
       <table className="w-full text-sm">
-        <thead className="bg-zinc-50 text-zinc-600 text-xs">
+        <thead className="bg-muted text-muted-foreground text-xs">
           <tr>
             <th className="text-left px-4 py-3 font-medium">日時</th>
             <th className="text-left px-4 py-3 font-medium">氏名</th>
@@ -239,23 +239,23 @@ function CandidateTable() {
             <th className="px-4 py-2"><input className="border rounded px-2 py-1 text-xs w-full" placeholder="絞込" /></th>
             <th className="px-4 py-2"><input className="border rounded px-2 py-1 text-xs w-full" placeholder="絞込" /></th>
             <th className="px-4 py-2">
-              <select className="border rounded px-2 py-1 text-xs w-full bg-white">
+              <select className="border rounded px-2 py-1 text-xs w-full bg-card">
                 <option>すべての役割</option>
               </select>
             </th>
             <th className="px-4 py-2">
-              <select className="border rounded px-2 py-1 text-xs w-full bg-white">
+              <select className="border rounded px-2 py-1 text-xs w-full bg-card">
                 <option>すべての状態</option>
               </select>
             </th>
             <th className="px-4 py-2"></th>
             <th className="px-4 py-2">
-              <select className="border rounded px-2 py-1 text-xs w-full bg-white">
+              <select className="border rounded px-2 py-1 text-xs w-full bg-card">
                 <option>すべての合否</option>
               </select>
             </th>
             <th className="px-4 py-2">
-              <select className="border rounded px-2 py-1 text-xs w-full bg-white">
+              <select className="border rounded px-2 py-1 text-xs w-full bg-card">
                 <option>すべての採否</option>
               </select>
             </th>
@@ -266,8 +266,8 @@ function CandidateTable() {
           {ROWS.map((r) => {
             const vp = verdictPill(r.verdict);
             return (
-              <tr key={r.id} className="hover:bg-zinc-50">
-                <td className="px-4 py-3 text-zinc-600 tabular whitespace-nowrap">{r.datetime}</td>
+              <tr key={r.id} className="hover:bg-accent">
+                <td className="px-4 py-3 text-muted-foreground tabular whitespace-nowrap">{r.datetime}</td>
                 <td className="px-4 py-3 font-medium">{r.name}</td>
                 <td className="px-4 py-3">
                   <span className={`pill pill-role-${r.roleTag}`}>{r.role}</span>
@@ -277,7 +277,7 @@ function CandidateTable() {
                 </td>
                 <td className="px-4 py-3 text-right tabular font-medium">
                   {r.score == null ? (
-                    <span className="text-zinc-300">―</span>
+                    <span className="text-muted-foreground opacity-50">―</span>
                   ) : (
                     r.score.toFixed(1)
                   )}
@@ -286,7 +286,7 @@ function CandidateTable() {
                   {vp ? (
                     <span className={`pill ${vp}`}>{r.verdict}</span>
                   ) : (
-                    <span className="text-zinc-400">―</span>
+                    <span className="text-muted-foreground opacity-70">―</span>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -301,7 +301,7 @@ function CandidateTable() {
                       不採用
                     </span>
                   ) : (
-                    <span className="text-zinc-400">未確定</span>
+                    <span className="text-muted-foreground opacity-70">未確定</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -313,13 +313,13 @@ function CandidateTable() {
           })}
         </tbody>
       </table>
-      <div className="px-4 py-3 border-t bg-zinc-50 flex items-center text-xs text-zinc-500">
+      <div className="px-4 py-3 border-t bg-muted flex items-center text-xs text-muted-foreground">
         <div>全 {ROWS.length} 件</div>
         <div className="flex-1" />
         <div className="flex gap-1">
-          <button className="border rounded px-2 py-1 hover:bg-white">前へ</button>
+          <button className="border rounded px-2 py-1 hover:bg-card">前へ</button>
           <button className="border rounded px-2 py-1 bg-blue-600 text-white">1</button>
-          <button className="border rounded px-2 py-1 hover:bg-white">次へ</button>
+          <button className="border rounded px-2 py-1 hover:bg-card">次へ</button>
         </div>
       </div>
     </div>

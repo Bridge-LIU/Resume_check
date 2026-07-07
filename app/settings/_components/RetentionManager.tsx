@@ -26,7 +26,7 @@ function SchedulerStatusBanner({
 }) {
   if (!status) {
     return (
-      <div className="border rounded px-3 py-2 text-xs text-zinc-500">
+      <div className="border rounded px-3 py-2 text-xs text-muted-foreground">
         定期実行ステータスを取得中…
       </div>
     );
@@ -37,7 +37,7 @@ function SchedulerStatusBanner({
       className={`border rounded px-3 py-2 text-xs flex flex-wrap items-center gap-x-4 gap-y-1 ${
         active
           ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-          : "bg-zinc-50 text-zinc-600"
+          : "bg-muted text-muted-foreground"
       }`}
     >
       <div>
@@ -46,18 +46,18 @@ function SchedulerStatusBanner({
       </div>
       {status.startedAt && (
         <div>
-          <span className="text-zinc-500">起動: </span>
+          <span className="text-muted-foreground">起動: </span>
           {formatJp(status.startedAt)}
         </div>
       )}
       {active && (
         <div>
-          <span className="text-zinc-500">次回予定: </span>
+          <span className="text-muted-foreground">次回予定: </span>
           {formatJp(status.nextRunAt)}
         </div>
       )}
       {!active && status.startedAt && (
-        <div className="text-zinc-500">
+        <div className="text-muted-foreground">
           ※ 設定変更後の反映は再起動が必要です
         </div>
       )}
@@ -180,14 +180,14 @@ export function RetentionManager() {
 
       {preview && (
         <div className="border rounded p-3 text-sm">
-          <div className="font-medium mb-2 text-zinc-700">
+          <div className="font-medium mb-2 text-foreground/85">
             次に消える面談 ({preview.length}件)
           </div>
           {preview.length === 0 ? (
-            <div className="text-zinc-500 text-xs">対象なし</div>
+            <div className="text-muted-foreground text-xs">対象なし</div>
           ) : (
             <table className="w-full text-xs">
-              <thead className="text-zinc-500">
+              <thead className="text-muted-foreground">
                 <tr>
                   <th className="text-left py-1">氏名</th>
                   <th className="text-left py-1">役割</th>
@@ -227,15 +227,15 @@ export function RetentionManager() {
 
       {log && (
         <details className="border rounded text-sm" open>
-          <summary className="cursor-pointer px-3 py-1.5 bg-zinc-50 text-xs text-zinc-600">
+          <summary className="cursor-pointer px-3 py-1.5 bg-muted text-xs text-muted-foreground">
             削除ログ（直近30件）
           </summary>
           {log.length === 0 ? (
-            <div className="px-3 py-2 text-zinc-500 text-xs">ログなし</div>
+            <div className="px-3 py-2 text-muted-foreground text-xs">ログなし</div>
           ) : (
             <ul className="px-3 py-2 text-xs font-mono space-y-0.5 max-h-48 overflow-auto">
               {log.map((line, i) => (
-                <li key={i} className="text-zinc-600">
+                <li key={i} className="text-muted-foreground">
                   {line}
                 </li>
               ))}
