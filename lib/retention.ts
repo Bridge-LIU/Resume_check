@@ -75,12 +75,18 @@ function appendLog(line: string): void {
 function saveAnonymized(id: string, meta: SessionMeta): void {
   const ev = getEvaluation(id);
   if (!ev) return; // 評価がなければ匿名サマリ作成しない
+  // 新形式（大分類 × 小軸）を flat 化して集計用の 軸評価 配列にする。
+  // 各エントリに「大分類」フィールドを付けておく（analytics 側でグループ集計可）。
+  const 軸評価 = [
+    ...ev.人間性.小軸評価.map((a) => ({ 軸: a.軸, スコア: a.スコア, 大分類: "人間性" as const })),
+    ...ev.技術力.小軸評価.map((a) => ({ 軸: a.軸, スコア: a.スコア, 大分類: "技術力" as const })),
+  ];
   const anon = {
     idHash: Buffer.from(id).toString("base64").slice(0, 16),
     役割: meta.役割,
     closedAt: meta.closedAt,
     result: meta.result,
-    軸評価: ev.軸評価.map((a) => ({ 軸: a.軸, スコア: a.スコア })),
+    軸評価,
     総合スコア: ev.総合スコア,
     自己解決レベル: ev.自己解決レベル,
     合否: ev.合否,

@@ -1,12 +1,9 @@
 "use client";
 
 import type { Mode } from "@/lib/types";
-import { useIsFullEdition } from "@/app/_components/EditionProvider";
 
 /**
- * モード切替表示。
- * - 貼付版（lite）: 「貼付（固定）」を静的表示
- * - 完全版（full）: 貼付 / API をクリックでトグル
+ * モード切替表示。貼付 / API をクリックでトグル。
  */
 export function ModeSwitch({
   mode,
@@ -19,24 +16,6 @@ export function ModeSwitch({
   apiLabel?: string;
   apiEnabled?: boolean;
 }) {
-  const isFull = useIsFullEdition();
-
-  if (!isFull) {
-    return (
-      <div
-        className="text-xs flex items-center gap-1 min-h-8"
-        aria-label="モード: 貼付（固定）"
-      >
-        <span className="text-muted-foreground mr-1" aria-hidden="true">
-          モード:
-        </span>
-        <span className="pill pill-eval" aria-hidden="true">
-          ● 貼付
-        </span>
-      </div>
-    );
-  }
-
   return (
     <div
       className="text-xs flex items-center gap-1 min-h-8"

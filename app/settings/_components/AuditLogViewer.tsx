@@ -7,8 +7,8 @@ const EVENT_LABEL: Record<AuditEvent, string> = {
   "session.softDelete": "ゴミ箱へ移動",
   "session.restore": "ゴミ箱から復元",
   "session.duplicate": "セッション複製",
-  "session.freezeConditions": "④条件凍結",
-  "session.saveEvaluation": "⑧評価保存",
+  "session.freezeConditions": "②条件凍結",
+  "session.saveEvaluation": "⑤評価保存",
   "master.role.upsert": "求人情報更新",
   "master.role.delete": "求人情報削除",
   "master.criteria.update": "評価条件更新",
@@ -17,12 +17,10 @@ const EVENT_LABEL: Record<AuditEvent, string> = {
   "backup.delete": "バックアップ削除",
   "retention.schedulerStart": "定期スイープ開始",
   "retention.sweep.auto": "自動スイープ実行",
-  "session.candidateSummarize": "②候補者 API 要約",
-  "session.questionsGenerate": "⑤質問 API 生成",
-  "session.questionsReformat": "⑤質問 API 整形",
-  "session.minutesSummarize": "⑥面談内容 API 要約",
-  "analytics.fake.generate": "ダミー匿名サマリ生成",
-  "analytics.fake.clear": "ダミー匿名サマリ削除",
+  "session.candidateSummarize": "①候補者 API 要約",
+  "session.questionsGenerate": "③質問 API 生成",
+  "session.questionsReformat": "③質問 API 整形",
+  "session.minutesSummarize": "④面談内容 API 要約",
 };
 
 const EVENT_PILL: Partial<Record<AuditEvent, string>> = {

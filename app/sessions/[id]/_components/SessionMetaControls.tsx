@@ -241,8 +241,8 @@ export function SessionMetaControls({
 
             {roleChanged && (
               <div className="text-xs border border-amber-200 bg-amber-50 text-amber-800 rounded px-3 py-2">
-                ⚠ 役割を変更したため、④凍結条件と⑤質問は引き継がれません
-                （元役割向けに作られているため）。複製後に④で再凍結してください。
+                ⚠ 役割を変更したため、②凍結条件と③質問は引き継がれません
+                （元役割向けに作られているため）。複製後に②で再凍結してください。
               </div>
             )}
 

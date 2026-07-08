@@ -47,7 +47,10 @@ export default async function HomePage() {
   const all = listSessions();
   const roles = listRoles();
   const evalCriteria = getEvalCriteria();
-  const masterReady = roles.length > 0 && !!evalCriteria && evalCriteria.評価軸.length > 0;
+  const masterReady =
+    roles.length > 0 &&
+    !!evalCriteria &&
+    evalCriteria.人間性.小軸.length + evalCriteria.技術力.小軸.length > 0;
 
   const now = new Date();
   const thisWeekStart = startOfWeek(now);

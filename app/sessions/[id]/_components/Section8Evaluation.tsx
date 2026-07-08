@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import type { Evaluation, Mode } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import type { CategoryEvaluation, CategoryKey, Evaluation, Mode } from "@/lib/types";
+import { CATEGORY_KEYS } from "@/lib/types";
 import {
   buildEvaluationPromptAction,
   evaluateInterviewApiAction,
@@ -15,7 +17,6 @@ import {
   type ProviderModelOverride,
 } from "./ProviderModelSelect";
 import type { LlmDefaults } from "../page";
-import { useIsFullEdition } from "@/app/_components/EditionProvider";
 import { useStableSectionScroll } from "./useStableSectionScroll";
 import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
 import { Button } from "@/components/ui/button";
@@ -26,16 +27,24 @@ import { Tip } from "@/components/ui/tooltip";
 import { scoreBarColor } from "@/lib/uiClass";
 
 const SAMPLE = `{
-  "軸評価": [
-    { "軸": "非技術", "スコア": 3.8, "根拠": "主体性・コミュ力・学習意欲を包括評価。前職で運用チーム3名のリーダー経験、業務外でCCNA学習を継続していた具体例が語れた" },
-    { "軸": "技術", "スコア": 4.5, "根拠": "NW/サーバ技術力・問題解決力を包括評価。障害切り分け手順の説明が体系的で、実案件でのBGP設計経験も定量的に語れた" },
-    { "軸": "総合", "スコア": 4.0, "根拠": "志望度・カルチャーフィット・定着性の総合印象。企業理解が深く、逆質問も事業戦略まで踏み込む。前職在籍4年で定着性も良好" }
-  ],
+  "人間性": {
+    "小軸評価": [
+      { "軸": "主体性", "スコア": 3.5, "根拠": "運用チームで自発的にリーダー役を担った具体例あり" },
+      { "軸": "コミュニケーション力", "スコア": 4.2, "根拠": "顧客折衝経験を STAR で明瞭に説明" },
+      { "軸": "学習意欲", "スコア": 4.0, "根拠": "業務外で CCNA 学習を継続" }
+    ]
+  },
+  "技術力": {
+    "小軸評価": [
+      { "軸": "専門知識", "スコア": 4.5, "根拠": "BGP 設計・障害切り分け手順を体系的に説明" },
+      { "軸": "問題解決力", "スコア": 4.0, "根拠": "深夜メンテで閾値付きロールバック判断を実施" },
+      { "軸": "設計力", "スコア": 4.2, "根拠": "冗長化と可観測性の観点を含めた設計を提示" }
+    ]
+  },
   "自己解決レベル": 4,
-  "総合スコア": 4.15,
   "合否": "普通",
   "良い点": "技術力の裏付けが定量的（BGP設計、切り分け手順）。志望度も企業理解の深さから確信できる。",
-  "懸念点": "夜間作業の体力面の確証が薄い（要確認）。非技術面は良好だが、大規模チーム統率経験は限定的。"
+  "懸念点": "夜間作業の体力面の確証が薄い（要確認）。大規模チーム統率経験は限定的。"
 }`;
 
 export function Section8Evaluation({
@@ -53,9 +62,7 @@ export function Section8Evaluation({
   /** ⑥面談内容の updatedAt。評価より新しければ「最新ではない」と表示 */
   minutesUpdatedAt?: string | null;
 }) {
-  const isFull = useIsFullEdition();
-  // 貼付版（lite）: ModeSwitch 側で onChange が無効化され "paste" 固定
-  // 完全版（full）: 貼付 / API をユーザがトグル可
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("paste");
   const { ref: rootRef } = useStableSectionScroll(mode);
   const [rawText, setRawText] = useState("");
@@ -86,24 +93,11 @@ export function Section8Evaluation({
     });
     if (!ok) return;
     lastSavedRawRef.current = snapshot;
-    // 保存に成功 → 表示用は楽観的に rawText を再パース
-    try {
-      const parsed = JSON.parse(rawText) as Record<string, unknown>;
-      setCurrent({
-        mode: currentMode,
-        軸評価: (parsed["軸評価"] as Evaluation["軸評価"]) ?? [],
-        自己解決レベル: parsed["自己解決レベル"] as number,
-        総合スコア: parsed["総合スコア"] as number,
-        合否: parsed["合否"] as Evaluation["合否"],
-        良い点: (parsed["良い点"] as string) ?? "",
-        懸念点: (parsed["懸念点"] as string) ?? "",
-        updatedAt: new Date().toISOString(),
-      });
-      setRawText("");
-      lastSavedRawRef.current = "";
-    } catch {
-      /* 保存自体は成功しているので再読込で反映 */
-    }
+    // 大分類スコア・総合スコアはサーバ側の重み付き平均計算に依存する。
+    // 楽観的な client 側再構築は困難なので、router.refresh() でサーバから最新を取り直す。
+    setRawText("");
+    lastSavedRawRef.current = "";
+    router.refresh();
   }
 
   function handleEvaluateApi() {
@@ -138,7 +132,7 @@ export function Section8Evaluation({
     <div ref={rootRef}>
       <SectionHeaderBar title="⑤ 評価・合否判定" hasData={!!current}>
         <ModeSwitch mode={mode} onChange={setMode} apiLabel="API評価" />
-        {isFull && mode === "api" && llmDefaults && (
+        {mode === "api" && llmDefaults && (
           <ProviderModelSelect
             stage={strict ? "evaluationStrict" : "evaluation"}
             defaultProvider={llmDefaults.defaultProvider}
@@ -289,13 +283,56 @@ function passingClass(g: Evaluation["合否"] | string | undefined): { text: str
   }
 }
 
-function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
-  const cls = passingClass(evaluation.合否);
+function categoryColor(key: CategoryKey) {
+  return key === "人間性"
+    ? { text: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-300 dark:border-emerald-500/40" }
+    : { text: "text-blue-700 dark:text-blue-300", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-300 dark:border-blue-500/40" };
+}
+
+function CategoryBlock({ label, cat }: { label: CategoryKey; cat: CategoryEvaluation }) {
+  const cc = categoryColor(label);
   const max = 5;
   return (
-    <div
-      className={`border rounded-lg p-4 bg-gradient-to-br ${cls.ring} space-y-3`}
-    >
+    <div className={`border ${cc.border} rounded-lg overflow-hidden`}>
+      <div className={`${cc.bg} px-3 py-2 flex items-center gap-3`}>
+        <div className={`font-bold ${cc.text}`}>{label}</div>
+        <div className="flex-1" />
+        <div className={`text-xl font-bold tabular ${cc.text}`}>
+          {cat.スコア.toFixed(1)}
+          <span className="text-xs font-normal opacity-70"> / 5</span>
+        </div>
+      </div>
+      <div className="p-3 space-y-1.5">
+        {cat.小軸評価.map((a) => {
+          const pct = Math.max(0, Math.min(100, (a.スコア / max) * 100));
+          return (
+            <div
+              key={a.軸}
+              className="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-sm"
+            >
+              <Tip content={a.根拠 || null}>
+                <div className="cursor-help truncate">{a.軸}</div>
+              </Tip>
+              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                <div
+                  className={`h-1.5 rounded-full ${scoreBarColor(a.スコア)}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <div className="text-right tabular">{a.スコア.toFixed(1)}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
+  const cls = passingClass(evaluation.合否);
+  const allSubAxes = CATEGORY_KEYS.flatMap((k) => evaluation[k].小軸評価);
+  return (
+    <div className={`border rounded-lg p-4 bg-gradient-to-br ${cls.ring} space-y-3`}>
       <div className="flex items-baseline gap-6 flex-wrap">
         <div>
           <span className="text-xs text-muted-foreground">総合</span>
@@ -323,27 +360,10 @@ function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
         </span>
       </div>
 
-      <div className="space-y-1">
-        {evaluation.軸評価.map((a) => {
-          const pct = Math.max(0, Math.min(100, (a.スコア / max) * 100));
-          return (
-            <div
-              key={a.軸}
-              className="grid grid-cols-[110px_1fr_40px] items-center gap-2 text-sm"
-            >
-              <Tip content={a.根拠 || null}>
-                <div className="cursor-help">{a.軸}</div>
-              </Tip>
-              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                <div
-                  className={`h-1.5 rounded-full ${scoreBarColor(a.スコア)}`}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <div className="text-right tabular">{a.スコア.toFixed(1)}</div>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {CATEGORY_KEYS.map((k) => (
+          <CategoryBlock key={k} label={k} cat={evaluation[k]} />
+        ))}
       </div>
 
       <div className="text-sm space-y-1 pt-2 border-t border-border/60">
@@ -355,16 +375,21 @@ function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
         </div>
       </div>
 
-      {evaluation.軸評価.some((a) => a.根拠) && (
+      {allSubAxes.some((a) => a.根拠) && (
         <details className="text-xs text-muted-foreground pt-2 border-t border-border/60">
           <summary className="cursor-pointer">軸別の根拠を表示</summary>
           <dl className="mt-2 space-y-1">
-            {evaluation.軸評価.map((a) => (
-              <div key={a.軸} className="grid grid-cols-[110px_1fr] gap-2">
-                <dt className="text-muted-foreground">{a.軸}</dt>
-                <dd>{a.根拠}</dd>
-              </div>
-            ))}
+            {CATEGORY_KEYS.flatMap((k) =>
+              evaluation[k].小軸評価.map((a) => (
+                <div key={`${k}-${a.軸}`} className="grid grid-cols-[140px_1fr] gap-2">
+                  <dt className="text-muted-foreground">
+                    <span className="text-[10px] mr-1 opacity-70">[{k}]</span>
+                    {a.軸}
+                  </dt>
+                  <dd>{a.根拠}</dd>
+                </div>
+              )),
+            )}
           </dl>
         </details>
       )}

@@ -14,7 +14,6 @@ import {
   type ProviderModelOverride,
 } from "./ProviderModelSelect";
 import type { LlmDefaults } from "../page";
-import { useIsFullEdition } from "@/app/_components/EditionProvider";
 import { useStableSectionScroll } from "./useStableSectionScroll";
 import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
 import { Button } from "@/components/ui/button";
@@ -53,9 +52,6 @@ export function Section2Candidate({
   initial: Candidate | null;
   llmDefaults?: LlmDefaults;
 }) {
-  const isFull = useIsFullEdition();
-  // 貼付版（lite）: ModeSwitch 側で onChange が無効化され "paste" 固定
-  // 完全版（full）: 貼付 / API をユーザがトグル可
   const [mode, setMode] = useState<Mode>("paste");
   const { ref: rootRef } = useStableSectionScroll(mode);
   // 保存は 要約 1 本のみ（Excel 出力時に見出しで 3 列へ分割）。
@@ -216,7 +212,7 @@ export function Section2Candidate({
     <div ref={rootRef}>
       <SectionHeaderBar title="① 面談者情報" hasData={!!initial?.要約}>
         <ModeSwitch mode={mode} onChange={setMode} apiLabel="API自動要約" />
-        {isFull && mode === "api" && llmDefaults && (
+        {mode === "api" && llmDefaults && (
           <ProviderModelSelect
             stage="summary"
             defaultProvider={llmDefaults.defaultProvider}

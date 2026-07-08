@@ -4,7 +4,7 @@
  *
  * プロジェクト実装の以下プロンプトに準拠したフォーマットで生成:
  *   - ②要約: buildSummaryPromptAction (経歴サマリ/保有スキル/強み/懸念)
- *   - ⑤質問: buildQuestionsSystemPrompt (## 非技術 7問 + ## 技術 8問, ⭐/狙い/解答例)
+ *   - ⑤質問: buildQuestionsSystemPrompt (## 人間性 7問 + ## 技術 8問, ⭐/狙い/解答例)
  *   - ⑧評価: EVAL_OUTPUT_SCHEMA ({軸評価,自己解決レベル,総合スコア,合否,良い点,懸念点})
  *
  * 分布:
@@ -77,7 +77,7 @@ const CAREER_BY_ROLE = {
 };
 
 // ─────────────────── 質問 ───────────────────
-// 短時間面談を想定: 非技術 5 + 技術 5 = 10 問
+// 短時間面談を想定: 人間性 5 + 技術 5 = 10 問
 const NONTECH_QUESTIONS = [
   { star: true,  n: "Q1", question: "自己紹介と直近の役割を 1〜2 分でお願いします。", aim: "コミュニケーション / 論理性", example: "現職の役割・チーム規模・具体的な成果を簡潔に構造化して説明" },
   { star: true,  n: "Q3", question: "これまでに自ら提案して改善した事例を、状況・行動・結果の順で教えてください。", aim: "主体性 / 影響力", example: "業務改善・新規施策・後輩指導など、自発的な行動と定量的な成果" },
@@ -135,7 +135,7 @@ const TECH_QUESTIONS_BY_ROLE = {
 // 各質問 × プロファイル（high/mid/low）で回答内容を差別化。
 // 「【Q番号: 質問短縮】」ヘッダの下に 3〜5 個の bullet で回答内容を書く。
 const RESPONSE_TEMPLATES = {
-  // ─── 非技術 ───
+  // ─── 人間性 ───
   Q1: {
     high: [
       "現職は自社 SaaS の ${role_ja}、直近 3 年は ${team_size} 名チームのテックリード",
@@ -623,7 +623,7 @@ function buildCandidate(role, career, yrs) {
 
 function buildQuestionsRaw(roleId) {
   const tech = TECH_QUESTIONS_BY_ROLE[roleId] ?? TECH_QUESTIONS_BY_ROLE.Dev;
-  const lines = ["## 非技術\n"];
+  const lines = ["## 人間性\n"];
   for (const q of NONTECH_QUESTIONS) {
     lines.push(`${q.star ? "⭐ " : ""}${q.n}. ${q.question}`);
     lines.push(`  狙い: ${q.aim}`);
@@ -689,7 +689,7 @@ function buildMinutes(role, 氏名, 作成日時, profile) {
   blocks.push(`出席: 採用担当（${pick(["田中", "佐藤", "鈴木"])}）、${氏名}`);
   blocks.push(`場所: オンライン（Microsoft Teams）\n`);
 
-  // 非技術 7 問
+  // 人間性 7 問
   for (const q of NONTECH_QUESTIONS) {
     const tpl = RESPONSE_TEMPLATES[q.n];
     if (!tpl) continue;
@@ -729,18 +729,35 @@ function buildEvaluation(profile, vars, evalBase) {
   };
   const [lo, hi] = ranges[profile];
 
-  const 軸評価 = evalBase.評価軸.map((ax) => {
-    const 名前 = ax.名前;
-    const rationales = AXIS_RATIONALE_TEMPLATES[名前]?.[profile] ?? [];
-    return {
-      軸: 名前,
-      スコア: randScore(lo, hi),
-      根拠: subst(pick(rationales) ?? "根拠テンプレ未定義。", vars),
-    };
-  });
+  const buildCategory = (catKey) => {
+    const cat = evalBase[catKey];
+    const 小軸評価 = cat.小軸.map((ax) => {
+      const 名前 = ax.名前;
+      const rationales = AXIS_RATIONALE_TEMPLATES[名前]?.[profile] ?? [];
+      return {
+        軸: 名前,
+        スコア: randScore(lo, hi),
+        根拠: subst(pick(rationales) ?? "根拠テンプレ未定義。", vars),
+      };
+    });
+    // 小軸重み付き平均で大分類スコアを算出
+    const wSum = 小軸評価.reduce((s, a, i) => s + a.スコア * cat.小軸[i].重み, 0);
+    const wTot = cat.小軸.reduce((s, s2) => s + s2.重み, 0);
+    const スコア = wTot > 0 ? Math.round((wSum / wTot) * 100) / 100 : 0;
+    return { スコア, 小軸評価 };
+  };
 
-  const 総合スコア =
-    Math.round((軸評価.reduce((s, a) => s + a.スコア, 0) / 軸評価.length) * 10) / 10;
+  const 人間性 = buildCategory("人間性");
+  const 技術力 = buildCategory("技術力");
+
+  // 総合 = 全 6 小軸のフラット重み付き平均（大分類重みは廃止済み）
+  const allSubs = [
+    ...evalBase.人間性.小軸.map((s, i) => ({ s: 人間性.小軸評価[i].スコア, w: s.重み })),
+    ...evalBase.技術力.小軸.map((s, i) => ({ s: 技術力.小軸評価[i].スコア, w: s.重み })),
+  ];
+  const totalW = allSubs.reduce((a, x) => a + x.s * x.w, 0);
+  const totalWs = allSubs.reduce((a, x) => a + x.w, 0);
+  const 総合スコア = totalWs > 0 ? Math.round((totalW / totalWs) * 100) / 100 : 0;
 
   let 合否;
   if (総合スコア >= evalBase.合格ライン) 合否 = "合格";
@@ -751,7 +768,8 @@ function buildEvaluation(profile, vars, evalBase) {
 
   return {
     mode: "paste",
-    軸評価,
+    人間性,
+    技術力,
     自己解決レベル,
     総合スコア,
     合否,

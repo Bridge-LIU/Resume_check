@@ -49,7 +49,7 @@ export function ProvidersField({ defaultProvider, providers, envStatus }: Props)
     <section className="space-y-3">
       <div className="font-medium text-sm">AI プロバイダ設定</div>
       <div className="text-xs text-muted-foreground leading-relaxed">
-        各プロバイダの API キーを入力。<strong>既定</strong>に選ばれたプロバイダが ②⑤⑧ の API モード実行時に使われる。
+        各プロバイダの API キーを入力。<strong>既定</strong>に選ばれたプロバイダが ①③⑤ の API モード実行時に使われる。
         環境変数（<code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code> /{" "}
         <code className="bg-muted px-1 rounded">OPENAI_API_KEY</code> /{" "}
         <code className="bg-muted px-1 rounded">GOOGLE_API_KEY</code>）が設定されている場合はそちらが優先。

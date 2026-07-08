@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClipboardCheck } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEdition } from "./EditionProvider";
 
 type Item = {
   href: string;
@@ -22,6 +21,7 @@ const MAIN: Item[] = [
   { href: "/compare",    icon: "🔀", label: "比較",   matchPrefix: true },
   { href: "/analytics",  icon: "📈", label: "分析",   matchPrefix: true },
   { href: "/master",     icon: "🗂️", label: "求人情報", matchPrefix: true },
+  { href: "/cost",       icon: "🧾", label: "APIコスト", matchPrefix: true },
 ];
 
 const FOOTER: Item[] = [
@@ -74,14 +74,7 @@ function isActive(pathname: string, item: Item): boolean {
 }
 
 export function SideBar() {
-  const edition = useEdition();
   const pathname = usePathname() ?? "/";
-
-  const main = [...MAIN];
-  if (edition === "full") {
-    // コストは 完全版限定（現行 layout.tsx の分岐を踏襲）
-    main.push({ href: "/cost", icon: "🧾", label: "APIコスト", matchPrefix: true });
-  }
 
   return (
     <aside
@@ -108,7 +101,7 @@ export function SideBar() {
       </Link>
 
       <nav className="flex flex-col gap-1 px-2">
-        {main.map((it) => (
+        {MAIN.map((it) => (
           <NavButton key={it.href} item={it} active={isActive(pathname, it)} />
         ))}
       </nav>

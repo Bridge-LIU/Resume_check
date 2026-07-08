@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HeartbeatPing } from "./_components/HeartbeatPing";
-import { EditionProvider } from "./_components/EditionProvider";
 import { ThemeProvider } from "./_components/ThemeProvider";
 import { SideBar } from "./_components/SideBar";
 import { TopBar } from "./_components/TopBar";
-import { getEdition } from "@/lib/edition";
 
 export const metadata: Metadata = {
   title: "面談AI評価ツール",
@@ -16,12 +14,10 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const edition = getEdition();
   return (
     <html lang="ja" className="h-full antialiased">
       <body id="app-body" className="min-h-full bg-background text-foreground transition-colors">
         <ThemeProvider>
-        <EditionProvider edition={edition}>
           <TooltipProvider delayDuration={200}>
             {/* SideBar: fixed left-0 / TopBar: fixed top-0 (both viewport 固定) */}
             <SideBar />
@@ -33,7 +29,6 @@ export default function RootLayout({
             </main>
             <HeartbeatPing />
           </TooltipProvider>
-        </EditionProvider>
         </ThemeProvider>
       </body>
     </html>

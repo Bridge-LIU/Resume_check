@@ -21,7 +21,8 @@ export interface AnonymizedSummary {
   役割: string;
   closedAt: string | null;
   result: "採用" | "不採用" | "未確定";
-  軸評価: { 軸: string; スコア: number }[];
+  /** 小軸を flat 化した配列。各エントリに「大分類」を付与（人間性 / 技術力） */
+  軸評価: { 軸: string; スコア: number; 大分類?: "人間性" | "技術力" }[];
   総合スコア: number;
   自己解決レベル: number;
   合否: "合格" | "普通" | "不合格";

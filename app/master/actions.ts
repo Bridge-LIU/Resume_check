@@ -93,23 +93,31 @@ export async function seedSampleMasterAction(): Promise<void> {
 
   const sampleEval: EvalCriteria = {
     方式: "BARS",
-    評価軸: [
-      { 名前: "自己解決力", 重み: 4 },
-      { 名前: "技術理解", 重み: 4 },
-      { 名前: "コミュニケーション", 重み: 3 },
-      { 名前: "業務経験", 重み: 3 },
-      { 名前: "適応力・柔軟性", 重み: 3 },
-    ],
+    人間性: {
+      小軸: [
+        { 名前: "主体性", 重み: 3 },
+        { 名前: "コミュニケーション力", 重み: 3 },
+        { 名前: "学習意欲", 重み: 3 },
+      ],
+    },
+    技術力: {
+      小軸: [
+        { 名前: "専門知識", 重み: 3 },
+        { 名前: "問題解決力", 重み: 3 },
+        { 名前: "設計力", 重み: 3 },
+      ],
+    },
     スケール: { 最小: 0, 最大: 5.0, 刻み: 0.5, 段階数: 11 },
-    合格ライン: 4.2,
+    合格ライン: 4.0,
     普通ライン: 3.5,
     自己解決レベル: "0〜5の5段階で別途評価",
     出力: ["軸ごとのスコアと根拠", "総合スコア", "合否", "良い点", "懸念点"],
   };
   saveEvalCriteria(sampleEval);
 
+  const axes = sampleEval.人間性.小軸.length + sampleEval.技術力.小軸.length;
   writeAudit("master.import", {
-    meta: { source: "seedSample", roles: sampleRoles.length, axes: sampleEval.評価軸.length },
+    meta: { source: "seedSample", roles: sampleRoles.length, axes },
   });
 
   revalidatePath("/master");

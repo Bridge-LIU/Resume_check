@@ -17,21 +17,20 @@ endlocal & exit /b %EXITCODE%
 
 :main
 REM ================================================
-REM  Interview AI Evaluation Tool - Full Launcher
+REM  Interview AI Evaluation Tool - Launcher
 REM  Paste mode + API mode (summary / questions / minutes / evaluation).
-REM  /cost page and Provider / API key settings are enabled.
+REM  /cost page and Provider / API key settings are always enabled.
 REM  API usage requires Provider + API key configured in Settings page.
 REM ================================================
 
 cd /d "%~dp0"
 
 if not defined PORT set PORT=3939
-set EDITION=full
 
 echo.
 echo ================================================
-echo   Interview AI Evaluation Tool - FULL
-echo   Edition: %EDITION%   Port: %PORT%
+echo   Interview AI Evaluation Tool
+echo   Port: %PORT%
 echo ================================================
 echo.
 

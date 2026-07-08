@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import {
   aggregateBy,
   aggregateTotal,
@@ -9,12 +8,11 @@ import {
 } from "@/lib/costEstimate";
 import { CHARS_PER_TOKEN, USD_TO_JPY, fmtJpy, fmtUsd, isPricingKnown } from "@/lib/pricing";
 import { PROVIDERS } from "@/lib/llm/registry";
-import { isFullEdition } from "@/lib/edition";
 import type { ProviderId } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const STAGE_ORDER: Stage[] = ["②要約", "⑤生成", "⑤整形", "⑥面談内容", "⑧評価"];
+const STAGE_ORDER: Stage[] = ["①要約", "③生成", "③整形", "④面談内容", "⑤評価"];
 
 function providerLabel(id: ProviderId): string {
   return PROVIDERS[id]?.displayName ?? id;
@@ -25,8 +23,6 @@ function providerIcon(id: ProviderId): string {
 }
 
 export default async function CostPage() {
-  // 貼付版（EDITION=lite）では API コストは発生しないため /cost 自体を隠す
-  if (!isFullEdition()) notFound();
   const records = loadCostRecords(5000);
   const total = aggregateTotal(records);
 
@@ -38,7 +34,7 @@ export default async function CostPage() {
           <div className="text-sm text-muted-foreground leading-relaxed">
             LLM API 呼び出しの記録がまだありません。
             <br />
-            ②要約 / ⑤生成 / ⑥面談内容 / ⑧評価 を「API モード」で実行すると、
+            ①要約 / ③生成 / ④面談内容 / ⑤評価 を「API モード」で実行すると、
             ここに概算コストが集計されます。
           </div>
         </div>

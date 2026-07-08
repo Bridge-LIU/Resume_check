@@ -3,7 +3,6 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { loadSettings, saveSettings, validateDataRoot } from "@/lib/storage";
-import { isFullEdition } from "@/lib/edition";
 import type {
   LlmStage,
   ProviderConfig,
@@ -23,16 +22,6 @@ import { Switch } from "@/components/ui/switch";
 
 const STAGES: LlmStage[] = ["summary", "questions", "evaluation", "evaluationStrict"];
 
-/**
- * API モード関連 UI の表示フラグ。
- * 貼付版（EDITION=lite）: false 固定 → ProvidersField / 質問生成数は非表示
- * 完全版（EDITION=full）: true → Provider / API キー / 質問生成数を表示
- *
- * フォーム送信側も この flag で分岐し、非表示中は current 値を そのまま維持する
- * （表示されていないフィールドを取り込んで書き潰してしまわないため）。
- */
-const SHOW_API_SETTINGS = isFullEdition();
-
 async function updateSettings(formData: FormData) {
   "use server";
   const current = loadSettings();
@@ -41,58 +30,44 @@ async function updateSettings(formData: FormData) {
     return Number.isFinite(n) && n >= 0 ? Math.floor(n) : fallback;
   };
 
-  // API モード UI 非表示中は providers / defaultProvider / questionCounts の
-  // フォーム項目は そもそも DOM に無い。 formData から取り込むと フィールド不在 →
-  // 誤って空値扱い で 既存 設定を上書きしてしまう恐れがあるため、その場合は
-  // current 値を そのまま維持する。
-  let providers: Record<ProviderId, ProviderConfig>;
-  let defaultProvider: ProviderId;
-  let questionCounts: Settings["questionCounts"];
-
-  if (SHOW_API_SETTINGS) {
-    // プロバイダごとの key / モデルを取り出す（空欄は現状維持、削除チェックで明示クリア）
-    const providerIds: ProviderId[] = ["anthropic", "openai", "google"];
-    providers = { ...current.providers };
-    for (const id of providerIds) {
-      const submitted = String(formData.get(`provider_${id}_key`) ?? "").trim();
-      const remove = formData.get(`remove_${id}`) === "on";
-      const nextKey = remove ? "" : submitted || current.providers[id].key;
-      const defaultModel = String(
-        formData.get(`provider_${id}_defaultModel`) ?? current.providers[id].defaultModel,
-      );
-      const models: ProviderConfig["models"] = { ...current.providers[id].models };
-      for (const stage of STAGES) {
-        const v = formData.get(`provider_${id}_model_${stage}`);
-        if (typeof v === "string" && v) models[stage] = v;
-      }
-      providers[id] = { key: nextKey, defaultModel, models };
+  // プロバイダごとの key / モデルを取り出す（空欄は現状維持、削除チェックで明示クリア）
+  const providerIds: ProviderId[] = ["anthropic", "openai", "google"];
+  const providers: Record<ProviderId, ProviderConfig> = { ...current.providers };
+  for (const id of providerIds) {
+    const submitted = String(formData.get(`provider_${id}_key`) ?? "").trim();
+    const remove = formData.get(`remove_${id}`) === "on";
+    const nextKey = remove ? "" : submitted || current.providers[id].key;
+    const defaultModel = String(
+      formData.get(`provider_${id}_defaultModel`) ?? current.providers[id].defaultModel,
+    );
+    const models: ProviderConfig["models"] = { ...current.providers[id].models };
+    for (const stage of STAGES) {
+      const v = formData.get(`provider_${id}_model_${stage}`);
+      if (typeof v === "string" && v) models[stage] = v;
     }
-
-    const submittedDefaultProvider = formData.get("defaultProvider");
-    defaultProvider =
-      submittedDefaultProvider === "anthropic" ||
-      submittedDefaultProvider === "openai" ||
-      submittedDefaultProvider === "google"
-        ? submittedDefaultProvider
-        : current.defaultProvider;
-
-    // ⑤質問生成数（1〜50 にクランプ）
-    // v が null / 空文字のときは fallback。Number(null) = 0 で誤って 1 に丸まるのを防ぐ。
-    const clampQ = (v: FormDataEntryValue | null, fallback: number) => {
-      if (v == null || v === "") return fallback;
-      const n = Number(v);
-      if (!Number.isFinite(n)) return fallback;
-      return Math.max(1, Math.min(50, Math.floor(n)));
-    };
-    questionCounts = {
-      nontech: clampQ(formData.get("q_nontech"), current.questionCounts.nontech),
-      tech: clampQ(formData.get("q_tech"), current.questionCounts.tech),
-    };
-  } else {
-    providers = current.providers;
-    defaultProvider = current.defaultProvider;
-    questionCounts = current.questionCounts;
+    providers[id] = { key: nextKey, defaultModel, models };
   }
+
+  const submittedDefaultProvider = formData.get("defaultProvider");
+  const defaultProvider: ProviderId =
+    submittedDefaultProvider === "anthropic" ||
+    submittedDefaultProvider === "openai" ||
+    submittedDefaultProvider === "google"
+      ? submittedDefaultProvider
+      : current.defaultProvider;
+
+  // ⑤質問生成数（1〜50 にクランプ）
+  // v が null / 空文字のときは fallback。Number(null) = 0 で誤って 1 に丸まるのを防ぐ。
+  const clampQ = (v: FormDataEntryValue | null, fallback: number) => {
+    if (v == null || v === "") return fallback;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(1, Math.min(50, Math.floor(n)));
+  };
+  const questionCounts: Settings["questionCounts"] = {
+    nontech: clampQ(formData.get("q_nontech"), current.questionCounts.nontech),
+    tech: clampQ(formData.get("q_tech"), current.questionCounts.tech),
+  };
 
   // dataRoot は destructive な値（C:\Windows / / 等）を受け入れると致命的
   // （fs.rmSync が走る経路があるため）。サーバ側で必ず検証する。
@@ -195,7 +170,7 @@ export default async function Page({
     <div className="space-y-4">
       {/* 既存設定フォーム */}
       <div className="bg-card rounded-xl border shadow-sm">
-        <div className="p-6 space-y-6 max-w-3xl">
+        <div className="p-6 space-y-6">
           <h1 className="font-bold text-lg">設定</h1>
 
           {errorMsg && (
@@ -218,54 +193,50 @@ export default async function Page({
           <form action={updateSettings} className="space-y-6">
             <DataRootField defaultValue={s.dataRoot} />
 
-            {SHOW_API_SETTINGS && (
-              <ProvidersField
-                defaultProvider={s.defaultProvider}
-                providers={providersSafe}
-                envStatus={envStatus}
-              />
-            )}
+            <ProvidersField
+              defaultProvider={s.defaultProvider}
+              providers={providersSafe}
+              envStatus={envStatus}
+            />
 
             {/* 質問生成数 — prompt と maxTokens 上限が両方この値から自動算出される */}
-            {SHOW_API_SETTINGS && (
-              <section className="space-y-3">
-                <div className="font-medium text-sm">質問生成数</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="q_nontech" className="text-xs text-muted-foreground">
-                      非技術
-                    </Label>
-                    <Input
-                      id="q_nontech"
-                      name="q_nontech"
-                      type="number"
-                      min={1}
-                      max={50}
-                      defaultValue={s.questionCounts.nontech}
-                    />
-                    <div className="text-2xs text-muted-foreground opacity-70">
-                      自己紹介・キャリア・志望動機 等
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="q_tech" className="text-xs text-muted-foreground">
-                      技術
-                    </Label>
-                    <Input
-                      id="q_tech"
-                      name="q_tech"
-                      type="number"
-                      min={1}
-                      max={50}
-                      defaultValue={s.questionCounts.tech}
-                    />
-                    <div className="text-2xs text-muted-foreground opacity-70">
-                      候補者の経歴・条件に紐づく専門質問
-                    </div>
+            <section className="space-y-3">
+              <div className="font-medium text-sm">質問生成数</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="q_nontech" className="text-xs text-muted-foreground">
+                    人間性
+                  </Label>
+                  <Input
+                    id="q_nontech"
+                    name="q_nontech"
+                    type="number"
+                    min={1}
+                    max={50}
+                    defaultValue={s.questionCounts.nontech}
+                  />
+                  <div className="text-2xs text-muted-foreground opacity-70">
+                    自己紹介・キャリア・志望動機 等
                   </div>
                 </div>
-              </section>
-            )}
+                <div className="space-y-1.5">
+                  <Label htmlFor="q_tech" className="text-xs text-muted-foreground">
+                    技術
+                  </Label>
+                  <Input
+                    id="q_tech"
+                    name="q_tech"
+                    type="number"
+                    min={1}
+                    max={50}
+                    defaultValue={s.questionCounts.tech}
+                  />
+                  <div className="text-2xs text-muted-foreground opacity-70">
+                    候補者の経歴・条件に紐づく専門質問
+                  </div>
+                </div>
+              </div>
+            </section>
 
             {/* 保存期間（編集可能化） */}
             <section className="space-y-3">

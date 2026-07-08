@@ -1,16 +1,17 @@
 /**
  * LLM プロバイダ × モデル の単価表（per 1M tokens、USD）
  *
- * - 価格は 2026-06 時点の公開価格を採用。実勢は Console / 請求書を正とする
+ * - 価格は 2026-07 時点の公開価格を採用。実勢は Console / 請求書を正とする
  * - キャッシュ割引や Batch 割引は考慮しない（コストは「上限見積り」）
- * - 為替は USD→JPY を 1$ = ¥160 で固定（Settings 化は今後）
+ * - 為替は USD→JPY を 1$ = ¥162 で固定（Settings 化は今後）
  * - 出力 token を `outputChars / CHARS_PER_TOKEN` で概算するため、日本語比率が高いほど
  *   実コストとズレやすい。実額は Phase B (adapter usage 取得) で正規化する予定
+ * - 廃止済みモデル（gpt-4o 系 / gemini-2.0-*）は過去の cost 記録の再計算用に残す
  */
 
 import type { ProviderId } from "./types";
 
-export const USD_TO_JPY = 160;
+export const USD_TO_JPY = 162;
 
 /** 日本語想定。1 token ≈ 2.5 文字（英語は ≈ 4 文字、混在の妥協値） */
 export const CHARS_PER_TOKEN = 2.5;
@@ -27,19 +28,37 @@ export interface ModelPricing {
  * 未登録モデルは推定不可（estimateCost で 0 にフォールバック）。
  */
 export const MODEL_PRICING: Record<string, ModelPricing> = {
-  // Anthropic
+  // ─── Anthropic（2026-07 現行） ───
   "claude-haiku-4-5-20251001": { inputUsdPerMTok: 1.0, outputUsdPerMTok: 5.0 },
   "claude-sonnet-4-6": { inputUsdPerMTok: 3.0, outputUsdPerMTok: 15.0 },
-  "claude-opus-4-7": { inputUsdPerMTok: 15.0, outputUsdPerMTok: 75.0 },
+  // Opus 4.5 以降で新価格体系に。旧 Opus 4.1 の $15/$75 から大幅値下げ
+  "claude-opus-4-7": { inputUsdPerMTok: 5.0, outputUsdPerMTok: 25.0 },
+  // 参考: 現在 registry.ts 未登録の新モデル。単価表に入れておけば手動指定でも
+  // 集計に載る。将来 registry に足す時にここは触らなくて済む
+  "claude-opus-4-8": { inputUsdPerMTok: 5.0, outputUsdPerMTok: 25.0 },
+  // Sonnet 5: 2026-08-31 まで導入価格 $2/$10、以降 $3/$15
+  "claude-sonnet-5": { inputUsdPerMTok: 2.0, outputUsdPerMTok: 10.0 },
 
-  // OpenAI
+  // ─── OpenAI（現行 GPT-5 系） ───
+  "gpt-5.5": { inputUsdPerMTok: 5.0, outputUsdPerMTok: 30.0 },
+  "gpt-5.4": { inputUsdPerMTok: 2.5, outputUsdPerMTok: 15.0 },
+  "gpt-5.4-mini": { inputUsdPerMTok: 0.75, outputUsdPerMTok: 4.5 },
+  "gpt-5.4-nano": { inputUsdPerMTok: 0.2, outputUsdPerMTok: 1.25 },
+  // OpenAI 廃止済（過去 cost 記録の再集計用に残す）
   "gpt-4o-mini": { inputUsdPerMTok: 0.15, outputUsdPerMTok: 0.6 },
   "gpt-4o": { inputUsdPerMTok: 2.5, outputUsdPerMTok: 10.0 },
   "o1-mini": { inputUsdPerMTok: 3.0, outputUsdPerMTok: 12.0 },
   "o1": { inputUsdPerMTok: 15.0, outputUsdPerMTok: 60.0 },
 
-  // Google
+  // ─── Google（現行 Gemini 2.5 / 3.5） ───
+  "gemini-3.5-flash": { inputUsdPerMTok: 1.5, outputUsdPerMTok: 9.0 },
+  // 2.5 Pro は ≤200k と >200k で 2 段階だが、上限見積として ≤200k 側で概算
+  "gemini-2.5-pro": { inputUsdPerMTok: 1.25, outputUsdPerMTok: 10.0 },
+  "gemini-2.5-flash": { inputUsdPerMTok: 0.3, outputUsdPerMTok: 2.5 },
+  // Gemini 2.0 Flash は 2026-06-01 に廃止済。過去記録用に単価を残す
   "gemini-2.0-flash": { inputUsdPerMTok: 0.1, outputUsdPerMTok: 0.4 },
+  // gemini-2.0-pro は Google の公式ラインナップに存在しないが registry に登録済のため
+  // 誤選択された過去記録の再集計用に単価を暫定で残す（実額は Console 参照）
   "gemini-2.0-pro": { inputUsdPerMTok: 1.25, outputUsdPerMTok: 5.0 },
 };
 

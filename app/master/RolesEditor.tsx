@@ -175,7 +175,7 @@ export default function RolesEditor({ initialRoles }: { initialRoles: Role[] }) 
   async function remove(role: Role) {
     const ok = await confirm({
       title: `役割「${role.役割}」を削除しますか？`,
-      description: `ID: ${role.id}\n削除すると、この役割を使った新規面談が作成できなくなります（既存の面談は④凍結スナップショットを使うため影響なし）。`,
+      description: `ID: ${role.id}\n削除すると、この役割を使った新規面談が作成できなくなります（既存の面談は②凍結スナップショットを使うため影響なし）。`,
       confirmLabel: "削除する",
       destructive: true,
     });

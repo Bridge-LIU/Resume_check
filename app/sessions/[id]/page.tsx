@@ -12,7 +12,6 @@ import {
   listRoles,
   loadSettings,
 } from "@/lib/storage";
-import { isFullEdition } from "@/lib/edition";
 import { rolePillClass, statusPillClass } from "@/lib/uiClass";
 import type { LlmStage, ProviderId } from "@/lib/types";
 import { Section2Candidate } from "./_components/Section2Candidate";
@@ -77,10 +76,9 @@ export default async function SessionPage({
     availableRoles.unshift({ id: meta.役割, label: `${meta.役割}（マスタ削除済）` });
   }
 
-  // 完全版のみ: セッション内 ProviderModelSelect の既定表示に使う
+  // セッション内 ProviderModelSelect の既定表示に使う
   // (⚠ hasKey は boolean のみ。API キー文字列は client に渡さない)
-  const llmDefaults: LlmDefaults | undefined = (() => {
-    if (!isFullEdition()) return undefined;
+  const llmDefaults: LlmDefaults = (() => {
     const defProv = settings.providers[settings.defaultProvider];
     return {
       defaultProvider: settings.defaultProvider,

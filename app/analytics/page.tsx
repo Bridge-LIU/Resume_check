@@ -243,10 +243,7 @@ export default async function AnalyticsPage() {
       <div className="text-xs text-muted-foreground leading-relaxed">
         ⚠️ 匿名サマリは <code>data/analytics/&lt;idHash&gt;.json</code> に保存。
         氏名・履歴書・面談内容は含みません（設計書 §7.5）。元セッションが完全削除されても
-        統計だけは長期保持できます。<br />
-        <span className="text-amber-700">
-          ※ 役割名が <code>[FAKE]</code> で始まる行はダミーデータ（開発用）。/settings 末尾で削除できます。
-        </span>
+        統計だけは長期保持できます。
       </div>
     </div>
   );

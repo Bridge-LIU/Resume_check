@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 面談AI評価ツール
 
-## Getting Started
+採用面談の主催・評価をローカル PC で完結させるためのツール。Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4 で実装。データは PII 保護のため PC 内 (`data/`) に保存し、外部送信は API モード時の LLM 呼び出しのみ。
 
-First, run the development server:
+## クイックスタート
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```powershell
+npm install
+npm run dev    # http://127.0.0.1:3939 で開発サーバ
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+エンドユーザ向けの起動は `start.bat` をダブルクリック（初回のみ `npm install` + `next build`、以降はビルド済みで数秒起動）。運用マニュアルは [`manual/運用ガイド.md`](manual/運用ガイド.md)。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## モード
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+各セクション（面談者情報 / 質問リスト / 評価）は **貼付** と **API** をユーザが切り替えて使います。
 
-## Learn More
+- **貼付モード** — ChatGPT / Claude 側で処理してテキストを貼り付ける。API キー不要。
+- **API モード** — `/settings` で設定した Provider (Anthropic / OpenAI / Google) を直接呼ぶ。使用状況は `/cost` で集計。
 
-To learn more about Next.js, take a look at the following resources:
+## 開発者向け
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 実装規約: [`AGENTS.md`](AGENTS.md)
+- 設計書: `files/面談AI評価ツール_設計書.md`（gitignore）
+- 主要コマンド:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+  ```powershell
+  npm run dev     # 開発サーバ (Turbopack, ホットリロード)
+  npm run build   # 本番ビルド + 型チェック
+  npm run lint    # ESLint
+  npm run start   # 本番モード（先に build が必要）
+  ```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 16 は `params` / `searchParams` が Promise になるなど破壊的変更があるため、`node_modules/next/dist/docs/` を必ず参照してください（AGENTS.md 冒頭）。

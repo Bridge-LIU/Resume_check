@@ -30,9 +30,7 @@ export type AuditEvent =
   | "backup.create"
   | "backup.delete"
   | "retention.schedulerStart"
-  | "retention.sweep.auto"
-  | "analytics.fake.generate"
-  | "analytics.fake.clear";
+  | "retention.sweep.auto";
 
 export interface AuditLogEntry {
   ts: string;

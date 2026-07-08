@@ -803,7 +803,7 @@
         <tr><td>📊</td><td>一覧</td><td><code>/list</code></td><td>セッション一覧、フィルタ、新規面談作成、一括比較</td></tr>
         <tr><td>📉</td><td>分析</td><td><code>/analytics</code></td><td>過去面談を匿名集計</td></tr>
         <tr><td>🗂️</td><td>マスタ</td><td><code>/master</code></td><td>求人情報・評価条件の編集</td></tr>
-        <tr><td>💴</td><td>コスト</td><td><code>/cost</code></td><td>LLM API のコスト集計（完全版のみ）</td></tr>
+        <tr><td>💴</td><td>コスト</td><td><code>/cost</code></td><td>LLM API のコスト集計</td></tr>
         <tr><td>🗑️</td><td>ゴミ箱</td><td><code>/trash</code></td><td>削除セッションの復元・完全削除</td></tr>
         <tr><td>⚙️</td><td>設定</td><td><code>/settings</code></td><td>保存先・保存期間・バックアップ・監査ログ</td></tr>
       </tbody>
@@ -889,7 +889,7 @@
 
   <article class="page" id="p-step2">
     <h1>① 面談者情報 <span class="pill pill-edit">編集中</span></h1>
-    <p class="subtitle">履歴書を AI で要約して、結果をこのエリアに貼ります。API モード（完全版）では最大 <strong>2 ファイル</strong>まで直接アップロードして自動要約できます。</p>
+    <p class="subtitle">履歴書を AI で要約して、結果をこのエリアに貼ります。API モードでは最大 <strong>2 ファイル</strong>まで直接アップロードして自動要約できます。</p>
 
     <h2 id="step2-howto">貼付モードの手順（既定）</h2>
     <ol>
@@ -901,7 +901,7 @@
     </ol>
 
     <h2 id="step2-api-files">API モード: 最大 2 ファイルまで自動要約</h2>
-    <p>完全版で API モードに切り替えると、履歴書ファイルを直接アップロードして AI に要約してもらえます。<strong>履歴書 + 職務経歴書</strong>のように 2 種類のファイルを合わせて 1 名分の要約に統合するのが典型的な使い方です。</p>
+    <p>API モードに切り替えると、履歴書ファイルを直接アップロードして AI に要約してもらえます。<strong>履歴書 + 職務経歴書</strong>のように 2 種類のファイルを合わせて 1 名分の要約に統合するのが典型的な使い方です。</p>
     <ul>
       <li><strong>対応形式</strong>: PDF / Word (.doc / .docx) / Excel (.xlsx / .xls)</li>
       <li><strong>1 ファイル上限</strong>: 3.7 MB（Server Action の 5 MB body 制限に収まるよう base64 換算で 3.7 MB）</li>
@@ -957,9 +957,9 @@
     <ol>
       <li>③ エリア上の <strong>「📋 コピー」</strong> ボタンで質問生成プロンプトをクリップボードへ</li>
       <li>Claude などの AI に貼付 → 候補者の経歴と組み合わせて 15問前後を生成</li>
-      <li>AI 回答をコピーして ③ エリアの <strong>「非技術」</strong> 枠と <strong>「技術」</strong> 枠に振り分けて貼付
+      <li>AI 回答をコピーして ③ エリアの <strong>「人間性」</strong> 枠と <strong>「技術」</strong> 枠に振り分けて貼付
         <ul>
-          <li>AI が <code>## 非技術</code> / <code>## 技術</code> の見出しを付けている場合は 1 枠に全文貼付でも自動振り分けされます</li>
+          <li>AI が <code>## 人間性</code> / <code>## 技術</code> の見出しを付けている場合は 1 枠に全文貼付でも自動振り分けされます</li>
         </ul>
       </li>
       <li><strong>「保存」</strong> をクリック → 下の「構造化プレビュー」で 1 問ずつカード表示される</li>
@@ -979,7 +979,7 @@
 
     <h2 id="step5-count">質問数の目安</h2>
     <div class="tip">
-      <p>既定は <strong>非技術 7 問 + 技術 8 問</strong>。カウンタが目標値のとき緑、超過は黄で色付けされます。プロンプトを AI に流す前に文中の数字を書き換えれば任意の件数で生成できます。</p>
+      <p>既定は <strong>人間性 7 問 + 技術 8 問</strong>。カウンタが目標値のとき緑、超過は黄で色付けされます。プロンプトを AI に流す前に文中の数字を書き換えれば任意の件数で生成できます。</p>
     </div>
 
     <h2 id="step5-copy">コピー系ボタン</h2>
@@ -1009,7 +1009,7 @@
 形式: Teams（録画あり）
 
 ────────────────────
-【非技術】
+【人間性】
 
 Q1. これまでの経歴と今回の応募動機
 - 大学卒 → SIer 3年（保守系）→ 事業会社 2年目
@@ -1173,13 +1173,10 @@ T5. 得意な言語と、その言語で気をつけていること
 
   <article class="page" id="p-cost">
     <h1>💴 コスト試算</h1>
-    <p class="subtitle"><code>/cost</code> で LLM API 呼び出しの概算コストを集計します（完全版のみ表示）。</p>
+    <p class="subtitle"><code>/cost</code> で LLM API 呼び出しの概算コストを集計します。</p>
 
     <h2 id="cost-when">表示されるタイミング</h2>
-    <p>本ツールは Phase 1 では <strong>貼付モード</strong>で運用しており、API を叩かないため <code>/cost</code> は「呼び出し記録がまだありません」と表示されます。Phase 2 で API モードを有効化してから記録が蓄積されていきます。</p>
-    <div class="note">
-      <p>貼付版（lite エディション）では <code>/cost</code> メニュー自体が非表示になります。</p>
-    </div>
+    <p>API モードで要約 / 質問生成 / 面談内容 / 評価を実行すると、その度に呼び出し記録が蓄積されます。貼付モードのみで運用している間は <code>/cost</code> は「呼び出し記録がまだありません」と表示されます。</p>
 
     <h2 id="cost-screenshot">画面</h2>
     <figure class="shot">

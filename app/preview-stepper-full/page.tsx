@@ -19,7 +19,7 @@ const STEPS: {
 }[] = [
   { key: "s2", no: "①", label: "面談者情報",     status: "done",    meta: "要約済 09:12" },
   { key: "s4", no: "②", label: "求める人材条件", status: "done",    meta: "凍結 09:15 🔒" },
-  { key: "s5", no: "③", label: "質問リスト",     status: "current", meta: "非技術 7 + 技術 8" },
+  { key: "s5", no: "③", label: "質問リスト",     status: "current", meta: "人間性 7 + 技術 8" },
   { key: "s6", no: "④", label: "面談内容",         status: "todo",    meta: "未着手" },
   { key: "s8", no: "⑤", label: "評価・合否判定", status: "todo",    meta: "未着手" },
 ];
@@ -479,7 +479,7 @@ function SectionS5({ mode }: { mode: Mode }) {
       {mode === "api" && (
         <div className="border rounded p-3 mb-2 bg-muted flex items-center gap-3 text-sm">
           <div className="flex-1 text-muted-foreground">
-            ① 面談者情報 + ② 凍結条件を入力に、AI で「非技術 <b>7</b> 問 + 技術 <b>8</b> 問」を section 付きで生成します。
+            ① 面談者情報 + ② 凍結条件を入力に、AI で「人間性 <b>7</b> 問 + 技術 <b>8</b> 問」を section 付きで生成します。
           </div>
           <button className="bg-blue-600 text-white rounded-lg px-3 py-1.5 text-sm">
             質問を生成
@@ -487,13 +487,13 @@ function SectionS5({ mode }: { mode: Mode }) {
         </div>
       )}
       {mode === "paste" && (
-        <MaxPromptCopy hint="Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力（## 非技術 / ## 技術 の section 付き）を下にペースト → 保存。" />
+        <MaxPromptCopy hint="Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力（## 人間性 / ## 技術 の section 付き）を下にペースト → 保存。" />
       )}
 
       {/* カウンター */}
       <div className="flex items-center gap-2 text-xs mb-2 flex-wrap">
         <span className="px-2 py-1 rounded font-medium bg-emerald-100 text-emerald-800">
-          非技術 7/7 ✓
+          人間性 7/7 ✓
         </span>
         <span className="px-2 py-1 rounded font-medium bg-blue-100 text-blue-800">
           技術 8/8 ✓
@@ -501,9 +501,9 @@ function SectionS5({ mode }: { mode: Mode }) {
         <span className="text-muted-foreground">合計 15 問</span>
       </div>
 
-      {/* 非技術 */}
+      {/* 人間性 */}
       <div className="border rounded-lg p-3 mb-3">
-        <div className="text-xs font-semibold text-muted-foreground mb-2">非技術 7 問</div>
+        <div className="text-xs font-semibold text-muted-foreground mb-2">人間性 7 問</div>
         <textarea
           rows={9}
           className="w-full text-sm leading-relaxed border rounded p-2 bg-muted font-mono"

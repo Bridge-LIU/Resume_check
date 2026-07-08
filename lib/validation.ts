@@ -11,7 +11,7 @@
  * その役割は次回 get / save 時に storage.ts:assertRoleId で throw する不整合を生む。
  */
 
-import type { EvalAxis, EvalCriteria, Role, RoleEvalOverride } from "./types";
+import { CATEGORY_KEYS, type CategoryKey, type EvalCategoryData, type EvalCriteria, type EvalSubAxis, type Role, type RoleEvalOverride } from "./types";
 
 export const NAME_MIN_LEN = 1;
 export const NAME_MAX_LEN = 60;
@@ -243,51 +243,30 @@ export function validateRoleObject(
 
 /* ───────────── EvalCriteria ───────────── */
 
-function validateAxes(raw: unknown): Validated<EvalAxis[]> {
+function validateSubAxes(raw: unknown, label: string): Validated<EvalSubAxis[]> {
   if (!Array.isArray(raw)) {
-    return { ok: false, error: "評価軸 は配列で指定してください" };
+    return { ok: false, error: `${label} は配列で指定してください` };
   }
   if (raw.length === 0) {
-    return { ok: false, error: "評価軸 は1つ以上必要です" };
+    return { ok: false, error: `${label} は 1 つ以上必要です` };
   }
-  const out: EvalAxis[] = [];
+  const out: EvalSubAxis[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < raw.length; i++) {
     const a = raw[i];
-    // 旧形式（文字列）も受け付ける
-    if (typeof a === "string") {
-      const 名前 = a.trim();
-      if (!名前) return { ok: false, error: `評価軸[${i}].名前 が空です` };
-      if (seen.has(名前)) {
-        return { ok: false, error: `評価軸「${名前}」が重複しています` };
-      }
-      seen.add(名前);
-      out.push({ 名前, 重み: 1 });
-      continue;
-    }
     if (!a || typeof a !== "object") {
-      return {
-        ok: false,
-        error: `評価軸[${i}] はオブジェクトで指定してください`,
-      };
+      return { ok: false, error: `${label}[${i}] はオブジェクトで指定してください` };
     }
     const o = a as Record<string, unknown>;
     if (typeof o.名前 !== "string" || !o.名前.trim()) {
-      return { ok: false, error: `評価軸[${i}].名前 は必須です` };
+      return { ok: false, error: `${label}[${i}].名前 は必須です` };
     }
-    if (
-      typeof o.重み !== "number" ||
-      !Number.isFinite(o.重み) ||
-      o.重み <= 0
-    ) {
-      return {
-        ok: false,
-        error: `評価軸[${i}].重み は正の数値で指定してください`,
-      };
+    if (typeof o.重み !== "number" || !Number.isFinite(o.重み) || o.重み <= 0) {
+      return { ok: false, error: `${label}[${i}].重み は正の数値で指定してください` };
     }
     const 名前 = o.名前.trim();
     if (seen.has(名前)) {
-      return { ok: false, error: `評価軸「${名前}」が重複しています` };
+      return { ok: false, error: `${label} に「${名前}」が重複しています` };
     }
     seen.add(名前);
     out.push({ 名前, 重み: o.重み });
@@ -295,75 +274,67 @@ function validateAxes(raw: unknown): Validated<EvalAxis[]> {
   return { ok: true, value: out };
 }
 
+function validateCategory(raw: unknown, key: CategoryKey): Validated<EvalCategoryData> {
+  if (!raw || typeof raw !== "object") {
+    return { ok: false, error: `${key} はオブジェクトで指定してください` };
+  }
+  const o = raw as Record<string, unknown>;
+  const sub = validateSubAxes(o.小軸, `${key}.小軸`);
+  if (!sub.ok) return sub;
+  return { ok: true, value: { 小軸: sub.value } };
+}
+
 function validateRoleOverrides(
   raw: unknown,
-  axisCount: number,
+  validSubAxisNames: Set<string>,
 ): Validated<Record<string, RoleEvalOverride> | undefined> {
-  if (raw === undefined || raw === null) {
-    return { ok: true, value: undefined };
-  }
+  if (raw == null) return { ok: true, value: undefined };
   if (typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, error: "ロール別 はオブジェクトで指定してください" };
   }
   const out: Record<string, RoleEvalOverride> = {};
   for (const [roleId, val] of Object.entries(raw as Record<string, unknown>)) {
     if (!val || typeof val !== "object") {
-      return {
-        ok: false,
-        error: `ロール別.${roleId} はオブジェクトで指定してください`,
-      };
+      return { ok: false, error: `ロール別.${roleId} はオブジェクトで指定してください` };
     }
     const ov = val as Record<string, unknown>;
     const entry: RoleEvalOverride = {};
-    if (ov.重み !== undefined) {
-      if (
-        !Array.isArray(ov.重み) ||
-        !ov.重み.every(
-          (n) => typeof n === "number" && Number.isFinite(n) && n > 0,
-        )
-      ) {
-        return {
-          ok: false,
-          error: `ロール別.${roleId}.重み は正の数値配列で指定してください`,
-        };
+    if (ov.小軸重み !== undefined) {
+      if (typeof ov.小軸重み !== "object" || Array.isArray(ov.小軸重み) || ov.小軸重み == null) {
+        return { ok: false, error: `ロール別.${roleId}.小軸重み はオブジェクトで指定してください` };
       }
-      if (ov.重み.length > axisCount) {
-        return {
-          ok: false,
-          error: `ロール別.${roleId}.重み の長さ(${ov.重み.length})が評価軸数(${axisCount})を超えています`,
-        };
+      const raw小軸重み = ov.小軸重み as Record<string, unknown>;
+      const 小軸重み: Record<string, number> = {};
+      for (const [k, v] of Object.entries(raw小軸重み)) {
+        if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) {
+          return {
+            ok: false,
+            error: `ロール別.${roleId}.小軸重み.${k} は正の数値で指定してください`,
+          };
+        }
+        // マスタに無い小軸名は無視（GC）。厳格に弾くと運用でロックしやすいので緩め。
+        if (validSubAxisNames.has(k)) 小軸重み[k] = v;
       }
-      entry.重み = ov.重み as number[];
+      if (Object.keys(小軸重み).length > 0) entry.小軸重み = 小軸重み;
     }
     if (ov.合格ライン !== undefined) {
       if (typeof ov.合格ライン !== "number" || !Number.isFinite(ov.合格ライン)) {
-        return {
-          ok: false,
-          error: `ロール別.${roleId}.合格ライン は数値で指定してください`,
-        };
+        return { ok: false, error: `ロール別.${roleId}.合格ライン は数値で指定してください` };
       }
       entry.合格ライン = ov.合格ライン;
     }
     if (ov.普通ライン !== undefined) {
       if (typeof ov.普通ライン !== "number" || !Number.isFinite(ov.普通ライン)) {
-        return {
-          ok: false,
-          error: `ロール別.${roleId}.普通ライン は数値で指定してください`,
-        };
+        return { ok: false, error: `ロール別.${roleId}.普通ライン は数値で指定してください` };
       }
       entry.普通ライン = ov.普通ライン;
     }
     if (Object.keys(entry).length > 0) out[roleId] = entry;
   }
-  return {
-    ok: true,
-    value: Object.keys(out).length > 0 ? out : undefined,
-  };
+  return { ok: true, value: Object.keys(out).length > 0 ? out : undefined };
 }
 
-export function validateEvalCriteriaObject(
-  body: unknown,
-): Validated<EvalCriteria> {
+export function validateEvalCriteriaObject(body: unknown): Validated<EvalCriteria> {
   if (!body || typeof body !== "object") {
     return { ok: false, error: "evalCriteria はオブジェクトで指定してください" };
   }
@@ -371,8 +342,25 @@ export function validateEvalCriteriaObject(
   if (b.方式 !== "BARS") {
     return { ok: false, error: '方式 は "BARS" のみ対応しています' };
   }
-  const axes = validateAxes(b.評価軸);
-  if (!axes.ok) return axes;
+
+  const cats: Record<CategoryKey, EvalCategoryData> = {} as Record<CategoryKey, EvalCategoryData>;
+  for (const key of CATEGORY_KEYS) {
+    const v = validateCategory(b[key], key);
+    if (!v.ok) return v;
+    cats[key] = v.value;
+  }
+
+  // 大分類間で小軸名の重複を禁止（LLM 出力パースを一意にするため）
+  const names = new Set<string>();
+  for (const key of CATEGORY_KEYS) {
+    for (const s of cats[key].小軸) {
+      if (names.has(s.名前)) {
+        return { ok: false, error: `小軸「${s.名前}」が大分類間で重複しています` };
+      }
+      names.add(s.名前);
+    }
+  }
+
   if (!b.スケール || typeof b.スケール !== "object") {
     return { ok: false, error: "スケール が不正です" };
   }
@@ -407,13 +395,16 @@ export function validateEvalCriteriaObject(
   if (!Array.isArray(b.出力) || !b.出力.every((x) => typeof x === "string")) {
     return { ok: false, error: "出力 は文字列配列で指定してください" };
   }
-  const overrides = validateRoleOverrides(b.ロール別, axes.value.length);
+
+  const overrides = validateRoleOverrides(b.ロール別, names);
   if (!overrides.ok) return overrides;
+
   return {
     ok: true,
     value: {
       方式: "BARS",
-      評価軸: axes.value,
+      人間性: cats["人間性"],
+      技術力: cats["技術力"],
       スケール: {
         最小: sc.最小,
         最大: sc.最大,

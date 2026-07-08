@@ -30,8 +30,8 @@ export async function GET(_req: Request, ctx: RouteContext<'/api/sessions/[id]'>
 
 ## プロジェクト概要
 
-- 採用面談ツールのローカル版。Phase 1 は全工程「貼付モード」で稼働中。
-- API モード（②要約 / ⑤質問 / ⑥要約 / ⑧評価）は実装済だが UI 上は非表示（Phase 2 で有効化予定）。
+- 採用面談ツールのローカル版。各セクション（①面談者情報 / ③質問リスト / ⑤評価）で「貼付」「API」をユーザがトグル切替。
+- API モード（①要約 / ③質問 / ④面談内容 / ⑤評価）は `lib/llm/*` + `xxxApiAction` に実装。`/settings` で Provider (Anthropic / OpenAI / Google) を設定すれば利用可能。
 - 設計書: `files/面談AI評価ツール_設計書.md`
 - スタック: Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4 + npm / ポート 3939
 - UI 方針: 業務標準・表中心。**実装が正本**（過去の mockup HTML は削除済）。
@@ -56,7 +56,7 @@ Resume_Claude/
 │   │   ├─ actions.ts       ← 各セクション保存・状態遷移
 │   │   ├─ loading.tsx      ← セクションスケルトン
 │   │   ├─ not-found.tsx    ← セッション欠落時の画面
-│   │   └─ _components/     ← ②④⑤⑥⑧ セクション UI
+│   │   └─ _components/     ← Section2/4/5/6/8（内部 ID）= UI ①〜⑤ の各セクション
 │   ├─ master/              ← /master 役割マスタ＋評価条件
 │   ├─ settings/            ← /settings 設定
 │   │   ├─ page.tsx         ← updateSettings (Server Action)
@@ -83,10 +83,10 @@ Resume_Claude/
 │   ├─ documentExtract.ts   ← PDF/DOCX/XLSX → テキスト
 │   ├─ resumeKind.ts
 │   ├─ excelMirror.ts       ← master.xlsx / sessions.xlsx 自動生成
-│   ├─ questionParser.ts    ← ⑤質問テキスト → 構造化
+│   ├─ questionParser.ts    ← UI ③（内部 Section5）質問テキスト → 構造化
 │   ├─ summaryFormat.ts
 │   ├─ crashGuard.ts
-│   └─ llm/                 ← API モード実装（UI 非公開）
+│   └─ llm/                 ← API モード実装（Provider / モデル抽象）
 ├─ config/settings.json     ← API キー / dataRoot / 保存期間設定
 ├─ data/                    ← settings.dataRoot のデフォルト
 │   ├─ master/roles/<id>.json
@@ -125,8 +125,7 @@ Resume_Claude/
 | `public/` | 静的資源 | ✅ |
 | `.preview/` | ローカル画面ショット・mockup | 🚫 gitignore |
 | `.superpowers/` | Claude Code 一時 | 🚫 gitignore |
-| `start-完全版.bat` / `start-貼付版.bat` | 起動スクリプト（ダブルクリック） | ✅ |
-| `start-dev.bat` | 開発モード起動 | ✅ |
+| `start.bat` | 起動スクリプト（本番モード・ダブルクリック起動） | ✅ |
 | `update-app.bat` | `git pull` → `npm install` → `next build` | ✅ |
 | `claude-Nsplit.bat` | Claude Code の分屏起動補助（個人ツール） | ✅ |
 | `README.md` | プロジェクト概要（開発者向け） | ✅ |
@@ -138,12 +137,16 @@ Resume_Claude/
 1. **fs アクセスは原則 `@/lib/storage` 経由**。`fs` を直接 import するのは `lib/` 配下のサーバ専用モジュール（`backup.ts`、`retention.ts`、`auditLog.ts`、`analytics.ts`、`excelMirror.ts`）に限り、いずれも `getDataRoot()` を起点にする。
 2. **型は `@/lib/types` から import**。再定義しない。
 3. **Server Component で読み、Server Action / Route Handler で書く**。Client Component から fs を呼ばない。
-4. **API モードのコードは残す（UI のみ非表示）**。`Section*` の `mode === "api"` ブロック、`xxxApiAction`、`lib/llm/*`、`documentExtract.ts` 一式は Phase 2 で再有効化する想定。新規修正でも消さない。
+4. **貼付モードと API モードは両方を維持**。ユーザが `ModeSwitch` で切り替えるため、`Section*` の `mode === "paste"` / `mode === "api"` の双方を必ず動作させる。片方だけの実装に整理するのは不可。
 5. **状態タグは `globals.css` の `.pill-*` クラス**を使う（独自定義しない）。
 6. **新規ファイル作成前に既存を確認**。重複実装を避ける。
 7. **commit / push は行わない**。ユーザー指示時のみ。
 8. **Role / EvalCriteria の入力検証は `lib/validation.ts:validateRoleObject` / `validateEvalCriteriaObject` を使う**。Route Handler / Import / Storage で共有。ID パターンは `/^[a-zA-Z0-9_-]+$/` に統一済（path traversal 防御）。
 9. **Server Action の入力サイズは `lib/validation.ts:assertTextWithinLimit` / `assertResumeUpload` で必ず検証**。Client 側ガードは Server Action ad-hoc 呼び出しでは無効。
+10. **番号系は 2 系統併存**：
+    - **UI 表示・ユーザー可視な文字列**（画面ラベル / エラーメッセージ / コピー用プロンプトの見出し / 監査ログのラベル / `/cost` の工程ラベル / ダイアログ本文）は**必ず 5 段の連番 `①②③④⑤`** を使う。
+    - **内部識別子**（コンポーネント名 `Section2/4/5/6/8`、URL パラメータ `s2/s4/s5/s6/s8`、監査イベント名、`Stage` 型のリテラル以外の JSDoc コメント）は**設計書と揃えた 8 段番号のまま温存**する（URL 互換／履歴データ互換のため）。
+    - **対応表**は `files/面談AI評価ツール_設計書.md` 冒頭の「番号対応表」を単一の正本とする。設計書の ②④⑤⑥⑧ を UI 文言にコピペするときは必ず ①②③④⑤ に読み替えること。
 
 ## UI 規約
 
@@ -176,7 +179,7 @@ deleteRole(id): void
 // master: 評価条件
 getEvalCriteria(): EvalCriteria | null
 saveEvalCriteria(c): void
-resolveEvalForRole(base, roleId): EvalCriteria  // ④凍結時に役割別オーバーライドを畳む
+resolveEvalForRole(base, roleId): EvalCriteria  // UI ②（内部 Section4）凍結時に役割別オーバーライドを畳む
 
 // master: import/export
 exportMaster(): string

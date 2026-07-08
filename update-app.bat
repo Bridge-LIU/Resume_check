@@ -55,8 +55,7 @@ if errorlevel 1 (
 echo.
 echo ================================================
 echo   Update finished.
-echo   Launch by double-clicking one of the start-*.bat
-echo   files in this folder.
+echo   Launch by double-clicking start.bat in this folder.
 echo ================================================
 echo.
 pause

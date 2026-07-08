@@ -35,7 +35,7 @@ export async function PUT(req: Request) {
     saveEvalCriteria(result);
     writeAudit("master.criteria.update", {
       meta: {
-        軸数: result.評価軸.length,
+        小軸数: result.人間性.小軸.length + result.技術力.小軸.length,
         合格ライン: result.合格ライン,
         普通ライン: result.普通ライン,
       },

@@ -17,7 +17,6 @@ import {
   type ProviderModelOverride,
 } from "./ProviderModelSelect";
 import type { LlmDefaults } from "../page";
-import { useIsFullEdition } from "@/app/_components/EditionProvider";
 import { useStableSectionScroll } from "./useStableSectionScroll";
 import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
 import { useConfirm } from "@/components/ui/use-confirm";
@@ -25,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tip } from "@/components/ui/tooltip";
 
-const NON_TECH_HEADER = "## 非技術";
+const NON_TECH_HEADER = "## 人間性";
 const TECH_HEADER = "## 技術";
 
 const DEFAULT_NON_TECH_TEMPLATE = `⭐ Q1. 簡単に自己紹介をお願いします（職歴・現在の役割・志望動機）
@@ -67,10 +66,11 @@ T2. BGP 改修で深夜メンテを完遂された経験で、最も切替が危
   解答例: 「N分以内に収束しなければロールバック」の閾値を明示できるか`;
 
 /**
- * rawText を「非技術／技術」に分割する。見出しが無ければ全部を非技術として扱う（後方互換）。
+ * rawText を「人間性／技術」に分割する。見出しが無ければ全部を人間性として扱う（後方互換）。
  * LLM が # / ## / ### のどれで出力してもマッチするよう正規表現で見出し検索。
+ * 旧「非技術」ヘッダも受け入れる。
  */
-const NON_TECH_HEADER_MATCH_RE = /^#+\s*非技術\s*$/m;
+const NON_TECH_HEADER_MATCH_RE = /^#+\s*(?:人間性|非技術)\s*$/m;
 const TECH_HEADER_MATCH_RE = /^#+\s*技術\s*$/m;
 function findHeader(raw: string, re: RegExp): { start: number; end: number } | null {
   const m = re.exec(raw);
@@ -120,11 +120,8 @@ export function Section5Questions({
   questionCounts: QuestionCounts;
   llmDefaults?: LlmDefaults;
 }) {
-  const isFull = useIsFullEdition();
   const targetNonTech = questionCounts.nontech;
   const targetTech = questionCounts.tech;
-  // 貼付版（lite）: ModeSwitch 側で onChange が無効化され "paste" 固定
-  // 完全版（full）: 貼付 / API をユーザがトグル可
   const [mode, setMode] = useState<Mode>("paste");
   const { ref: rootRef } = useStableSectionScroll(mode);
   const initialSplit = splitSections(initial?.rawText ?? "");
@@ -228,7 +225,7 @@ export function Section5Questions({
   async function handleInsertTemplate() {
     if (nonTech.trim()) {
       const ok = await confirm({
-        title: "現在の非技術質問を上書きしますか？",
+        title: "現在の人間性質問を上書きしますか？",
         description: "テンプレートで置き換えます。",
         confirmLabel: "上書きする",
         destructive: true,
@@ -249,7 +246,7 @@ export function Section5Questions({
         hasData={!!initial?.rawText?.trim()}
       >
         <ModeSwitch mode={mode} onChange={setMode} apiLabel="API生成" />
-        {isFull && mode === "api" && llmDefaults && (
+        {mode === "api" && llmDefaults && (
           <ProviderModelSelect
             stage="questions"
             defaultProvider={llmDefaults.defaultProvider}
@@ -265,7 +262,7 @@ export function Section5Questions({
       {mode === "api" && (
         <div className="border rounded p-3 mb-2 bg-muted flex items-center gap-3 text-sm">
           <div className="flex-1 text-muted-foreground min-w-0">
-            ① 面談者情報 + ② 凍結条件を入力に、AI で「非技術 {targetNonTech} 問 + 技術 {targetTech} 問」を section 付きで生成します。
+            ① 面談者情報 + ② 凍結条件を入力に、AI で「人間性 {targetNonTech} 問 + 技術 {targetTech} 問」を section 付きで生成します。
           </div>
           <Button
             type="button"
@@ -282,7 +279,7 @@ export function Section5Questions({
           fetcher={() => buildQuestionsPromptAction(sessionId)}
           hint={
             <>
-              Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力（## 非技術 / ## 技術 の section 付き）を下にペースト → 保存。
+              Max チャットで生成する場合：プロンプトをコピー → Max に貼付 → 出力（## 人間性 / ## 技術 の section 付き）を下にペースト → 保存。
             </>
           }
           className="mb-2"
@@ -300,7 +297,7 @@ export function Section5Questions({
                 : "bg-amber-100 text-amber-800"
           }`}
         >
-          非技術 {nonTechCount}/{targetNonTech}{" "}
+          人間性 {nonTechCount}/{targetNonTech}{" "}
           {nonTechCount === targetNonTech ? "✓" : nonTechCount === 0 ? "" : "⚠"}
         </span>
         <span
@@ -317,7 +314,7 @@ export function Section5Questions({
         </span>
         <span className="text-muted-foreground">合計 {nonTechCount + techCount} 問</span>
         <div className="flex-1" />
-        <Tip content="非技術のデフォルトテンプレ（固定 7 問）を左カラムに流し込む">
+        <Tip content="人間性のデフォルトテンプレ（固定 7 問）を左カラムに流し込む">
           <Button
             type="button"
             variant="outline"
@@ -325,16 +322,16 @@ export function Section5Questions({
             onClick={handleInsertTemplate}
             disabled={busy}
           >
-            📝 非技術テンプレを入れる
+            📝 人間性テンプレを入れる
           </Button>
         </Tip>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* 左: 非技術 */}
+        {/* 左: 人間性 */}
         <div>
           <div className="text-xs font-medium text-emerald-800 mb-1 flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-emerald-100">非技術</span>
+            <span className="px-2 py-0.5 rounded bg-emerald-100">人間性</span>
             <span className="text-muted-foreground">候補者によらない共通質問</span>
           </div>
           <div className="relative">
@@ -403,9 +400,9 @@ export function Section5Questions({
       <StructuredPreview combined={combined} />
 
       <div className="text-xs text-muted-foreground mt-2">
-        ※ 保存時は <code className="bg-muted px-1 rounded">## 非技術</code> /{" "}
+        ※ 保存時は <code className="bg-muted px-1 rounded">## 人間性</code> /{" "}
         <code className="bg-muted px-1 rounded">## 技術</code> の見出し付きで結合されます。
-        旧形式（見出しなし）は左の「非技術」に取り込まれます。
+        旧形式（見出しなし・旧「## 非技術」）は左の「人間性」に取り込まれます。
       </div>
       <ConfirmDialog />
     </div>
@@ -421,14 +418,14 @@ function StructuredPreview({ combined }: { combined: string }) {
   return (
     <details className="mt-3 border rounded-lg" open>
       <summary className="cursor-pointer text-xs text-muted-foreground px-3 py-2 bg-muted select-none">
-        構造化プレビュー — {total} 問（非技術 {nonTech.length} / 技術 {tech.length}）
+        構造化プレビュー — {total} 問（人間性 {nonTech.length} / 技術 {tech.length}）
         <span className="text-muted-foreground opacity-70 ml-2">
           ※ 保存時に questions.json の items 配列に同じ内容が入ります
         </span>
       </summary>
       <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
         <CategoryCard
-          title="非技術"
+          title="人間性"
           items={nonTech}
           prefix="Q"
           bg="bg-emerald-50/50"

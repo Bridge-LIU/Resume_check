@@ -25,33 +25,47 @@ export interface Role {
   編集不可?: boolean;
 }
 
-/** 評価軸（名前 + 重み）。重みは相対値で 1〜5 を想定（既定 3）。 */
-export interface EvalAxis {
+/** 小軸（大分類配下の 1 項目）。重みは相対値で 1〜5 を想定（既定 3）。 */
+export interface EvalSubAxis {
   名前: string;
   重み: number;
 }
 
 /**
- * 役割ごとの上書き値。指定された項目だけグローバル設定を上書きする。
- * - 重み: 評価軸の順番に対応する配列（長さは ≤ 評価軸数。足りない分はグローバル値を使う）
- * - 合格ライン / 普通ライン: 未指定ならグローバル値
+ * 大分類（人間性 / 技術力）の中身。大分類自身には重みを持たない（表示グルーピングのみ）。
+ * 総合スコアの算出は 6 小軸フラットの重み付き平均で行う。
+ * 大分類スコア（表示用）は配下小軸の重み付き平均。
+ */
+export interface EvalCategoryData {
+  小軸: EvalSubAxis[];
+}
+
+/** 大分類名（固定 2 種）。JSON key + 型分岐で使う。 */
+export const CATEGORY_KEYS = ["人間性", "技術力"] as const;
+export type CategoryKey = (typeof CATEGORY_KEYS)[number];
+
+/**
+ * 役割別上書き。名前ベースの Map（大分類キー / 小軸名）で index 依存を避ける。
+ * 大分類自体には重みを持たないため、上書き対象は 小軸重み と 合格/普通ライン のみ。
  */
 export interface RoleEvalOverride {
-  重み?: number[];
+  /** 小軸名 → 重み。マスタに存在しない小軸名は無視される。 */
+  小軸重み?: Record<string, number>;
   合格ライン?: number;
   普通ライン?: number;
 }
 
-/** master/eval_criteria.json — BARS 評価条件マスタ */
+/** master/eval_criteria.json — BARS 評価条件マスタ。2 大分類固定（人間性 / 技術力）。 */
 export interface EvalCriteria {
   方式: "BARS";
-  評価軸: EvalAxis[];
+  人間性: EvalCategoryData;
+  技術力: EvalCategoryData;
   スケール: { 最小: number; 最大: number; 刻み: number; 段階数: number };
   合格ライン: number;
   普通ライン: number;
   自己解決レベル: string;
   出力: string[];
-  /** 役割ID をキーにした上書き値。④凍結時にここから役割別の重み・合格ラインを取り出して snapshot へ畳み込む。 */
+  /** 役割 ID をキーにした役割別上書き。②凍結時に snapshot へ畳み込む。 */
   ロール別?: Record<string, RoleEvalOverride>;
 }
 
@@ -129,22 +143,29 @@ export interface Minutes {
   summarized?: boolean;
 }
 
-/** sessions/<id>/evaluation.json — ⑧ 評価結果 */
-export interface AxisEvaluation {
+/** sessions/<id>/evaluation.json — ⑤ 評価結果（大分類 × 小軸の 2 段構造） */
+export interface SubAxisEvaluation {
   軸: string;
   スコア: number;
   根拠: string;
 }
+export interface CategoryEvaluation {
+  /** 大分類スコア（小軸の重み付き平均。サーバ側で自動算出） */
+  スコア: number;
+  小軸評価: SubAxisEvaluation[];
+}
 export interface Evaluation {
   mode: Mode;
-  軸評価: AxisEvaluation[];
+  人間性: CategoryEvaluation;
+  技術力: CategoryEvaluation;
   自己解決レベル: number;
+  /** 大分類スコアの重み付き平均。サーバ側で自動算出 */
   総合スコア: number;
   合否: "合格" | "普通" | "不合格";
   良い点: string;
   懸念点: string;
   updatedAt: string;
-  /** ⑧評価を API モードで実行した場合のプロバイダ。貼付モードや旧データでは未設定 */
+  /** ⑤評価を API モードで実行した場合のプロバイダ。貼付モードでは未設定 */
   provider?: ProviderId;
 }
 
@@ -178,7 +199,7 @@ export interface ProviderSafeStatus {
 
 /** ⑤質問生成時の問数設定。prompt 文と maxTokens が両方この値から動的に決まる。 */
 export interface QuestionCounts {
-  /** 非技術質問の数（既定 7） */
+  /** 人間性質問の数（既定 7） */
   nontech: number;
   /** 技術質問の数（既定 8） */
   tech: number;

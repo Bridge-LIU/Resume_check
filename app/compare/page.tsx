@@ -10,11 +10,27 @@ import {
   saveSessionMeta,
 } from "@/lib/storage";
 import type {
-  AxisEvaluation,
   ConditionsSnapshot,
+  EvalCriteria,
   Evaluation,
   SessionMeta,
+  SubAxisEvaluation,
 } from "@/lib/types";
+import { CATEGORY_KEYS } from "@/lib/types";
+
+/** EvalCriteria から「小軸名 → 小軸重み」の Map に平坦化。大分類には重みなし。 */
+function flatWeightsFrom(ev: EvalCriteria): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const k of CATEGORY_KEYS) {
+    for (const s of ev[k].小軸) m.set(s.名前, s.重み);
+  }
+  return m;
+}
+
+/** Evaluation の 2 段構造を SubAxisEvaluation の flat 配列に */
+function flatAxisEvaluations(evalu: Evaluation): SubAxisEvaluation[] {
+  return CATEGORY_KEYS.flatMap((k) => evalu[k].小軸評価);
+}
 import { CompareTransposed, type TransposedRow } from "./_components/CompareTransposed";
 import { RadarChart, type RadarCandidate } from "./_components/RadarChart";
 import { rolePillClass } from "@/lib/uiClass";
@@ -39,22 +55,23 @@ type CompareCol = {
   weightedTotal: number | null;
 };
 
-/** ConditionsSnapshot の重みと Evaluation の軸スコアから重み付き平均を計算 */
+/** ConditionsSnapshot の重み（大分類 × 小軸）と Evaluation の小軸スコアから重み付き平均を計算 */
 function computeWeightedTotal(
   evaluation: Evaluation | null,
   snapshot: ConditionsSnapshot | null,
 ): number | null {
   if (!evaluation || !snapshot) return null;
-  const axes = snapshot.eval.評価軸;
-  if (axes.length === 0) return null;
+  const weights = flatWeightsFrom(snapshot.eval);
+  if (weights.size === 0) return null;
+  const entries = flatAxisEvaluations(evaluation);
   let weightedSum = 0;
   let totalWeight = 0;
   let matched = 0;
-  for (const axis of axes) {
-    const a = evaluation.軸評価.find((x) => x.軸 === axis.名前);
-    if (a == null) continue;
-    weightedSum += a.スコア * axis.重み;
-    totalWeight += axis.重み;
+  for (const e of entries) {
+    const w = weights.get(e.軸);
+    if (w == null) continue;
+    weightedSum += e.スコア * w;
+    totalWeight += w;
     matched++;
   }
   if (totalWeight === 0 || matched === 0) return null;
@@ -83,19 +100,21 @@ function bestWorst(values: (number | null)[]): { best: number | null; worst: num
 
 function buildAxisMap(cols: CompareCol[]): {
   axes: string[];
-  rows: Map<string, (AxisEvaluation | null)[]>;
+  rows: Map<string, (SubAxisEvaluation | null)[]>;
 } {
   const axisSet = new Set<string>();
   for (const c of cols) {
     if (!c.evaluation) continue;
-    for (const a of c.evaluation.軸評価) axisSet.add(a.軸);
+    for (const a of flatAxisEvaluations(c.evaluation)) axisSet.add(a.軸);
   }
   const axes = Array.from(axisSet);
-  const rows = new Map<string, (AxisEvaluation | null)[]>();
+  const rows = new Map<string, (SubAxisEvaluation | null)[]>();
   for (const axis of axes) {
     rows.set(
       axis,
-      cols.map((c) => c.evaluation?.軸評価.find((a) => a.軸 === axis) ?? null),
+      cols.map((c) =>
+        c.evaluation ? flatAxisEvaluations(c.evaluation).find((a) => a.軸 === axis) ?? null : null,
+      ),
     );
   }
   return { axes, rows };
@@ -215,12 +234,13 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
   const selfsExt = bestWorst(selfs);
   const { axes, rows } = buildAxisMap(cols);
 
-  // 重みは軸ごとに表示するため、最初に snapshot を持つ列の評価軸 → 軸名→重み のマップにする
+  // 重みは軸ごとに表示するため、最初に snapshot を持つ列の 小軸重み × 大分類重み マップにする
   const axisWeightMap = new Map<string, number>();
   for (const c of cols) {
     if (!c.snapshot) continue;
-    for (const ax of c.snapshot.eval.評価軸) {
-      if (!axisWeightMap.has(ax.名前)) axisWeightMap.set(ax.名前, ax.重み);
+    const w = flatWeightsFrom(c.snapshot.eval);
+    for (const [name, weight] of w) {
+      if (!axisWeightMap.has(name)) axisWeightMap.set(name, weight);
     }
   }
 
@@ -229,7 +249,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
     .filter((c) => c.evaluation != null)
     .map((c) => {
       const values = new Map<string, number>();
-      for (const a of c.evaluation!.軸評価) {
+      for (const a of flatAxisEvaluations(c.evaluation!)) {
         values.set(a.軸, a.スコア);
       }
       return { id: c.meta.id, label: c.meta.氏名, values };
@@ -242,8 +262,9 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
   const transposedRows: TransposedRow[] = cols.map((c) => {
     const axisScoreMap: Record<string, number | null> = {};
     const axisRationaleMap: Record<string, string | null> = {};
+    const flat = c.evaluation ? flatAxisEvaluations(c.evaluation) : [];
     for (const ax of axes) {
-      const a = c.evaluation?.軸評価.find((x) => x.軸 === ax);
+      const a = flat.find((x) => x.軸 === ax);
       axisScoreMap[ax] = a?.スコア ?? null;
       axisRationaleMap[ax] = a?.根拠 ?? null;
     }
@@ -293,7 +314,7 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
           最低値を <span className="text-red-700 font-medium">赤</span> でハイライト。
           合格ライン {passLine} / 普通ライン {midLine}。未評価のセッションは空欄表示。
           <br />
-          <strong>重み付き総合</strong>は、各セッションが ④ で凍結した時点の重みで再計算した値。
+          <strong>重み付き総合</strong>は、各セッションが ② で凍結した時点の重みで再計算した値。
           Max 出力との差が 0.1 以上なら隣に差分（<span className="text-emerald-600">+</span> /{" "}
           <span className="text-red-600">−</span>）を表示します（Max が重みを無視した可能性のチェック用）。
         </div>

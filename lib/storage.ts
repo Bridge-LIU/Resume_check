@@ -15,7 +15,6 @@ import path from "node:path";
 import type {
   Candidate,
   ConditionsSnapshot,
-  EvalAxis,
   EvalCriteria,
   Evaluation,
   Minutes,
@@ -424,31 +423,13 @@ export function deleteRole(id: string): void {
 
 const evalCriteriaPath = () => dataPath("master", "eval_criteria.json");
 
-/**
- * 旧形式（評価軸: string[]）を新形式（EvalAxis[]）に正規化する。
- * 既存データを破壊せず、読み出し時に変換するだけ（保存時に新形式になる）。
- */
-function normalizeAxis(a: unknown): EvalAxis {
-  if (typeof a === "string") return { 名前: a, 重み: 1 };
-  if (a && typeof a === "object") {
-    const o = a as Record<string, unknown>;
-    const 名前 = typeof o.名前 === "string" ? o.名前 : "";
-    const 重みRaw = typeof o.重み === "number" ? o.重み : Number(o.重み);
-    const 重み = Number.isFinite(重みRaw) && 重みRaw > 0 ? 重みRaw : 1;
-    return { 名前, 重み };
-  }
-  return { 名前: String(a ?? ""), 重み: 1 };
-}
-
-function normalizeEvalCriteria(raw: unknown): EvalCriteria | null {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw as EvalCriteria;
-  const axes = Array.isArray(r.評価軸) ? r.評価軸.map(normalizeAxis) : [];
-  return { ...r, 評価軸: axes };
-}
-
 export function getEvalCriteria(): EvalCriteria | null {
-  return normalizeEvalCriteria(readJson<unknown>(evalCriteriaPath()));
+  const raw = readJson<unknown>(evalCriteriaPath());
+  if (!raw) return null;
+  // 新スキーマ（人間性 / 技術力 の固定 2 大分類）でバリデーション。
+  // 旧 flat 形式が残っていた場合は null にして UI 側で空表示（設計方針: 旧データはリセット前提）。
+  const v = validateEvalCriteriaObject(raw);
+  return v.ok ? v.value : null;
 }
 
 export function saveEvalCriteria(c: EvalCriteria): void {
@@ -459,8 +440,8 @@ export function saveEvalCriteria(c: EvalCriteria): void {
 /**
  * グローバル EvalCriteria に役割別オーバーライドを畳み込んで、その役割向けの
  * 「実効評価条件」を返す。snapshot に保存する用。
- * - 重みは評価軸の順序で要素ごとに上書き
- * - 合格ライン / 普通ライン は値が定義されていれば上書き
+ * - 小軸重みは 名前ベースで個別に上書き（Map）
+ * - 合格ライン / 普通ライン は値があれば上書き
  * - 戻り値には ロール別 は含めない（snapshot は単一役割向けに解決済み）
  */
 export function resolveEvalForRole(
@@ -471,23 +452,23 @@ export function resolveEvalForRole(
   const { ロール別: _omit, ...rest } = base;
   void _omit;
   if (!override) return rest;
-  const axes = base.評価軸.map((a, i) => {
-    const w = override.重み?.[i];
-    return typeof w === "number" && Number.isFinite(w) && w > 0
-      ? { ...a, 重み: w }
-      : a;
+  const override小軸重み = override.小軸重み ?? {};
+  const applyToCategory = (cat: EvalCriteria["人間性"]) => ({
+    小軸: cat.小軸.map((s) => {
+      const w = override小軸重み[s.名前];
+      return typeof w === "number" && Number.isFinite(w) && w > 0
+        ? { ...s, 重み: w }
+        : s;
+    }),
   });
   return {
     ...rest,
-    評価軸: axes,
+    人間性: applyToCategory(base.人間性),
+    技術力: applyToCategory(base.技術力),
     合格ライン:
-      typeof override.合格ライン === "number"
-        ? override.合格ライン
-        : base.合格ライン,
+      typeof override.合格ライン === "number" ? override.合格ライン : base.合格ライン,
     普通ライン:
-      typeof override.普通ライン === "number"
-        ? override.普通ライン
-        : base.普通ライン,
+      typeof override.普通ライン === "number" ? override.普通ライン : base.普通ライン,
   };
 }
 
@@ -558,7 +539,9 @@ export function importMaster(json: string): { roles: number; evalAxes: number } 
     saveRole(r);
   }
   saveEvalCriteria(evalValidated);
-  return { roles: rolesValidated.length, evalAxes: evalValidated.評価軸.length };
+  const evalAxes =
+    evalValidated.人間性.小軸.length + evalValidated.技術力.小軸.length;
+  return { roles: rolesValidated.length, evalAxes };
 }
 
 /* ───────────── セッション ───────────── */
@@ -763,8 +746,9 @@ export const saveCandidate = (id: string, data: Candidate) => {
 export const getConditionsSnapshot = (id: string) => {
   const raw = readSection<ConditionsSnapshot>(id, "conditions_snapshot.json");
   if (!raw) return null;
-  const evalNorm = normalizeEvalCriteria(raw.eval);
-  if (evalNorm) raw.eval = evalNorm;
+  // 新スキーマ（人間性 / 技術力）でバリデーション。旧 flat 形式の snapshot は無視して null 扱い
+  // にすると④凍結からの読み直しを促せるが、既存の完了セッションに影響しない設計方針として
+  // ここでは raw を素通しする（Section⑤ 側で不整合時に警告表示）。
   return raw;
 };
 export const saveConditionsSnapshot = (id: string, data: ConditionsSnapshot) => {

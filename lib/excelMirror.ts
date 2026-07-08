@@ -34,10 +34,34 @@ import {
   listRoles,
   listSessions,
   loadSettings,
-  resolveEvalForRole,
 } from "./storage";
 import { parseQuestions } from "./questionParser";
 import { parseStructuredSummary } from "./summaryFormat";
+import { CATEGORY_KEYS, type CategoryKey, type EvalCriteria, type Evaluation, type SubAxisEvaluation } from "./types";
+
+/** EvalCriteria から全小軸を flat 化。Excel の軸列生成に使う。 */
+function flatSubAxes(
+  ev: EvalCriteria | null,
+): { 名前: string; 重み: number; 大分類: CategoryKey }[] {
+  if (!ev) return [];
+  const out: { 名前: string; 重み: number; 大分類: CategoryKey }[] = [];
+  for (const k of CATEGORY_KEYS) {
+    for (const s of ev[k].小軸) {
+      out.push({ 名前: s.名前, 重み: s.重み, 大分類: k });
+    }
+  }
+  return out;
+}
+
+/** Evaluation から全小軸評価を flat 化。 */
+function flatEvalEntries(ev: Evaluation | null): SubAxisEvaluation[] {
+  if (!ev) return [];
+  const out: SubAxisEvaluation[] = [];
+  for (const k of CATEGORY_KEYS) {
+    for (const e of ev[k].小軸評価) out.push(e);
+  }
+  return out;
+}
 
 export const MASTER_FILE = "マスタ.xlsx";
 export const SESSIONS_FILE = "面談者一覧.xlsx";
@@ -150,11 +174,10 @@ export async function buildMasterXlsx(): Promise<Buffer> {
   wb.creator = "面談AI評価ツール";
   wb.created = new Date();
 
-  const axisNames = ev?.評価軸.map((a) => a.名前) ?? [
-    "非技術",
-    "技術",
-    "総合",
-  ];
+  const flatAxes = flatSubAxes(ev);
+  const axisNames = flatAxes.length > 0
+    ? flatAxes.map((a) => a.名前)
+    : ["主体性", "コミュニケーション力", "学習意欲", "専門知識", "問題解決力", "設計力"];
   const axisCount = axisNames.length;
 
   // 列インデックス
@@ -250,10 +273,10 @@ export async function buildMasterXlsx(): Promise<Buffer> {
 
   // ── Data rows ──
   roles.forEach((role, idx) => {
-    const resolved = ev ? resolveEvalForRole(ev, role.id) : null;
-    const weights = resolved?.評価軸.map((a) => a.重み) ?? [];
-    const goal = resolved?.合格ライン ?? null;
-    const pass = resolved?.普通ライン ?? null;
+    // 役割別上書きは廃止。全役割で ev（共通既定）を使う。
+    const weights = flatAxes.map((a) => a.重み);
+    const goal = ev?.合格ライン ?? null;
+    const pass = ev?.普通ライン ?? null;
 
     const row = ws1.addRow([
       role.役割,
@@ -540,11 +563,10 @@ export async function buildSessionsXlsx(
   wb.creator = "面談AI評価ツール";
   wb.created = new Date();
 
-  const axisNames = ev?.評価軸.map((a) => a.名前) ?? [
-    "非技術",
-    "技術",
-    "総合",
-  ];
+  const flatAxes2 = flatSubAxes(ev);
+  const axisNames = flatAxes2.length > 0
+    ? flatAxes2.map((a) => a.名前)
+    : ["主体性", "コミュニケーション力", "学習意欲", "専門知識", "問題解決力", "設計力"];
 
   const ws = wb.addWorksheet("①D_面談者一覧", {
     views: [{ state: "frozen", ySplit: 2, xSplit: 1, showGridLines: false }],
@@ -670,12 +692,13 @@ export async function buildSessionsXlsx(
       }
       return "貼付";
     })();
+    const evalEntries = flatEvalEntries(evalu);
     const axisScores = axisNames.map((name) => {
-      const a = evalu?.軸評価.find((x) => x.軸 === name);
+      const a = evalEntries.find((x) => x.軸 === name);
       return typeof a?.スコア === "number" ? a.スコア : null;
     });
     const axisRationales = axisNames.map((name) => {
-      const a = evalu?.軸評価.find((x) => x.軸 === name);
+      const a = evalEntries.find((x) => x.軸 === name);
       return a?.根拠 ?? "";
     });
     const total = typeof evalu?.総合スコア === "number" ? evalu.総合スコア : null;
@@ -812,14 +835,9 @@ export async function buildSessionsXlsx(
     if (typeof totalCell.value === "number") {
       totalCell.numFmt = "0.00";
       const score = totalCell.value;
-      const goalLine =
-        (ev && resolveEvalForRole(ev, roleId)?.合格ライン) ??
-        ev?.合格ライン ??
-        4.2;
-      const passLine =
-        (ev && resolveEvalForRole(ev, roleId)?.普通ライン) ??
-        ev?.普通ライン ??
-        3.5;
+      const goalLine = ev?.合格ライン ?? 4.0;
+      const passLine = ev?.普通ライン ?? 3.5;
+      void roleId; // 役割別上書きは廃止済み
       totalCell.font = {
         ...totalCell.font,
         color: {
@@ -1149,14 +1167,16 @@ function addConditionsSheet(
   }
   cursor += 1;
 
-  // 評価軸重み
-  cursor = addKV(ws, cursor, "評価軸", ev.評価軸.map((a) => a.名前).join(" / "));
+  // 評価軸重み（大分類 × 小軸）
+  const flatSubs = flatSubAxes(ev);
+  cursor = addKV(ws, cursor, "小軸", flatSubs.map((a) => a.名前).join(" / "));
   cursor = addKV(
     ws,
     cursor,
-    "軸重み",
-    ev.評価軸.map((a) => `${a.名前}=${a.重み}`).join(" / "),
+    "小軸重み",
+    flatSubs.map((a) => `${a.名前}=${a.重み}`).join(" / "),
   );
+  // 大分類重みは廃止済み（大分類はグループ表示のみ）
   cursor = addKV(ws, cursor, "合格ライン", ev.合格ライン.toFixed(2));
   cursor = addKV(ws, cursor, "普通ライン", ev.普通ライン.toFixed(2));
   addKV(
@@ -1204,7 +1224,7 @@ function addQuestionsSheet(
     if (items.length === 0) return;
     ws.mergeCells(cursor, 1, cursor, 5);
     const c = ws.getCell(cursor, 1);
-    c.value = prefix === "Q" ? "非技術（共通質問）" : "技術（役割別）";
+    c.value = prefix === "Q" ? "人間性（共通質問）" : "技術（役割別）";
     c.fill = solidFill(bgTitle);
     c.font = { bold: true, size: 11, color: { argb: bgTitleColor } };
     c.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
@@ -1320,7 +1340,7 @@ function addEvaluationSheet(
   styleHeaderRow(hdr);
   ws.getRow(cursor).height = 22;
   cursor += 1;
-  for (const a of ev.軸評価) {
+  for (const a of flatEvalEntries(ev)) {
     const { symbol, color } = scoreMark(a.スコア);
     const row = ws.getRow(cursor);
     row.getCell(1).value = a.軸;

@@ -441,7 +441,7 @@ function SectionContent({
           <div className="border rounded-lg p-3 bg-muted flex items-center gap-3">
             <div className="flex-1 text-xs text-muted-foreground">
               ① 面談者情報 + ② 凍結条件を入力に、AI で
-              「非技術 <b>7</b> 問 + 技術 <b>8</b> 問」を section 付きで生成します。
+              「人間性 <b>7</b> 問 + 技術 <b>8</b> 問」を section 付きで生成します。
               <div className="text-muted-foreground mt-1">
                 anthropic / claude-sonnet-4-6 で実行
               </div>
@@ -457,7 +457,7 @@ function SectionContent({
         )}
         <div className="flex items-center gap-3">
           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-            非技術 <b>7</b>
+            人間性 <b>7</b>
           </span>
           <span className="text-xs bg-violet-100 text-violet-700 px-2 py-1 rounded-full">
             技術 <b>8</b>

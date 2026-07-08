@@ -459,13 +459,8 @@ function Row({
   axes: { 軸: string }[];
 }) {
   const axisMap = new Map(it.軸評価.map((a) => [a.軸, a.スコア]));
-  const isFake = it.役割.startsWith("[FAKE]");
   return (
-    <tr
-      className={
-        isFake ? "bg-amber-50/40 hover:bg-amber-50" : "hover:bg-accent"
-      }
-    >
+    <tr className="hover:bg-accent">
       <td className="px-2 py-1.5 text-muted-foreground text-xs tabular">
         {it.closedAt ? it.closedAt.slice(0, 10) : "—"}
       </td>

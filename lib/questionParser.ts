@@ -4,7 +4,7 @@
  * rawText（⭐/狙い/解答例 のテキスト形式）と QuestionItem[]（構造化配列）の双方向変換。
  *
  * サポートする入力フォーマット:
- *   ## 非技術 / ## 技術 のセクション見出し（任意）
+ *   ## 人間性 / ## 技術 のセクション見出し（任意、旧「## 非技術」も後方互換で読込可）
  *   ⭐ Q1. 質問本文   ← または ☆ Q1. / Q1. / T1. / 1. / １. などの開始パターン
  *     狙い: ...     ← または 狙: / aim: などの揺れ吸収（行頭インデント無くてもOK）
  *     解答例: ...   ← または 解: / example: などの揺れ吸収
@@ -12,7 +12,7 @@
  * 設計目標:
  *   - Max が多少フォーマットを崩しても極力拾う
  *   - ⭐ や Q1./T1. の番号付けは復元時に再付番する
- *   - セクション情報（非技術/技術）は category として保持
+ *   - セクション情報（人間性/技術）は category として保持
  */
 
 // 注: pure な変換関数のため client / server どちらからでも import 可。
@@ -20,13 +20,14 @@ import type { QuestionItem } from "./types";
 
 /** QuestionItem に追加でカテゴリ情報を載せた拡張型（内部用） */
 export interface ParsedQuestionItem extends QuestionItem {
-  /** 非技術 / 技術 / その他 */
-  category: "非技術" | "技術" | "その他";
+  /** 人間性 / 技術 / その他 */
+  category: "人間性" | "技術" | "その他";
 }
 
-// LLM が # 非技術 / ## 非技術 / ### 非技術 のどれで出力しても拾えるよう
+// LLM が # 人間性 / ## 人間性 / ### 人間性 のどれで出力しても拾えるよう
 // ハッシュ数を 1 以上に緩和（Haiku など軽量モデルは単一 # を返すことがある）
-const NON_TECH_HEADER_RE = /^#+\s*非技術\s*$/m;
+// 旧「非技術」ヘッダも後方互換で受け入れる
+const NON_TECH_HEADER_RE = /^#+\s*(?:人間性|非技術)\s*$/m;
 const TECH_HEADER_RE = /^#+\s*技術\s*$/m;
 
 /** 質問開始行: ⭐/☆ + Q/T/数字 + . */
@@ -71,7 +72,7 @@ export function parseQuestions(rawText: string): {
   const lines = rawText.split(/\r?\n/);
 
   // セクション境界を見つける
-  let currentCategory: "非技術" | "技術" | "その他" = "非技術"; // 見出し無しなら全部非技術扱い
+  let currentCategory: "人間性" | "技術" | "その他" = "人間性"; // 見出し無しなら全部人間性扱い
   const nonTech: ParsedQuestionItem[] = [];
   const tech: ParsedQuestionItem[] = [];
 
@@ -94,7 +95,7 @@ export function parseQuestions(rawText: string): {
     const bucket =
       cur.category === "技術"
         ? tech
-        : cur.category === "非技術"
+        : cur.category === "人間性"
           ? nonTech
           : nonTech; // "その他"（見出し無し）も nonTech へ
     bucket.push(cur);
@@ -102,11 +103,11 @@ export function parseQuestions(rawText: string): {
 
   for (const raw of lines) {
     const line = raw;
-    // セクション見出し検知
-    if (/^#+\s*非技術\s*$/.test(line.trim())) {
+    // セクション見出し検知（旧「非技術」も後方互換で受入）
+    if (/^#+\s*(?:人間性|非技術)\s*$/.test(line.trim())) {
       commit();
       cur = null;
-      currentCategory = "非技術";
+      currentCategory = "人間性";
       continue;
     }
     if (/^#+\s*技術\s*$/.test(line.trim())) {
@@ -159,7 +160,7 @@ export function parseQuestions(rawText: string): {
   return { nonTech, tech };
 }
 
-/** QuestionItem[] → rawText（保存形式）。番号は再付番。category=非技術/技術 のヘッダを出す */
+/** QuestionItem[] → rawText（保存形式）。番号は再付番。category=人間性/技術 のヘッダを出す */
 export function stringifyQuestions(
   nonTech: QuestionItem[],
   tech: QuestionItem[],
@@ -180,7 +181,7 @@ export function stringifyQuestions(
   }
 
   if (nonTech.length > 0) {
-    parts.push("## 非技術");
+    parts.push("## 人間性");
     parts.push(format(nonTech, "Q"));
   }
   if (tech.length > 0) {
@@ -191,7 +192,7 @@ export function stringifyQuestions(
   return parts.join("\n") + (parts.length > 0 ? "\n" : "");
 }
 
-/** 全 items（非技術 + 技術）を 1 つの配列に圧縮（保存用）。category は捨てる */
+/** 全 items（人間性 + 技術）を 1 つの配列に圧縮（保存用）。category は捨てる */
 export function flattenToItems(
   nonTech: QuestionItem[],
   tech: QuestionItem[],

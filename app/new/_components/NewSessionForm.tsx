@@ -101,7 +101,7 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
           </>
         )}
         <div className="text-xs text-muted-foreground">
-          役割を選ぶと ④ にマスタが読み込まれ、確定後に凍結されます。
+          役割を選ぶと ② にマスタが読み込まれ、確定後に凍結されます。
         </div>
       </div>
 

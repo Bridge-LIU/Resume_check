@@ -23,7 +23,6 @@ import {
   getRole,
   getSessionMeta,
   loadSettings,
-  resolveEvalForRole,
   saveCandidate,
   saveConditionsSnapshot,
   saveEvaluation,
@@ -32,16 +31,19 @@ import {
   saveSessionMeta,
 } from "@/lib/storage";
 import type {
-  AxisEvaluation,
   Candidate,
+  CategoryEvaluation,
   ConditionsSnapshot,
+  EvalCriteria,
   Evaluation,
   Minutes,
   Mode,
   Questions,
   Role,
   SessionMeta,
+  SubAxisEvaluation,
 } from "@/lib/types";
+import { CATEGORY_KEYS } from "@/lib/types";
 import { writeAudit } from "@/lib/auditLog";
 import { flattenToItems, parseQuestions } from "@/lib/questionParser";
 import { softDeleteSession } from "@/lib/retention";
@@ -466,7 +468,7 @@ export async function freezeConditionsAction(
   }
   const snapshot: ConditionsSnapshot = {
     role,
-    eval: resolveEvalForRole(evalCriteria, role.id),
+    eval: evalCriteria,
     frozenAt: nowIso(),
   };
   saveConditionsSnapshot(id, snapshot);
@@ -515,17 +517,17 @@ export async function saveQuestionsAction(
 
 /**
  * 質問生成 system prompt を問数から組み立てる。
- * - 非技術 N問・技術 M問の数値が prompt と maxTokens の両方を駆動する
+ * - 人間性 N問・技術 M問の数値が prompt と maxTokens の両方を駆動する
  */
 function buildQuestionsSystemPrompt(nontech: number, tech: number): string {
   return (
     "あなたは面接設計の専門家です。候補者の経歴要約と求める人材条件を入力として、面談で使う質問を2セクションに分けて作ってください。\n\n" +
-    `【非技術】候補者によらず採用面談で共通して聞きたい質問を **${nontech}問**（自己紹介・キャリア・強み弱み・努力したこと・対人・趣味/ストレス対処・志望動機 等）。\n` +
+    `【人間性】候補者によらず採用面談で共通して聞きたい質問を **${nontech}問**（自己紹介・キャリア・強み弱み・努力したこと・対人・趣味/ストレス対処・志望動機 等）。\n` +
     `【技術】候補者の経歴・求める人材条件に紐づく専門質問を **${tech}問**（STAR法・コンピテンシー・キラー質問の観点で深掘り）。\n\n` +
     "各質問には『狙い』（評価したい軸）と『簡単な解答例』を必ず添えてください。最重要の必須質問には『⭐』を先頭に付けてください。\n" +
     "前置き・コードフェンス・後書きは不要。下記フォーマットを厳守してください。\n\n" +
     "出力フォーマット:\n" +
-    "## 非技術\n" +
+    "## 人間性\n" +
     "⭐ Q1. 質問文\n" +
     "  狙い: 評価したい軸\n" +
     "  解答例: 想定される良い回答の要点\n\n" +
@@ -580,9 +582,9 @@ export async function generateQuestionsApiAction(
   const { nontech, tech } = loadSettings().questionCounts;
   const systemPrompt = buildQuestionsSystemPrompt(nontech, tech);
   const user =
-    "# 候補者情報（②要約）\n" +
+    "# 候補者情報（①要約）\n" +
     candidate.要約 +
-    "\n\n# 求める人材条件（④凍結）\n" +
+    "\n\n# 求める人材条件（②凍結）\n" +
     JSON.stringify(snapshot.role, null, 2);
 
   let responseText: string;
@@ -821,7 +823,11 @@ function normalizeVerdict(raw: unknown): "合格" | "普通" | "不合格" | nul
   return null;
 }
 
-function parseEvaluationJson(rawText: string, mode: Mode): EvaluationParseResult {
+function parseEvaluationJson(
+  rawText: string,
+  mode: Mode,
+  criteria: EvalCriteria,
+): EvaluationParseResult {
   const cleaned = stripCodeFenceAndPreamble(rawText);
   let parsed: unknown;
   try {
@@ -837,35 +843,55 @@ function parseEvaluationJson(rawText: string, mode: Mode): EvaluationParseResult
   }
   const p = parsed as Record<string, unknown>;
 
-  const 軸評価Raw = p["軸評価"];
-  if (!Array.isArray(軸評価Raw)) {
-    return { ok: false, error: "「軸評価」が配列ではありません" };
-  }
-  const 軸評価: AxisEvaluation[] = [];
-  for (let i = 0; i < 軸評価Raw.length; i++) {
-    const a = 軸評価Raw[i];
-    if (typeof a !== "object" || a === null) {
-      return { ok: false, error: `軸評価[${i}] がオブジェクトではありません` };
+  const cats: Partial<Record<(typeof CATEGORY_KEYS)[number], CategoryEvaluation>> = {};
+  for (const key of CATEGORY_KEYS) {
+    const catRaw = p[key];
+    if (!catRaw || typeof catRaw !== "object") {
+      return { ok: false, error: `「${key}」がオブジェクトではありません` };
     }
-    const ax = a as Record<string, unknown>;
-    if (typeof ax["軸"] !== "string") {
-      return { ok: false, error: `軸評価[${i}].軸 が文字列ではありません` };
+    const c = catRaw as Record<string, unknown>;
+    const subRaw = c["小軸評価"];
+    if (!Array.isArray(subRaw)) {
+      return { ok: false, error: `「${key}.小軸評価」が配列ではありません` };
     }
-    if (typeof ax["スコア"] !== "number") {
-      return { ok: false, error: `軸評価[${i}].スコア が数値ではありません` };
+    const expected = new Set(criteria[key].小軸.map((s) => s.名前));
+    const 小軸評価: SubAxisEvaluation[] = [];
+    for (let i = 0; i < subRaw.length; i++) {
+      const a = subRaw[i];
+      if (typeof a !== "object" || a === null) {
+        return { ok: false, error: `${key}.小軸評価[${i}] がオブジェクトではありません` };
+      }
+      const ax = a as Record<string, unknown>;
+      if (typeof ax["軸"] !== "string") {
+        return { ok: false, error: `${key}.小軸評価[${i}].軸 が文字列ではありません` };
+      }
+      if (typeof ax["スコア"] !== "number") {
+        return { ok: false, error: `${key}.小軸評価[${i}].スコア が数値ではありません` };
+      }
+      const 軸 = ax["軸"] as string;
+      if (!expected.has(軸)) {
+        return {
+          ok: false,
+          error: `${key}.小軸評価[${i}].軸「${軸}」はマスタに存在しません`,
+        };
+      }
+      小軸評価.push({
+        軸,
+        スコア: ax["スコア"] as number,
+        根拠: typeof ax["根拠"] === "string" ? (ax["根拠"] as string) : "",
+      });
     }
-    軸評価.push({
-      軸: ax["軸"] as string,
-      スコア: ax["スコア"] as number,
-      根拠: typeof ax["根拠"] === "string" ? (ax["根拠"] as string) : "",
-    });
+    const スコア = weightedAverage(
+      小軸評価.map((s) => ({
+        v: s.スコア,
+        w: criteria[key].小軸.find((x) => x.名前 === s.軸)?.重み ?? 1,
+      })),
+    );
+    cats[key] = { スコア, 小軸評価 };
   }
 
   if (typeof p["自己解決レベル"] !== "number") {
     return { ok: false, error: "「自己解決レベル」が数値ではありません" };
-  }
-  if (typeof p["総合スコア"] !== "number") {
-    return { ok: false, error: "「総合スコア」が数値ではありません" };
   }
   const 合否 = normalizeVerdict(p["合否"]);
   if (!合否) {
@@ -875,11 +901,22 @@ function parseEvaluationJson(rawText: string, mode: Mode): EvaluationParseResult
     };
   }
 
+  // 総合スコア: 全 6 小軸のフラット重み付き平均（大分類重みは廃止済み）
+  const 総合スコア = weightedAverage(
+    CATEGORY_KEYS.flatMap((k) =>
+      cats[k]!.小軸評価.map((s) => ({
+        v: s.スコア,
+        w: criteria[k].小軸.find((x) => x.名前 === s.軸)?.重み ?? 1,
+      })),
+    ),
+  );
+
   const data: Evaluation = {
     mode,
-    軸評価,
+    人間性: cats["人間性"]!,
+    技術力: cats["技術力"]!,
     自己解決レベル: p["自己解決レベル"] as number,
-    総合スコア: p["総合スコア"] as number,
+    総合スコア,
     合否,
     良い点: typeof p["良い点"] === "string" ? (p["良い点"] as string) : "",
     懸念点: typeof p["懸念点"] === "string" ? (p["懸念点"] as string) : "",
@@ -888,12 +925,26 @@ function parseEvaluationJson(rawText: string, mode: Mode): EvaluationParseResult
   return { ok: true, data };
 }
 
+function weightedAverage(items: { v: number; w: number }[]): number {
+  const wsum = items.reduce((s, x) => s + x.w, 0);
+  if (wsum <= 0) return 0;
+  const sum = items.reduce((s, x) => s + x.v * x.w, 0);
+  return Math.round((sum / wsum) * 100) / 100;
+}
+
 export async function saveEvaluationFromJsonAction(
   id: string,
   mode: Mode,
   rawText: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const result = parseEvaluationJson(rawText, mode);
+  const snapshot = getConditionsSnapshot(id);
+  if (!snapshot) {
+    return {
+      ok: false,
+      error: "② 求める人材条件が未凍結です。先に凍結してから評価を貼り付けてください。",
+    };
+  }
+  const result = parseEvaluationJson(rawText, mode, snapshot.eval);
   if (!result.ok || !result.data) {
     return { ok: false, error: result.error ?? "不明なエラー" };
   }
@@ -954,9 +1005,9 @@ export async function buildQuestionsPromptAction(id: string): Promise<PromptResu
   const prompt =
     buildQuestionsSystemPrompt(nontech, tech) +
     "\n\n---\n\n" +
-    "# 候補者情報（②要約）\n" +
+    "# 候補者情報（①要約）\n" +
     candidate.要約 +
-    "\n\n# 求める人材条件（④凍結）\n" +
+    "\n\n# 求める人材条件（②凍結）\n" +
     JSON.stringify(snapshot.role, null, 2) +
     "\n\n上記をもとに指定フォーマットで質問を生成してください。コードフェンスや前置きは付けず、本文のみ返してください。";
   return { ok: true, prompt };
@@ -997,7 +1048,9 @@ const EVAL_SYSTEM_PROMPT =
   "- コードフェンスは付けない。";
 
 const EVAL_OUTPUT_SCHEMA =
-  '{"軸評価":[{"軸":"","スコア":0,"根拠":""}],"自己解決レベル":0,"総合スコア":0,"合否":"合格|普通|不合格 のいずれか1つ","良い点":"","懸念点":""}';
+  '{"人間性":{"小軸評価":[{"軸":"（マスタと一致する小軸名）","スコア":0,"根拠":""}]},"技術力":{"小軸評価":[{"軸":"（マスタと一致する小軸名）","スコア":0,"根拠":""}]},"自己解決レベル":0,"合否":"合格|普通|不合格 のいずれか1つ","良い点":"","懸念点":""}\n' +
+  "※ 各大分類ごとに、マスタで定義された全ての小軸名でスコアを返してください（余計な小軸は追加せず、抜けもなく）。\n" +
+  "※ 総合スコア・各大分類スコアはサーバ側で重み付き平均から自動計算するので出力に含めなくて構いません。";
 
 export async function evaluateInterviewApiAction(
   id: string,
@@ -1060,7 +1113,7 @@ export async function evaluateInterviewApiAction(
     };
   }
 
-  const result = parseEvaluationJson(extracted, "api");
+  const result = parseEvaluationJson(extracted, "api", snapshot.eval);
   if (!result.ok || !result.data) {
     return {
       ok: false,
