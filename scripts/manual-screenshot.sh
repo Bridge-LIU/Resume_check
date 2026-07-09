@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 # 操作マニュアル用に各画面のスクショを Chrome ヘッドレスで自動撮影する。
 # 前提: dev server (http://127.0.0.1:3939) が動いていること。
-# 出力先: manual/assets/  （同ディレクトリの HTML から <img src="assets/xxx.png"> で参照）
+# 出力先: manual/assets/  （manual/操作マニュアル.html から <img src="assets/xxx.png"> で参照）
+# 実行: bash scripts/manual-screenshot.sh
 
 set -euo pipefail
 
 CHROME="/c/Program Files/Google/Chrome/Application/chrome.exe"
-OUT_DIR="$(cd "$(dirname "$0")" && pwd)/assets"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+OUT_DIR="$REPO_ROOT/manual/assets"
 BASE="http://127.0.0.1:${PORT:-3939}"
 
-DATA_ROOT="$(cd "$(dirname "$0")/.." && pwd)/data"
+DATA_ROOT="$REPO_ROOT/data"
 SESSIONS_ROOT="$DATA_ROOT/sessions"
 
 # session 詳細用：まず 測試 で始まるセッションを優先、無ければ任意の評価済セッション

@@ -1,7 +1,7 @@
 // 操作マニュアル用スクショ生成（Playwright 版）
 // - 前提: dev server (http://127.0.0.1:3939) が動いていること
 // - 出力: manual/assets/*.png
-// - 実行: node manual/screenshot-playwright.mjs
+// - 実行: node scripts/manual-screenshot.mjs
 //
 // マニュアル HTML が参照する 11 画像:
 //   home / list / new / trash / master / settings / cost / analytics /
@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
-const OUT_DIR = path.join(__dirname, "assets");
+const OUT_DIR = path.join(REPO_ROOT, "manual", "assets");
 const BASE = process.env.BASE || "http://127.0.0.1:3939";
 const SESSIONS_ROOT = path.join(REPO_ROOT, "data", "sessions");
 
