@@ -130,30 +130,74 @@ export default async function HomePage() {
   }
 
   if (all.length === 0) {
+    // 0 件時: 通常ダッシュボードの骨格を保ち、大タイルを CTA・活動タイルを 5 ステップガイドに置換。
+    // ミュートで並んだ 状態カウント / 合格率 / 評価待ち / 平均スコア で「面談を作るとここに数値が入る」を予感させる。
     return (
       <div className="bg-card rounded-xl border shadow-sm p-6 space-y-4">
         <Header now={now} />
-        <div className="rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/50 p-8 text-center space-y-4">
-          <div className="text-5xl">📋</div>
-          <div>
-            <div className="font-bold text-lg text-emerald-900">マスタの準備 OK！</div>
-            <div className="text-sm text-emerald-800 mt-1">
-              求人情報と評価条件が揃いました。最初の面談を作ってみましょう。
+
+        <div className="grid grid-cols-6 gap-3 auto-rows-[110px]">
+          {/* 大タイル位置: オンボーディング CTA */}
+          <div className="col-span-6 md:col-span-4 row-span-2 rounded-xl border-2 border-dashed border-emerald-300 bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-500/15 dark:to-blue-500/15 dark:border-emerald-500/50 p-5 shadow-sm relative overflow-hidden flex flex-col justify-center items-start">
+            <div className="text-xs text-emerald-700 dark:text-emerald-300 uppercase tracking-widest font-medium">
+              はじめての面談
             </div>
+            <div className="font-bold text-xl text-emerald-900 dark:text-emerald-200 mt-1">
+              マスタの準備 OK！
+            </div>
+            <div className="text-sm text-emerald-800 dark:text-emerald-300 mt-1">
+              役割 {roles.length} 件・評価条件登録済み。最初の面談を作ってみましょう。
+            </div>
+            <Link
+              href="/new"
+              className="mt-3 inline-block bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded font-medium shadow-sm"
+            >
+              ＋ 最初の面談を作成 →
+            </Link>
+            <div className="absolute right-4 bottom-4 text-6xl opacity-15">📋</div>
           </div>
-          <Link
-            href="/new"
-            className="inline-block bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-5 py-2 rounded font-medium shadow-sm"
-          >
-            ＋ 最初の面談を作成
-          </Link>
-          <div className="text-xs text-emerald-700/70">
-            役割は {roles.length} 件登録済み ・ 変更は{" "}
-            <Link href="/master" className="underline">
-              /master
-            </Link>{" "}
-            から
+
+          {/* 合格率（ミュート） */}
+          <MutedKpiCard label="合格率" main="―" sub="評価済ゼロ" />
+
+          {/* 平均スコア（ミュート） */}
+          <MutedKpiCard label="平均スコア" main="―" sub="先週データなし" />
+
+          {/* 評価待ち（0） */}
+          <div className="col-span-6 md:col-span-2 row-span-2 rounded-xl border bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/30 p-4 shadow-sm">
+            <div className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+              評価待ち
+            </div>
+            <div className="text-4xl font-bold text-amber-700 dark:text-amber-300 tabular mt-1">
+              0
+            </div>
+            <div className="text-2xs text-amber-600 dark:text-amber-400 mt-0.5">
+              面談済 → 評価済
+            </div>
+            <div className="mt-3 text-2xs text-muted-foreground">なし</div>
           </div>
+
+          {/* 活動タイル位置: 次にやること 5 ステップ */}
+          <div className="col-span-6 md:col-span-4 row-span-2 rounded-xl border bg-card p-4 shadow-sm">
+            <div className="text-xs text-muted-foreground uppercase tracking-widest mb-3">
+              次にやること
+            </div>
+            <ol className="space-y-1.5 text-sm">
+              <NextStep num="1" label="求人情報を確認" href="/master" />
+              <NextStep num="2" label="＋ 面談を作成" href="/new" active />
+              <NextStep num="3" label="面談者情報 / 求める人材条件 を入力" />
+              <NextStep num="4" label="質問リストを AI に生成させる / 貼付する" />
+              <NextStep num="5" label="面談内容を貼付 → 評価結果を確認" />
+            </ol>
+          </div>
+        </div>
+
+        {/* 状態別カウント（4 種、ミュート表示） */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <ZeroStageCard label="編集中"   bg={STATUS_CARD_BG.edit} icon={STATUS_ICON["編集中"]} />
+          <ZeroStageCard label="質問公開" bg={STATUS_CARD_BG.qpub} icon={STATUS_ICON["質問公開"]} />
+          <ZeroStageCard label="面談済"   bg={STATUS_CARD_BG.itv}  icon={STATUS_ICON["面談済"]} />
+          <ZeroStageCard label="評価済"   bg={STATUS_CARD_BG.eval} icon={STATUS_ICON["評価済"]} />
         </div>
       </div>
     );
@@ -339,4 +383,76 @@ function StageCard({
       <div className="absolute right-3 bottom-3 text-3xl opacity-20 leading-none">{icon}</div>
     </Link>
   );
+}
+
+/* ────────── 0 件時 (empty state) 専用の部品 ────────── */
+
+function MutedKpiCard({ label, main, sub }: { label: string; main: string; sub: string }) {
+  return (
+    <div className="col-span-3 md:col-span-2 rounded-xl border bg-card p-4 shadow-sm">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-3xl font-bold tabular mt-1 text-muted-foreground opacity-70">
+        {main}
+      </div>
+      <div className="text-2xs text-muted-foreground opacity-70 mt-0.5">{sub}</div>
+    </div>
+  );
+}
+
+function ZeroStageCard({
+  label,
+  bg,
+  icon,
+}: {
+  label: string;
+  bg: string;
+  icon: string;
+}) {
+  return (
+    <div
+      className={`${bg} text-white rounded-xl p-4 shadow-sm relative overflow-hidden opacity-60`}
+    >
+      <div className="text-3xl font-bold tabular">0</div>
+      <div className="text-sm mt-1 opacity-90">{label}</div>
+      <div className="absolute right-3 bottom-3 text-3xl opacity-20 leading-none">{icon}</div>
+    </div>
+  );
+}
+
+function NextStep({
+  num,
+  label,
+  href,
+  active,
+}: {
+  num: string;
+  label: string;
+  href?: string;
+  active?: boolean;
+}) {
+  const li = (
+    <li
+      className={
+        "flex items-center gap-3 rounded-lg px-2 py-1.5 " +
+        (active ? "bg-emerald-50 dark:bg-emerald-500/10" : "hover:bg-muted/60")
+      }
+    >
+      <span
+        className={
+          "w-6 h-6 rounded-full flex items-center justify-center text-2xs font-bold shrink-0 " +
+          (active ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground")
+        }
+      >
+        {num}
+      </span>
+      <span className={active ? "font-medium" : "text-muted-foreground"}>{label}</span>
+      {href && (
+        <>
+          <div className="flex-1" />
+          <span className="text-xs text-primary">→</span>
+        </>
+      )}
+    </li>
+  );
+  return href ? <Link href={href}>{li}</Link> : li;
 }
