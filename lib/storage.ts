@@ -29,6 +29,7 @@ import {
   validateEvalCriteriaObject,
   validateRoleObject,
 } from "./validation";
+import { PROVIDER_IDS_ACTIVE } from "./llm/registry";
 
 const PROJECT_ROOT = process.cwd();
 const SETTINGS_PATH = path.join(PROJECT_ROOT, "config", "settings.json");
@@ -111,9 +112,17 @@ function migrateSettings(raw: unknown): Settings {
     ),
   };
 
+  // 旧 settings に `defaultProvider: "openai"` / `"google"` が残っている場合、
+  // 現行 UI で選択不可なプロバイダを既定にすると API 実行時に「未設定」で落ちる。
+  // 有効プロバイダに畳み込んで anthropic にフォールバックする。
+  const storedDefault = s.defaultProvider ?? "anthropic";
+  const defaultProvider: ProviderId = PROVIDER_IDS_ACTIVE.includes(storedDefault)
+    ? storedDefault
+    : "anthropic";
+
   return {
     dataRoot: s.dataRoot ?? "./data",
-    defaultProvider: s.defaultProvider ?? "anthropic",
+    defaultProvider,
     providers,
     questionCounts,
     retention: {

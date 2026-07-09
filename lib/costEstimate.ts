@@ -149,3 +149,171 @@ export function aggregateBy<K extends string>(
 export function aggregateTotal(records: CostRecord[]): Aggregate {
   return records.reduce(addRecord, ZERO_AGG);
 }
+
+/* ───────────── 日次時系列（/cost の推移チャート用） ───────────── */
+
+export interface DailyPoint {
+  /** "YYYY-MM-DD"（ローカル時刻ではなく ts 先頭 10 文字。UTC ズレは吸収しない前提） */
+  date: string;
+  count: number;
+  totalJpy: number;
+  totalUsd: number;
+}
+
+/**
+ * 過去 `days` 日分の日次コスト系列を返す。データが 1 件も無い日は 0 埋め。
+ * 出力は日付昇順（古い日 → 新しい日）。チャート描画にそのまま使える。
+ */
+export function aggregateByDay(records: CostRecord[], days = 30): DailyPoint[] {
+  const map = new Map<string, { count: number; jpy: number; usd: number }>();
+  for (const r of records) {
+    const d = r.ts.slice(0, 10);
+    const cur = map.get(d) ?? { count: 0, jpy: 0, usd: 0 };
+    map.set(d, {
+      count: cur.count + 1,
+      jpy: cur.jpy + r.cost.totalJpy,
+      usd: cur.usd + r.cost.totalUsd,
+    });
+  }
+  // 「今日」を基準に days 日分の空セルを用意して、実データをはめ込む。
+  // ts は toolchain 依存で UTC / ローカルどちらか揺れるが、日次サマリの粒度なら誤差 1 日以内で許容。
+  const today = new Date();
+  const out: DailyPoint[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const v = map.get(key);
+    out.push({
+      date: key,
+      count: v?.count ?? 0,
+      totalJpy: v?.jpy ?? 0,
+      totalUsd: v?.usd ?? 0,
+    });
+  }
+  return out;
+}
+
+/* ───────────── モデル別 想定単価（ハイブリッド推算） ───────────── */
+
+/**
+ * 工程別の想定 char 数フォールバック（実データが無いモデル用）。
+ * 既存の prompt 実装を目安に、上限見積り寄りで設定。
+ * ③整形は ③生成 の派生なので単独ではセット合計に含めない。
+ */
+export const STAGE_FALLBACK_CHARS: Record<
+  "①要約" | "③生成" | "④面談内容" | "⑤評価",
+  { inputChars: number; outputChars: number }
+> = {
+  "①要約": { inputChars: 8000, outputChars: 2000 },
+  "③生成": { inputChars: 4000, outputChars: 4000 },
+  "④面談内容": { inputChars: 6000, outputChars: 1200 },
+  "⑤評価": { inputChars: 3500, outputChars: 3000 },
+};
+
+/** 1 面談セットに含める工程（③整形は含めない） */
+export const SET_STAGES: ("①要約" | "③生成" | "④面談内容" | "⑤評価")[] = [
+  "①要約",
+  "③生成",
+  "④面談内容",
+  "⑤評価",
+];
+
+export interface StageEstimate {
+  stage: "①要約" | "③生成" | "④面談内容" | "⑤評価";
+  inputChars: number;
+  outputChars: number;
+  cost: CostBreakdown;
+  /** "real" = このプロジェクトの実データ中央値 / "fallback" = 既定見積 */
+  source: "real" | "fallback";
+  /** 中央値算出に使ったサンプル数（source=real のみ意味を持つ） */
+  sampleCount: number;
+}
+
+export interface ModelEstimate {
+  model: string;
+  stages: StageEstimate[];
+  /** 1 セット（SET_STAGES）を通したときの合計コスト */
+  setCost: CostBreakdown;
+}
+
+function median(nums: number[]): number {
+  if (nums.length === 0) return 0;
+  const sorted = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+    : sorted[mid];
+}
+
+/**
+ * ハイブリッド推算：
+ *   実データがあれば該当モデル × 工程の inputChars / outputChars の中央値、
+ *   無ければ STAGE_FALLBACK_CHARS。
+ * `estimateCost` を通してモデル単価で換算するため、他モデルの実績を借りて
+ * 単価だけ差し替える形になる（=「もし Sonnet で同じ量をやったら」の見積になる）。
+ * 実データを借りる範囲は「全モデル横断で該当工程の中央値」。
+ */
+export function estimateModelSetCost(
+  model: string,
+  allRecords: CostRecord[],
+): ModelEstimate {
+  const perStage: StageEstimate[] = SET_STAGES.map((stage) => {
+    // まず「該当モデル自身の該当工程」の実データを優先
+    const ownRecords = allRecords.filter(
+      (r) => r.model === model && r.stage === stage,
+    );
+    // 自モデルに実績が無ければ「該当工程の他モデル実績」を借りる
+    const pool = ownRecords.length > 0
+      ? ownRecords
+      : allRecords.filter((r) => r.stage === stage);
+
+    if (pool.length > 0) {
+      const inputChars = median(pool.map((r) => r.inputChars));
+      const outputChars = median(pool.map((r) => r.outputChars));
+      return {
+        stage,
+        inputChars,
+        outputChars,
+        cost: estimateCost(model, inputChars, outputChars),
+        // 「実データを借用した」かどうかで real / fallback を区別。
+        // 自モデル実績があれば real、他モデル借用は fallback 扱い（見積であることを明示）。
+        source: ownRecords.length > 0 ? "real" : "fallback",
+        sampleCount: ownRecords.length,
+      } satisfies StageEstimate;
+    }
+
+    // 実データも借用元も無ければ既定見積
+    const fb = STAGE_FALLBACK_CHARS[stage];
+    return {
+      stage,
+      inputChars: fb.inputChars,
+      outputChars: fb.outputChars,
+      cost: estimateCost(model, fb.inputChars, fb.outputChars),
+      source: "fallback",
+      sampleCount: 0,
+    } satisfies StageEstimate;
+  });
+
+  // セット合計 = 4 工程を合算した CostBreakdown
+  const setCost: CostBreakdown = perStage.reduce<CostBreakdown>(
+    (acc, s) => ({
+      inputTokens: acc.inputTokens + s.cost.inputTokens,
+      outputTokens: acc.outputTokens + s.cost.outputTokens,
+      inputUsd: acc.inputUsd + s.cost.inputUsd,
+      outputUsd: acc.outputUsd + s.cost.outputUsd,
+      totalUsd: acc.totalUsd + s.cost.totalUsd,
+      totalJpy: acc.totalJpy + s.cost.totalJpy,
+    }),
+    {
+      inputTokens: 0,
+      outputTokens: 0,
+      inputUsd: 0,
+      outputUsd: 0,
+      totalUsd: 0,
+      totalJpy: 0,
+    },
+  );
+
+  return { model, stages: perStage, setCost };
+}

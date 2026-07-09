@@ -78,4 +78,20 @@ export const TIER_LABEL: Record<Tier, string> = {
   max: "高精度",
 };
 
+/**
+ * 全プロバイダ ID（型定義と揃える）。
+ * 過去データ（`provider: "openai"` 等の cost/評価記録）を読むためには
+ * 3 種類とも型・アダプタ・pricing に残しておく必要がある。
+ */
 export const PROVIDER_IDS: ProviderId[] = ["anthropic", "openai", "google"];
+
+/**
+ * UI で選択可能な有効プロバイダ。
+ * 現在は Claude のみサポート。/settings や既定選択ロジックはここを参照する。
+ * OpenAI / Google を再開するときはこの配列に足すだけ（アダプタ・pricing は生きたまま）。
+ */
+export const PROVIDER_IDS_ACTIVE: ProviderId[] = ["anthropic"];
+
+export function isActiveProvider(id: ProviderId): boolean {
+  return PROVIDER_IDS_ACTIVE.includes(id);
+}

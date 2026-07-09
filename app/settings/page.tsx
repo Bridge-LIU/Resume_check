@@ -19,6 +19,7 @@ import { SaveSettingsButton } from "./_components/SaveSettingsButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { PROVIDER_IDS_ACTIVE } from "@/lib/llm/registry";
 
 const STAGES: LlmStage[] = ["summary", "questions", "evaluation", "evaluationStrict"];
 
@@ -31,9 +32,10 @@ async function updateSettings(formData: FormData) {
   };
 
   // プロバイダごとの key / モデルを取り出す（空欄は現状維持、削除チェックで明示クリア）
-  const providerIds: ProviderId[] = ["anthropic", "openai", "google"];
+  // 現在は Claude のみ UI 表示。非表示プロバイダは formData に来ないので、
+  // ループも active list のみを回して既存値をそのまま維持する。
   const providers: Record<ProviderId, ProviderConfig> = { ...current.providers };
-  for (const id of providerIds) {
+  for (const id of PROVIDER_IDS_ACTIVE) {
     const submitted = String(formData.get(`provider_${id}_key`) ?? "").trim();
     const remove = formData.get(`remove_${id}`) === "on";
     const nextKey = remove ? "" : submitted || current.providers[id].key;
@@ -50,10 +52,9 @@ async function updateSettings(formData: FormData) {
 
   const submittedDefaultProvider = formData.get("defaultProvider");
   const defaultProvider: ProviderId =
-    submittedDefaultProvider === "anthropic" ||
-    submittedDefaultProvider === "openai" ||
-    submittedDefaultProvider === "google"
-      ? submittedDefaultProvider
+    typeof submittedDefaultProvider === "string" &&
+    PROVIDER_IDS_ACTIVE.includes(submittedDefaultProvider as ProviderId)
+      ? (submittedDefaultProvider as ProviderId)
       : current.defaultProvider;
 
   // ⑤質問生成数（1〜50 にクランプ）
@@ -141,30 +142,20 @@ export default async function Page({
   const { error: errorMsg, saved } = await searchParams;
   const s = loadSettings();
   // 画面には key そのものは出さない。設定済かどうかと、環境変数優先かのみ表示。
-  const envStatus: Record<ProviderId, boolean> = {
+  // 現在は Claude のみ UI 表示。非表示プロバイダの env 判定は無用（UI に出さない）。
+  const envStatus: Partial<Record<ProviderId, boolean>> = {
     anthropic: !!(process.env.ANTHROPIC_API_KEY ?? "").trim(),
-    openai: !!(process.env.OPENAI_API_KEY ?? "").trim(),
-    google: !!(
-      (process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY ?? "").trim()
-    ),
   };
   // ⚠ providers をそのまま client component に渡すと RSC payload に
   // API キー文字列がそのまま乗ってブラウザに送られる。boolean + モデル名だけに
   // 詰め替えてから渡す（Critical: 設定画面からのキー漏洩防止）。
-  const providersSafe: Record<ProviderId, ProviderSafeStatus> = {
-    anthropic: {
-      hasFileKey: !!s.providers.anthropic.key.trim(),
-      defaultModel: s.providers.anthropic.defaultModel,
-    },
-    openai: {
-      hasFileKey: !!s.providers.openai.key.trim(),
-      defaultModel: s.providers.openai.defaultModel,
-    },
-    google: {
-      hasFileKey: !!s.providers.google.key.trim(),
-      defaultModel: s.providers.google.defaultModel,
-    },
-  };
+  const providersSafe: Partial<Record<ProviderId, ProviderSafeStatus>> = {};
+  for (const id of PROVIDER_IDS_ACTIVE) {
+    providersSafe[id] = {
+      hasFileKey: !!s.providers[id].key.trim(),
+      defaultModel: s.providers[id].defaultModel,
+    };
+  }
 
   return (
     <div className="space-y-4">

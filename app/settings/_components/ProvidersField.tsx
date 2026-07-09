@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Lock, LockOpen } from "lucide-react";
 import type { ProviderId, ProviderSafeStatus } from "@/lib/types";
-import { PROVIDERS, TIER_ICON } from "@/lib/llm/registry";
+import { PROVIDER_IDS_ACTIVE, PROVIDERS, TIER_ICON } from "@/lib/llm/registry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,9 +24,10 @@ interface Props {
    * ⚠ 必ず `ProviderSafeStatus` を渡すこと（API キー文字列を含まない）。
    * page.tsx で `providersSafe` を生成してから渡す。`ProviderConfig` を
    * そのまま渡すと RSC payload にキーが漏れる。
+   * PROVIDER_IDS_ACTIVE に含まれない ID は undefined でよい。
    */
-  providers: Record<ProviderId, ProviderSafeStatus>;
-  envStatus: Record<ProviderId, boolean>;
+  providers: Partial<Record<ProviderId, ProviderSafeStatus>>;
+  envStatus: Partial<Record<ProviderId, boolean>>;
 }
 
 const ACCENT_BG: Record<ProviderId, string> = {
@@ -49,10 +50,8 @@ export function ProvidersField({ defaultProvider, providers, envStatus }: Props)
     <section className="space-y-3">
       <div className="font-medium text-sm">AI プロバイダ設定</div>
       <div className="text-xs text-muted-foreground leading-relaxed">
-        各プロバイダの API キーを入力。<strong>既定</strong>に選ばれたプロバイダが ①③⑤ の API モード実行時に使われる。
-        環境変数（<code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code> /{" "}
-        <code className="bg-muted px-1 rounded">OPENAI_API_KEY</code> /{" "}
-        <code className="bg-muted px-1 rounded">GOOGLE_API_KEY</code>）が設定されている場合はそちらが優先。
+        Anthropic Claude の API キーを入力すると ①③⑤ を API モードで実行できる。
+        環境変数（<code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code>）が設定されている場合はそちらが優先。
       </div>
 
       <RadioGroup
@@ -61,17 +60,21 @@ export function ProvidersField({ defaultProvider, providers, envStatus }: Props)
         onValueChange={(v) => setSelectedDefault(v as ProviderId)}
         className="space-y-3 gap-0"
       >
-        {(Object.keys(PROVIDERS) as ProviderId[]).map((id) => (
-          <ProviderCard
-            key={id}
-            id={id}
-            info={PROVIDERS[id]}
-            config={providers[id]}
-            isDefault={selectedDefault === id}
-            hasEnvKey={envStatus[id]}
-            confirm={confirm}
-          />
-        ))}
+        {PROVIDER_IDS_ACTIVE.map((id) => {
+          const config = providers[id];
+          if (!config) return null;
+          return (
+            <ProviderCard
+              key={id}
+              id={id}
+              info={PROVIDERS[id]}
+              config={config}
+              isDefault={selectedDefault === id}
+              hasEnvKey={!!envStatus[id]}
+              confirm={confirm}
+            />
+          );
+        })}
       </RadioGroup>
       <ConfirmDialog />
     </section>
