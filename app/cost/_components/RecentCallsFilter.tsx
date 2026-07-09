@@ -24,6 +24,18 @@ export interface RecentRow {
 type ModelKey = "all" | string; // "all" or model id
 type StageKey = "all" | string;
 
+/**
+ * ISO 文字列 (UTC) → ローカルタイムゾーンの `YYYY-MM-DD HH:mm` に整形。
+ * 監査ログは `new Date().toISOString()` (UTC) で保存されているため、
+ * ここでブラウザのローカルタイムゾーンに変換して表示する。
+ */
+function formatLocalTs(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 const STAGE_LABELS = ["①要約", "③生成", "③整形", "④面談内容", "⑤評価"];
 
 export function RecentCallsFilter({
@@ -109,7 +121,7 @@ export function RecentCallsFilter({
           {shown.map((r, i) => (
             <tr key={i}>
               <td className="px-2 py-1 text-xs tabular-nums text-muted-foreground">
-                {r.ts.replace("T", " ").slice(0, 16)}
+                {formatLocalTs(r.ts)}
               </td>
               <td className="px-2 py-1">{r.stage}</td>
               <td className="px-2 py-1 text-[12px]">

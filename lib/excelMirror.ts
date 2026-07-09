@@ -1290,8 +1290,21 @@ function addMinutesSheet(
   body.value = min.text;
   body.alignment = { vertical: "top", horizontal: "left", wrapText: true, indent: 1 };
   body.font = { size: 10, color: { argb: "FF1F2937" } };
-  const lines = min.text.split(/\r?\n/).length;
-  ws.getRow(cursor).height = Math.min(600, Math.max(80, lines * 15));
+
+  // 行高は「表示される折返し行数 × 行送り」で計算。
+  // - Excel は merge + wrapText 時に auto-fit しないので明示指定が必須
+  // - 元コードは \n のみでカウントしていたため、1 行に長文があると切れていた
+  // - 半角/全角混在で ~64 文字/行と粗く見積る（列幅 A22 + B100 = 122 units、
+  //   font 10 の実効表示幅の下限側で見積り、切れよりオーバー気味を優先）
+  // - Excel の行高上限は 409pt。400pt を超える本文は末尾が見切れるが、
+  //   その場合はセルを選択して手動で「行の高さ自動調整」してもらう（README 級の警告は入れず、
+  //   実運用でほぼ発生しない前提）
+  const CHARS_PER_WRAPPED_LINE = 64;
+  const LINE_HEIGHT_PT = 18;
+  const effLines = min.text.split(/\r?\n/).reduce((sum, line) => {
+    return sum + Math.max(1, Math.ceil(line.length / CHARS_PER_WRAPPED_LINE));
+  }, 0);
+  ws.getRow(cursor).height = Math.min(400, Math.max(80, effLines * LINE_HEIGHT_PT));
 
   applyBordersTo(ws);
 }

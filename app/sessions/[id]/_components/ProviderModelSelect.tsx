@@ -1,7 +1,7 @@
 "use client";
 
 import type { LlmStage, ProviderId } from "@/lib/types";
-import { PROVIDERS, TIER_ICON } from "@/lib/llm/registry";
+import { PROVIDERS, PROVIDER_IDS_ACTIVE, TIER_ICON } from "@/lib/llm/registry";
 import {
   Select,
   SelectContent,
@@ -80,7 +80,10 @@ export function ProviderModelSelect({
         <SelectItem value={DEFAULT_VALUE} className="text-xs">
           {defaultText}
         </SelectItem>
-        {(Object.keys(PROVIDERS) as ProviderId[]).map((pid) => {
+        {/* /settings で「有効化」されたプロバイダのみ表示。
+            OpenAI / Google を再開したい場合は lib/llm/registry.ts の
+            PROVIDER_IDS_ACTIVE に足すだけで自動で選択肢に戻る。 */}
+        {PROVIDER_IDS_ACTIVE.map((pid) => {
           const info = PROVIDERS[pid];
           const enabled = hasKey[pid];
           return (
