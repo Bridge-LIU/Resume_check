@@ -36,6 +36,12 @@ import {
 } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const WEIGHT_MIN = 1;
 const WEIGHT_MAX = 5;
@@ -51,17 +57,26 @@ function clampWeight(n: number): number {
 }
 
 function categoryColor(key: CategoryKey) {
+  // 案 A（深めパステル）: 100/70 塗り + 400 太枠 + 600 solid のラベル・重みチップ。
+  // ダーク時は 500/xx 系透過で「薄すぎず眩しすぎず」のバランスを取る。
   return key === "人間性"
     ? {
-        text: "text-emerald-700 dark:text-emerald-300",
-        bg: "bg-emerald-50 dark:bg-emerald-500/10",
-        border: "border-emerald-300 dark:border-emerald-500/40",
+        // 重みチップの文字色（solid 塗り上に載せる想定で white 基調）
+        text: "text-white",
+        // グループ本体の背景
+        bg: "bg-emerald-100/70 dark:bg-emerald-500/15",
+        // グループ本体の枠（border-2 で使う想定）
+        border: "border-emerald-400 dark:border-emerald-500/60",
+        // ラベル・重みチップの塗り
+        solidBg: "bg-emerald-600 dark:bg-emerald-500",
+        // アクセントバー（ドラッグ中の ring 色等）
         bar: "bg-emerald-500",
       }
     : {
-        text: "text-blue-700 dark:text-blue-300",
-        bg: "bg-blue-50 dark:bg-blue-500/10",
-        border: "border-blue-300 dark:border-blue-500/40",
+        text: "text-white",
+        bg: "bg-blue-100/70 dark:bg-blue-500/15",
+        border: "border-blue-400 dark:border-blue-500/60",
+        solidBg: "bg-blue-600 dark:bg-blue-500",
         bar: "bg-blue-500",
       };
 }
@@ -368,7 +383,7 @@ export default function EvalCriteriaEditor({
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             {CATEGORY_KEYS.map((key) => {
               const cc = categoryColor(key);
               const list = items[key];
@@ -376,13 +391,13 @@ export default function EvalCriteriaEditor({
                 <GroupDroppable
                   key={key}
                   groupKey={key}
-                  className={`relative border ${cc.border} ${cc.bg} pt-5 pb-4 px-4`}
+                  className={`relative border-2 ${cc.border} ${cc.bg} pt-5 pb-4 px-4 shadow-sm`}
                 >
                   <div
-                    className={`absolute -top-2.5 left-3 px-2 text-xs font-bold ${cc.text} bg-card inline-flex items-center gap-2 rounded`}
+                    className={`absolute -top-3 left-3 px-2.5 py-0.5 text-xs font-bold ${cc.solidBg} text-white inline-flex items-center gap-2 rounded shadow-sm`}
                   >
                     <span>{key}</span>
-                    <span className="text-muted-foreground font-normal">({list.length} 件)</span>
+                    <span className="text-white/70 font-normal">({list.length} 件)</span>
                   </div>
                   <SortableContext
                     id={key}
@@ -415,26 +430,28 @@ export default function EvalCriteriaEditor({
         </DndContext>
 
         {/* ─── 共通既定バー ─── */}
-        <div className="border border-amber-200 bg-amber-50 rounded-lg px-3 py-2 flex items-center gap-4 text-sm flex-wrap">
-          <span className="text-amber-900 font-medium text-xs">共通既定</span>
-          <label className="text-foreground/85 flex items-center gap-1">
-            合格ライン{" "}
-            <Input
-              type="number"
+        <div className="border-2 border-amber-400 bg-amber-100/70 dark:bg-amber-500/15 dark:border-amber-500/60 rounded-lg px-3 py-2 flex items-center gap-4 text-sm flex-wrap shadow-sm">
+          <span className="bg-amber-600 dark:bg-amber-500 text-white font-bold text-xs px-2.5 py-0.5 rounded shadow-sm">
+            共通既定
+          </span>
+          <label className="text-foreground/85 flex items-center gap-2">
+            合格ライン
+            <NumberInput
+              size="sm"
               step="0.1"
               value={draft.合格ライン}
               onChange={(e) => setDraft({ ...draft, 合格ライン: Number(e.target.value) })}
-              className="w-16 h-7 tabular text-center bg-card"
+              className="w-24 tabular"
             />
           </label>
-          <label className="text-foreground/85 flex items-center gap-1">
-            普通ライン{" "}
-            <Input
-              type="number"
+          <label className="text-foreground/85 flex items-center gap-2">
+            普通ライン
+            <NumberInput
+              size="sm"
               step="0.1"
               value={draft.普通ライン}
               onChange={(e) => setDraft({ ...draft, 普通ライン: Number(e.target.value) })}
-              className="w-16 h-7 tabular text-center bg-card"
+              className="w-24 tabular"
             />
           </label>
           <span className="text-muted-foreground opacity-70 text-xs ml-auto">
@@ -457,18 +474,17 @@ export default function EvalCriteriaEditor({
         />
 
         {/* ─── 詳細（折りたたみ） ─── */}
-        <details className="text-sm">
-          <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs">
+        <Collapsible className="text-sm">
+          <CollapsibleTrigger className="text-muted-foreground hover:text-foreground text-xs">
             スケール・自己解決レベル・出力項目（詳細）
-          </summary>
-          <div className="mt-3 space-y-4">
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3 space-y-4">
             <div>
               <div className="text-xs text-muted-foreground mb-2">スケール</div>
               <div className="grid grid-cols-4 gap-3 max-w-2xl">
                 <label className="text-sm">
                   <div className="text-xs text-muted-foreground mb-1">最小</div>
-                  <Input
-                    type="number"
+                  <NumberInput
                     step="0.1"
                     value={draft.スケール.最小}
                     onChange={(e) => setScale("最小", Number(e.target.value))}
@@ -477,8 +493,7 @@ export default function EvalCriteriaEditor({
                 </label>
                 <label className="text-sm">
                   <div className="text-xs text-muted-foreground mb-1">最大</div>
-                  <Input
-                    type="number"
+                  <NumberInput
                     step="0.1"
                     value={draft.スケール.最大}
                     onChange={(e) => setScale("最大", Number(e.target.value))}
@@ -487,8 +502,7 @@ export default function EvalCriteriaEditor({
                 </label>
                 <label className="text-sm">
                   <div className="text-xs text-muted-foreground mb-1">刻み</div>
-                  <Input
-                    type="number"
+                  <NumberInput
                     step="0.1"
                     value={draft.スケール.刻み}
                     onChange={(e) => setScale("刻み", Number(e.target.value))}
@@ -534,8 +548,8 @@ export default function EvalCriteriaEditor({
                 ※ 設計書 §6 準拠
               </div>
             </div>
-          </div>
-        </details>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </section>
   );
@@ -629,7 +643,7 @@ function SortablePill({
         step={1}
         value={item.重み}
         onChange={(e) => onWeight(item.uid, Number(e.target.value))}
-        className={`w-10 h-6 text-center tabular text-xs rounded ${cc.bg} ${cc.text} border-0 focus:outline-none focus:ring-1 focus:ring-blue-400`}
+        className={`w-10 h-6 text-center tabular text-xs rounded font-semibold ${cc.solidBg} ${cc.text} border-0 focus:outline-none focus:ring-2 focus:ring-white/40`}
         aria-label="重み"
       />
       <button
@@ -658,7 +672,7 @@ function PillPreview({ item, categoryKey }: { item: SubAxisItem; categoryKey: Ca
       >
         {item.名前}
       </span>
-      <span className={`w-10 h-6 flex items-center justify-center tabular text-xs rounded ${cc.bg} ${cc.text}`}>
+      <span className={`w-10 h-6 flex items-center justify-center tabular text-xs rounded font-semibold ${cc.solidBg} ${cc.text}`}>
         {item.重み}
       </span>
     </div>
@@ -691,7 +705,7 @@ function AddInput({
       <button
         type="button"
         onClick={() => onAdd(text) && setText("")}
-        className={`text-xs px-2 py-1 rounded border ${cc.text} ${cc.border} hover:${cc.bg}`}
+        className={`text-xs px-3 py-1 rounded font-semibold ${cc.solidBg} text-white shadow-sm hover:opacity-90 active:opacity-80`}
       >
         追加
       </button>
@@ -752,19 +766,19 @@ function RoleOverrideTable({
               </th>
               <th
                 colSpan={humanAxes.length}
-                className="text-center px-2 py-1.5 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border-r border-border/60"
+                className="text-center px-2 py-1.5 font-bold text-emerald-900 dark:text-emerald-100 bg-emerald-200/80 dark:bg-emerald-500/25 border-r border-border/60"
               >
-                人間性の小軸重み
+                人間性
               </th>
               <th
                 colSpan={techAxes.length}
-                className="text-center px-2 py-1.5 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/10 border-r border-border/60"
+                className="text-center px-2 py-1.5 font-bold text-blue-900 dark:text-blue-100 bg-blue-200/80 dark:bg-blue-500/25 border-r border-border/60"
               >
-                技術力の小軸重み
+                技術力
               </th>
               <th
                 colSpan={2}
-                className="text-center px-2 py-1.5 text-amber-900 bg-amber-50 dark:bg-amber-500/10 border-r border-border/60"
+                className="text-center px-2 py-1.5 font-bold text-amber-900 dark:text-amber-100 bg-amber-200/80 dark:bg-amber-500/25 border-r border-border/60"
               >
                 判定ライン
               </th>
@@ -774,7 +788,7 @@ function RoleOverrideTable({
               {humanAxes.map((a) => (
                 <th
                   key={`h-${a.uid}`}
-                  className="text-center px-2 py-1.5 font-normal bg-emerald-50/50 dark:bg-emerald-500/5"
+                  className="text-center px-2 py-1.5 font-normal text-emerald-800 dark:text-emerald-200 bg-emerald-100/70 dark:bg-emerald-500/10"
                   title={a.名前}
                 >
                   <span className="line-clamp-1">{a.名前}</span>
@@ -783,16 +797,16 @@ function RoleOverrideTable({
               {techAxes.map((a) => (
                 <th
                   key={`t-${a.uid}`}
-                  className="text-center px-2 py-1.5 font-normal bg-blue-50/50 dark:bg-blue-500/5"
+                  className="text-center px-2 py-1.5 font-normal text-blue-800 dark:text-blue-200 bg-blue-100/70 dark:bg-blue-500/10"
                   title={a.名前}
                 >
                   <span className="line-clamp-1">{a.名前}</span>
                 </th>
               ))}
-              <th className="text-center px-2 py-1.5 font-normal bg-amber-50/50 dark:bg-amber-500/5">
+              <th className="text-center px-2 py-1.5 font-normal text-amber-900 dark:text-amber-100 bg-amber-100/70 dark:bg-amber-500/10">
                 合格
               </th>
-              <th className="text-center px-2 py-1.5 font-normal bg-amber-50/50 dark:bg-amber-500/5">
+              <th className="text-center px-2 py-1.5 font-normal text-amber-900 dark:text-amber-100 bg-amber-100/70 dark:bg-amber-500/10">
                 普通
               </th>
             </tr>
@@ -822,7 +836,7 @@ function RoleOverrideTable({
                             const raw = e.target.value;
                             onSubWeight(role.id, a.名前, raw === "" ? null : Number(raw));
                           }}
-                          className="w-12 h-7 tabular text-center mx-auto"
+                          className="w-12 h-7 tabular text-center mx-auto px-1"
                         />
                       </td>
                     );
@@ -842,14 +856,14 @@ function RoleOverrideTable({
                             const raw = e.target.value;
                             onSubWeight(role.id, a.名前, raw === "" ? null : Number(raw));
                           }}
-                          className="w-12 h-7 tabular text-center mx-auto"
+                          className="w-12 h-7 tabular text-center mx-auto px-1"
                         />
                       </td>
                     );
                   })}
                   <td className="px-1 py-2 text-center">
-                    <Input
-                      type="number"
+                    <NumberInput
+                      size="sm"
                       step="0.1"
                       value={typeof ov?.合格ライン === "number" ? ov.合格ライン : ""}
                       placeholder={String(baseGoal)}
@@ -857,12 +871,12 @@ function RoleOverrideTable({
                         const raw = e.target.value;
                         onGoal(role.id, raw === "" ? null : Number(raw));
                       }}
-                      className="w-16 h-7 tabular text-center mx-auto"
+                      className="w-20 tabular mx-auto"
                     />
                   </td>
                   <td className="px-1 py-2 text-center border-r border-border/60">
-                    <Input
-                      type="number"
+                    <NumberInput
+                      size="sm"
                       step="0.1"
                       value={typeof ov?.普通ライン === "number" ? ov.普通ライン : ""}
                       placeholder={String(basePass)}
@@ -870,7 +884,7 @@ function RoleOverrideTable({
                         const raw = e.target.value;
                         onPass(role.id, raw === "" ? null : Number(raw));
                       }}
-                      className="w-16 h-7 tabular text-center mx-auto"
+                      className="w-20 tabular mx-auto"
                     />
                   </td>
                   <td className="px-2 py-2 text-center">

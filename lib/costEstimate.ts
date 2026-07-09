@@ -211,11 +211,15 @@ export const STAGE_FALLBACK_CHARS: Record<
   "⑤評価": { inputChars: 3500, outputChars: 3000 },
 };
 
-/** 1 面談セットに含める工程（③整形は含めない） */
+/**
+ * 1 面談セットに含める工程。
+ * - ③整形は ③生成 の派生なので含めない。
+ * - ④面談内容 は現在 UI 経由の API 呼び出し導線が無い（貼付だけで完結）。集計には載せない。
+ *   dead code の summarizeMinutesApiAction が復活したらここに追加すること。
+ */
 export const SET_STAGES: ("①要約" | "③生成" | "④面談内容" | "⑤評価")[] = [
   "①要約",
   "③生成",
-  "④面談内容",
   "⑤評価",
 ];
 

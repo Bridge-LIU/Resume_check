@@ -23,6 +23,11 @@ import { useConfirm } from "@/components/ui/use-confirm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tip } from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const NON_TECH_HEADER = "## 人間性";
 const TECH_HEADER = "## 技術";
@@ -416,14 +421,14 @@ function StructuredPreview({ combined }: { combined: string }) {
   if (total === 0) return null;
 
   return (
-    <details className="mt-3 border rounded-lg" open>
-      <summary className="cursor-pointer text-xs text-muted-foreground px-3 py-2 bg-muted select-none">
+    <Collapsible defaultOpen className="mt-3 border rounded-lg">
+      <CollapsibleTrigger className="w-full text-xs text-muted-foreground px-3 py-2 bg-muted select-none">
         構造化プレビュー — {total} 問（人間性 {nonTech.length} / 技術 {tech.length}）
         <span className="text-muted-foreground opacity-70 ml-2">
           ※ 保存時に questions.json の items 配列に同じ内容が入ります
         </span>
-      </summary>
-      <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+      </CollapsibleTrigger>
+      <CollapsibleContent className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
         <CategoryCard
           title="人間性"
           items={nonTech}
@@ -438,8 +443,8 @@ function StructuredPreview({ combined }: { combined: string }) {
           bg="bg-blue-50/50"
           accent="border-l-blue-400"
         />
-      </div>
-    </details>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

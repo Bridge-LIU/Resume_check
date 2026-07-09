@@ -128,6 +128,18 @@
     scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
     scrollbar-width: thin;
   }
+
+  /* ネイティブの数値入力 spin ボタンはブラウザごとに見た目が違い野暮ったいので全 UI で隠す。
+     +/- が必要な箇所は components/ui/number-input.tsx で独自 chevron を描画する。 */
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
 /* 監査ログ等で頻出する 10px サイズの独自トークン（text-[10px] の置き換え用） */

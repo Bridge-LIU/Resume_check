@@ -9,6 +9,11 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 /* ────────── ダミーデータ ────────── */
 
@@ -278,33 +283,40 @@ function V4_Accordion({ cats }: { cats: Category[] }) {
       {cats.map((c, idx) => {
         const cc = colorClasses(c.color);
         return (
-          <details
+          <Collapsible
             key={c.name}
-            open={idx === 0}
+            defaultOpen={idx === 0}
             className={`rounded-lg border ${cc.border} bg-card`}
           >
-            <summary className={`cursor-pointer list-none px-4 py-3 flex items-center gap-3 ${cc.bg} rounded-t-lg`}>
-              <ChevronRight className={`w-4 h-4 ${cc.text}`} aria-hidden />
+            <CollapsibleTrigger
+              className={`group w-full px-4 py-3 flex items-center gap-3 ${cc.bg} rounded-t-lg`}
+            >
+              <ChevronRight
+                className={`w-4 h-4 ${cc.text} transition-transform group-data-[state=open]:rotate-90`}
+                aria-hidden
+              />
               <div className={`font-bold ${cc.text}`}>{c.name}</div>
               <div className="flex-1" />
               <div className="text-xs text-muted-foreground">小軸 {c.subAxes.length}</div>
               <WeightPill w={c.weight} />
-            </summary>
-            <ul className="divide-y">
-              {c.subAxes.map((s) => (
-                <li key={s.name} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className="text-muted-foreground text-xs w-4">└</span>
-                  <span className="text-sm flex-1">{s.name}</span>
-                  <label className="text-xs text-muted-foreground flex items-center gap-1">
-                    重み <WeightInput value={s.weight} />
-                  </label>
-                  <button className="text-muted-foreground hover:text-red-600 text-xs">
-                    <X className="w-3.5 h-3.5" aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </details>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <ul className="divide-y">
+                {c.subAxes.map((s) => (
+                  <li key={s.name} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="text-muted-foreground text-xs w-4">└</span>
+                    <span className="text-sm flex-1">{s.name}</span>
+                    <label className="text-xs text-muted-foreground flex items-center gap-1">
+                      重み <WeightInput value={s.weight} />
+                    </label>
+                    <button className="text-muted-foreground hover:text-red-600 text-xs">
+                      <X className="w-3.5 h-3.5" aria-hidden />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
         );
       })}
     </div>

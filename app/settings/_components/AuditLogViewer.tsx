@@ -1,5 +1,10 @@
 import { readAudit } from "@/lib/auditLog";
 import type { AuditEvent, AuditLogEntry } from "@/lib/auditLog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const EVENT_LABEL: Record<AuditEvent, string> = {
   "session.create": "セッション作成",
@@ -90,10 +95,10 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
 
   return (
     <div className="bg-card rounded-xl border shadow-sm">
-      <details className="group">
-        <summary className="p-6 cursor-pointer list-none flex items-center gap-3 hover:bg-accent/50 rounded-xl">
+      <Collapsible>
+        <CollapsibleTrigger className="group w-full p-6 flex items-center gap-3 hover:bg-accent/50 rounded-xl">
           <svg
-            className="h-4 w-4 text-muted-foreground opacity-70 transition-transform group-open:rotate-90"
+            className="h-4 w-4 text-muted-foreground opacity-70 transition-transform group-data-[state=open]:rotate-90"
             viewBox="0 0 20 20"
             fill="currentColor"
             aria-hidden="true"
@@ -108,8 +113,8 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
           <span className="text-xs text-muted-foreground opacity-70 font-mono">
             data/logs/audit.log
           </span>
-        </summary>
-        <div className="px-6 pb-6 space-y-3">
+        </CollapsibleTrigger>
+        <CollapsibleContent className="px-6 pb-6 space-y-3">
           <div className="text-xs text-muted-foreground">
             PII（氏名・履歴書本文・面談内容本文）は記録しない方針。表示は時刻降順。
           </div>
@@ -155,8 +160,8 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
               </table>
             </div>
           )}
-        </div>
-      </details>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

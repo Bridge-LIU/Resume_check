@@ -24,6 +24,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tip } from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { scoreBarColor } from "@/lib/uiClass";
 
 const SAMPLE = `{
@@ -209,11 +214,11 @@ export function Section8Evaluation({
       {current && <EvaluationView evaluation={current} />}
 
       {/* 既に current があっても JSON 貼直し UI が畳まれると動線が消えるので常に open */}
-      <details className="mt-3" open>
-        <summary className="text-sm text-muted-foreground cursor-pointer">
+      <Collapsible defaultOpen className="mt-3">
+        <CollapsibleTrigger className="text-sm text-muted-foreground">
           {current ? "貼り直す（JSON）" : "評価結果 JSON を貼り付ける"}
-        </summary>
-        <div className="mt-2 space-y-2">
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2 space-y-2">
           {mode === "paste" && (
             <MaxPromptCopy
               fetcher={() => buildEvaluationPromptAction(sessionId)}
@@ -262,8 +267,8 @@ export function Section8Evaluation({
               貼り付け後、テキスト欄からフォーカスを外すと自動保存
             </span>
           </div>
-        </div>
-      </details>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
@@ -376,22 +381,24 @@ function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
       </div>
 
       {allSubAxes.some((a) => a.根拠) && (
-        <details className="text-xs text-muted-foreground pt-2 border-t border-border/60">
-          <summary className="cursor-pointer">軸別の根拠を表示</summary>
-          <dl className="mt-2 space-y-1">
-            {CATEGORY_KEYS.flatMap((k) =>
-              evaluation[k].小軸評価.map((a) => (
-                <div key={`${k}-${a.軸}`} className="grid grid-cols-[140px_1fr] gap-2">
-                  <dt className="text-muted-foreground">
-                    <span className="text-[10px] mr-1 opacity-70">[{k}]</span>
-                    {a.軸}
-                  </dt>
-                  <dd>{a.根拠}</dd>
-                </div>
-              )),
-            )}
-          </dl>
-        </details>
+        <Collapsible className="text-xs text-muted-foreground pt-2 border-t border-border/60">
+          <CollapsibleTrigger>軸別の根拠を表示</CollapsibleTrigger>
+          <CollapsibleContent>
+            <dl className="mt-2 space-y-1">
+              {CATEGORY_KEYS.flatMap((k) =>
+                evaluation[k].小軸評価.map((a) => (
+                  <div key={`${k}-${a.軸}`} className="grid grid-cols-[140px_1fr] gap-2">
+                    <dt className="text-muted-foreground">
+                      <span className="text-[10px] mr-1 opacity-70">[{k}]</span>
+                      {a.軸}
+                    </dt>
+                    <dd>{a.根拠}</dd>
+                  </div>
+                )),
+              )}
+            </dl>
+          </CollapsibleContent>
+        </Collapsible>
       )}
     </div>
   );

@@ -11,6 +11,11 @@ import type { PreviewItem, SweepResult } from "@/lib/retention";
 import type { RetentionSchedulerStatus } from "@/lib/retentionScheduler";
 import { useConfirm } from "@/components/ui/use-confirm";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 function formatJp(iso: string | null): string {
   if (!iso) return "—";
@@ -226,22 +231,24 @@ export function RetentionManager() {
       )}
 
       {log && (
-        <details className="border rounded text-sm" open>
-          <summary className="cursor-pointer px-3 py-1.5 bg-muted text-xs text-muted-foreground">
+        <Collapsible defaultOpen className="border rounded text-sm">
+          <CollapsibleTrigger className="w-full px-3 py-1.5 bg-muted text-xs text-muted-foreground">
             削除ログ（直近30件）
-          </summary>
-          {log.length === 0 ? (
-            <div className="px-3 py-2 text-muted-foreground text-xs">ログなし</div>
-          ) : (
-            <ul className="px-3 py-2 text-xs font-mono space-y-0.5 max-h-48 overflow-auto">
-              {log.map((line, i) => (
-                <li key={i} className="text-muted-foreground">
-                  {line}
-                </li>
-              ))}
-            </ul>
-          )}
-        </details>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {log.length === 0 ? (
+              <div className="px-3 py-2 text-muted-foreground text-xs">ログなし</div>
+            ) : (
+              <ul className="px-3 py-2 text-xs font-mono space-y-0.5 max-h-48 overflow-auto">
+                {log.map((line, i) => (
+                  <li key={i} className="text-muted-foreground">
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
       )}
       <ConfirmDialog />
     </div>

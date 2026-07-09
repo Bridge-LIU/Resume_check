@@ -19,6 +19,11 @@ import {
 } from "@/lib/pricing";
 import { PROVIDERS, TIER_ICON, TIER_LABEL, type Tier } from "@/lib/llm/registry";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   RecentCallsFilter,
   type RecentRow,
 } from "./_components/RecentCallsFilter";
@@ -335,50 +340,75 @@ function PricingCards({ estimates }: { estimates: ModelEstimate[] }) {
         </div>
 
         {/* 工程別内訳 (折り畳み) */}
-        <details className="border-t pt-3">
-          <summary className="cursor-pointer text-xs text-primary hover:underline">
+        <Collapsible className="border-t pt-3">
+          <CollapsibleTrigger className="text-xs text-primary hover:underline">
             工程別内訳を展開
-          </summary>
-          <div className="mt-3 overflow-x-auto">
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-xs text-muted-foreground border-b">
                 <tr>
                   <th className="text-left px-2 py-1">モデル</th>
                   <th className="text-right px-2 py-1">①要約</th>
                   <th className="text-right px-2 py-1">③生成</th>
-                  <th className="text-right px-2 py-1">④面談内容</th>
+                  <th
+                    className="text-right px-2 py-1 text-muted-foreground opacity-70"
+                    title="現在 UI 経由の API 導線なし（貼付のみ）"
+                  >
+                    ④面談内容
+                  </th>
                   <th className="text-right px-2 py-1">⑤評価</th>
                   <th className="text-right px-2 py-1 font-bold">合計</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {estimates.map((est) => (
-                  <tr key={est.model}>
-                    <td className="px-2 py-1.5 font-mono text-xs">
-                      {shortModelLabel(est.model)}
-                    </td>
-                    {est.stages.map((s) => (
-                      <td key={s.stage} className="text-right tabular-nums px-2 py-1.5">
-                        {fmtJpy(s.cost.totalJpy)}{" "}
-                        <span
-                          className={`text-2xs ${
-                            s.source === "real" ? "text-emerald-600" : "text-amber-600"
-                          }`}
-                          title={
-                            s.source === "real"
-                              ? `このモデルの実データ ${s.sampleCount} 件の中央値`
-                              : "既定見積または他モデル実績を借用"
-                          }
-                        >
-                          {s.source === "real" ? "実" : "見"}
-                        </span>
+                {estimates.map((est) => {
+                  // 表示ヘッダは 4 工程だが est.stages は SET_STAGES 由来（現状 3 工程）。
+                  // 導線の無い ④面談内容 だけ「―」を出すため、stage 名でマッピング。
+                  const byStage = new Map(est.stages.map((s) => [s.stage, s]));
+                  const HEADER_STAGES = ["①要約", "③生成", "④面談内容", "⑤評価"] as const;
+                  return (
+                    <tr key={est.model}>
+                      <td className="px-2 py-1.5 font-mono text-xs">
+                        {shortModelLabel(est.model)}
                       </td>
-                    ))}
-                    <td className="text-right tabular-nums font-bold px-2 py-1.5">
-                      {fmtJpy(est.setCost.totalJpy)}
-                    </td>
-                  </tr>
-                ))}
+                      {HEADER_STAGES.map((stage) => {
+                        const s = byStage.get(stage);
+                        if (!s) {
+                          return (
+                            <td
+                              key={stage}
+                              className="text-right px-2 py-1.5 text-muted-foreground opacity-60"
+                              title="API 導線なし（合計に含めない）"
+                            >
+                              ―
+                            </td>
+                          );
+                        }
+                        return (
+                          <td key={stage} className="text-right tabular-nums px-2 py-1.5">
+                            {fmtJpy(s.cost.totalJpy)}{" "}
+                            <span
+                              className={`text-2xs ${
+                                s.source === "real" ? "text-emerald-600" : "text-amber-600"
+                              }`}
+                              title={
+                                s.source === "real"
+                                  ? `このモデルの実データ ${s.sampleCount} 件の中央値`
+                                  : "既定見積または他モデル実績を借用"
+                              }
+                            >
+                              {s.source === "real" ? "実" : "見"}
+                            </span>
+                          </td>
+                        );
+                      })}
+                      <td className="text-right tabular-nums font-bold px-2 py-1.5">
+                        {fmtJpy(est.setCost.totalJpy)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             <div className="text-2xs text-muted-foreground mt-2 flex flex-wrap gap-3">
@@ -391,8 +421,8 @@ function PricingCards({ estimates }: { estimates: ModelEstimate[] }) {
               </span>
               <span>単価は 2026-07 時点</span>
             </div>
-          </div>
-        </details>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
