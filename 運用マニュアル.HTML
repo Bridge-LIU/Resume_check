@@ -738,8 +738,8 @@
     <h2 id="intro-features">主な機能</h2>
     <ul>
       <li>面談ごとに専用 URL を作って、関連情報を 1 ヶ所に集約</li>
-      <li>履歴書要約・面談内容・評価結果を <strong>貼付</strong> で保存（AI に直接投げる必要なし）</li>
-      <li>役割（NW / Server / Dev / PMO / ITSupport / Special）ごとに別々の評価条件</li>
+      <li>履歴書要約・面談内容・評価結果を <strong>貼付</strong> または <strong>API</strong> の 2 モードで保存</li>
+      <li>役割（Dev / ITSupport / NW / PMO / Server の 5 種を同梱、追加は <code>/master</code> で自由）ごとに別々の評価条件</li>
       <li>面談時点の条件を <strong>凍結</strong> → 後でマスタを変えても過去面談に影響しない</li>
       <li>過去面談を <strong>匿名サマリ</strong>として集計・分析</li>
       <li>Excel ファイル（マスタ / 面談者一覧）を自動更新</li>
@@ -748,7 +748,12 @@
 
     <h2 id="intro-mode">動作モード</h2>
     <div class="note">
-      <p>本ツールは「<strong>貼付モード</strong>」で動作します。AI 要約・質問生成・評価は Claude などの AI チャット側で実行し、結果をコピー → このツールに貼付という流れです。</p>
+      <p>各セクション（① 面談者情報 / ③ 質問 / ④ 面談内容 / ⑤ 評価）は <strong>貼付モード</strong> と <strong>API モード</strong> をボタンで切り替えて使えます。</p>
+      <ul>
+        <li><strong>貼付モード</strong>（既定）: AI 要約・質問生成・評価を Claude / ChatGPT 等の AI チャット側で行い、結果をコピー → このツールに貼付</li>
+        <li><strong>API モード</strong>: <code>/settings</code> で登録した Provider（Anthropic / OpenAI / Google）を直接呼び出し、要約・生成・評価を自動化。使用状況は <code>/cost</code> で集計</li>
+      </ul>
+      <p>API キー未登録の状態でも貼付モードだけで業務が完結します。API モードを有効にするには <a href="#settings">設定</a> 参照。</p>
     </div>
   </article>
 
@@ -777,13 +782,13 @@
 
   <article class="page" id="p-layout">
     <h1>画面構成</h1>
-    <p class="subtitle">左端に <strong>アイコン付きサイドバー</strong>、上部に <strong>タイトル + 新規面談ボタン + テーマ切替 + ユーザーアバターの TopBar</strong>、その下に各ページの本文が並びます。</p>
+    <p class="subtitle">左端に <strong>アイコン付きサイドバー</strong>、上部に <strong>タイトル + 新規面談ボタン + テーマ切替の TopBar</strong>、その下に各ページの本文が並びます。</p>
 
     <h2 id="layout-screenshot">画面全体</h2>
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/home.png" alt="ホーム画面（ダッシュボード）">
+        <img src="マニュアル/assets/home.png" alt="ホーム画面（ダッシュボード）">
       </div>
       <figcaption>ホーム画面 (<code>/</code>) — 左サイドバー + 上部 TopBar + ダッシュボード本文</figcaption>
     </figure>
@@ -794,27 +799,29 @@
       <p>ダークモードは長時間ダッシュボードを開きっぱなしにする運用（面談中の面談内容貼付など）で目が疲れにくくなります。</p>
     </div>
 
-    <h2 id="layout-pages">ページ一覧（左サイドバー準拠）</h2>
-    <p>画面左端の縦型サイドバーから主要ページに直接遷移できます。上段が主要メニュー、下段（フッター位置）が運用系メニューです。</p>
+    <h2 id="layout-pages">サイドバーの全ボタン</h2>
+    <p>画面左端の縦型サイドバーには <strong>主要メニュー 6 個 + 運用系 4 個</strong>があります。ロゴをクリックするとホームに戻ります。</p>
     <table>
-      <thead><tr><th>アイコン</th><th>ページ</th><th>URL</th><th>用途</th></tr></thead>
+      <thead><tr><th>アイコン</th><th>ラベル</th><th>URL / 動作</th><th>用途</th><th>マニュアル該当章</th></tr></thead>
       <tbody>
-        <tr><td>🏠</td><td>ホーム</td><td><code>/</code></td><td>ダッシュボード（今週の面談 / 合格率 / 平均スコア / 評価待ち / 最近の活動）</td></tr>
-        <tr><td>📊</td><td>一覧</td><td><code>/list</code></td><td>セッション一覧、フィルタ、新規面談作成、一括比較</td></tr>
-        <tr><td>📉</td><td>分析</td><td><code>/analytics</code></td><td>過去面談を匿名集計</td></tr>
-        <tr><td>🗂️</td><td>マスタ</td><td><code>/master</code></td><td>求人情報・評価条件の編集</td></tr>
-        <tr><td>💴</td><td>コスト</td><td><code>/cost</code></td><td>LLM API のコスト集計</td></tr>
-        <tr><td>🗑️</td><td>ゴミ箱</td><td><code>/trash</code></td><td>削除セッションの復元・完全削除</td></tr>
-        <tr><td>⚙️</td><td>設定</td><td><code>/settings</code></td><td>保存先・保存期間・バックアップ・監査ログ</td></tr>
+        <tr><td>🏠</td><td>ホーム</td><td><code>/</code></td><td>ダッシュボード（今週の面談 / 合格率 / 平均スコア / 評価待ち / 最近の活動）</td><td><a href="#layout">画面構成</a></td></tr>
+        <tr><td>📊</td><td>面談一覧</td><td><code>/list</code></td><td>セッション一覧、フィルタ、複数選択して比較</td><td><a href="#list">一覧画面</a></td></tr>
+        <tr><td>🔀</td><td>比較</td><td><code>/compare</code></td><td>評価済セッションを並べて横断比較</td><td><a href="#compare">横断比較</a></td></tr>
+        <tr><td>📈</td><td>分析</td><td><code>/analytics</code></td><td>過去面談を匿名集計・軸別スコアの分布</td><td><a href="#analytics">分析画面</a></td></tr>
+        <tr><td>🗂️</td><td>求人情報</td><td><code>/master</code></td><td>求人情報（役割）・評価条件マスタの編集</td><td><a href="#master">求人情報管理</a></td></tr>
+        <tr><td>🧾</td><td>API コスト</td><td><code>/cost</code></td><td>LLM API 使用状況・費用集計</td><td><a href="#cost">💴 コスト試算</a></td></tr>
+        <tr><td>📁</td><td>フォルダ</td><td>ローカルの <code>data/sessions</code> を Explorer で開く（別ウィンドウ）</td><td>PII 実体ファイルへのショートカット。バックアップ・確認用</td><td>—</td></tr>
+        <tr><td>🗑️</td><td>ゴミ箱</td><td><code>/trash</code></td><td>ソフト削除セッションの復元・完全削除</td><td><a href="#trash">ゴミ箱と復元</a></td></tr>
+        <tr><td>⚙️</td><td>設定</td><td><code>/settings</code></td><td>Provider / API キー / 保存先 / 保存期間 / バックアップ / 監査ログ</td><td><a href="#settings">設定</a></td></tr>
+        <tr><td>❔</td><td>ヘルプ</td><td><code>/manual</code>（別タブ）</td><td>この操作マニュアル</td><td>—</td></tr>
       </tbody>
     </table>
-    <p>以下のページはサイドバーからは直接開けず、他ページから遷移します。</p>
+    <p>サイドバーに無い、他ページから遷移するページ：</p>
     <table>
       <thead><tr><th>ページ</th><th>URL</th><th>到達手段</th><th>用途</th></tr></thead>
       <tbody>
-        <tr><td>新規面談</td><td><code>/new</code></td><td>一覧画面の「＋ 新規面談」ボタン</td><td>面談を新規作成</td></tr>
-        <tr><td>セッション</td><td><code>/sessions/&lt;id&gt;</code></td><td>一覧の「詳細」</td><td>面談 1 件の本体（①〜⑤）</td></tr>
-        <tr><td>比較</td><td><code>/compare</code></td><td>一覧で複数選択 →「比較」</td><td>複数評価済セッションを並べて比較</td></tr>
+        <tr><td>新規面談</td><td><code>/new</code></td><td>右上の <strong>「+ 新規面談」</strong> ボタン</td><td>面談を新規作成</td></tr>
+        <tr><td>セッション</td><td><code>/sessions/&lt;id&gt;</code></td><td>一覧の面談行をクリック</td><td>面談 1 件の本体（①〜⑤）</td></tr>
       </tbody>
     </table>
     <div class="note">
@@ -830,7 +837,7 @@
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/session.png" alt="セッション本体">
+        <img src="マニュアル/assets/session.png" alt="セッション本体">
       </div>
       <figcaption>1 つのセッションには ①候補者 / ②条件 / ③質問 / ④面談内容 / ⑤評価 が縦に並ぶ</figcaption>
     </figure>
@@ -866,7 +873,7 @@
     <h2 id="step1-create">作成手順</h2>
     <ol>
       <li>画面右上の <strong>「+ 新規面談」</strong> をクリック</li>
-      <li>候補者の <strong>氏名</strong> と、応募 <strong>役割</strong>（NW / Server / Dev / PMO / ITSupport / Special）を入力</li>
+      <li>候補者の <strong>氏名</strong> と、応募 <strong>役割</strong>（Dev / ITSupport / NW / PMO / Server の 5 種、<code>/master</code> で追加可能）を入力</li>
       <li><strong>「作成して開く →」</strong> をクリック</li>
       <li>自動的にセッションページ <code>/sessions/&lt;ID&gt;</code> に遷移</li>
     </ol>
@@ -875,7 +882,7 @@
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/new.png" alt="新規面談">
+        <img src="マニュアル/assets/new.png" alt="新規面談">
       </div>
       <figcaption>/new — 役割 と 氏名 を入力</figcaption>
     </figure>
@@ -889,34 +896,58 @@
 
   <article class="page" id="p-step2">
     <h1>① 面談者情報 <span class="pill pill-edit">編集中</span></h1>
-    <p class="subtitle">履歴書を AI で要約して、結果をこのエリアに貼ります。API モードでは最大 <strong>2 ファイル</strong>まで直接アップロードして自動要約できます。</p>
+    <p class="subtitle">履歴書を AI で要約して、結果をこのエリアに保存します。<strong>API モード</strong>（直接ファイルアップロード）と <strong>貼付モード</strong>（AI チャット経由）の 2 通り。</p>
 
-    <h2 id="step2-howto">貼付モードの手順（既定）</h2>
+    <h2 id="step2-api">API モードの手順（推奨）</h2>
+    <p>キー登録済みなら 1 クリックで要約完了。履歴書 + 職務経歴書のような 2 種類のファイルもまとめて 1 要約に統合できます。</p>
+    <ol>
+      <li>① エリア右上の <strong>モード切替</strong> を <strong>API</strong> に</li>
+      <li>Provider / モデルを選択（未選択なら <code>/settings</code> の既定を使用）</li>
+      <li><strong>「📎 履歴書をアップ」</strong> をクリック → PDF / Word / Excel を添付（最大 2 ファイル）</li>
+      <li><strong>「AI で要約」</strong> ボタンをクリック</li>
+      <li>数秒〜30 秒で要約が「要約」枠に自動投入 → フォーカス外で <strong>自動保存</strong></li>
+    </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-1-api.png" alt="① API モード">
+      </div>
+      <figcaption>① エリアで API モードに切り替えた状態</figcaption>
+    </figure>
+
+    <h2 id="step2-howto">貼付モードの手順</h2>
+    <p>API キー無しでも AI チャット（Claude / ChatGPT / Gemini）経由で同等の結果を貼付できます。</p>
     <ol>
       <li>① エリア上の <strong>「📋 コピー」</strong> ボタンで履歴書要約プロンプトをクリップボードへ</li>
-      <li>Claude などの AI チャットに貼付 → 履歴書ファイル（PDF / Word / Excel）を添付</li>
-      <li>AI が出した要約をすべてコピー（<kbd>Ctrl</kbd>+<kbd>A</kbd> → <kbd>Ctrl</kbd>+<kbd>C</kbd>）</li>
-      <li>① エリアの「要約」テキスト枠に貼付（<kbd>Ctrl</kbd>+<kbd>V</kbd>）</li>
-      <li>フォーカスを外すと <strong>自動保存</strong>（右下に「保存済」インジケータ表示）</li>
+      <li>AI チャットに貼付 → 履歴書ファイルを添付</li>
+      <li>AI 回答をコピー（<kbd>Ctrl</kbd>+<kbd>A</kbd> → <kbd>Ctrl</kbd>+<kbd>C</kbd>）</li>
+      <li>① エリアの「要約」テキスト枠に貼付</li>
+      <li>フォーカスを外すと <strong>自動保存</strong></li>
     </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-1.png" alt="① 貼付モード">
+      </div>
+      <figcaption>① エリアで貼付モードの状態（既定）</figcaption>
+    </figure>
 
-    <h2 id="step2-api-files">API モード: 最大 2 ファイルまで自動要約</h2>
-    <p>API モードに切り替えると、履歴書ファイルを直接アップロードして AI に要約してもらえます。<strong>履歴書 + 職務経歴書</strong>のように 2 種類のファイルを合わせて 1 名分の要約に統合するのが典型的な使い方です。</p>
+    <h2 id="step2-api-files">API モード詳細：ファイルアップロード仕様</h2>
     <ul>
       <li><strong>対応形式</strong>: PDF / Word (.doc / .docx) / Excel (.xlsx / .xls)</li>
-      <li><strong>1 ファイル上限</strong>: 3.7 MB（Server Action の 5 MB body 制限に収まるよう base64 換算で 3.7 MB）</li>
-      <li><strong>ファイル数上限</strong>: 2 ファイルまで（既定「履歴書」+「職務経歴書」を想定）</li>
-      <li><strong>UI</strong>: 1 個目を選ぶと積み上げリストに表示、追加ボタンが「📎 履歴書をアップ（2/2）」に変わる。2 個目を入れると追加ボタンが消える</li>
-      <li><strong>取消</strong>: 各ファイル行の <strong>「取消」</strong> ボタンで個別に外せる</li>
-      <li><strong>要約時</strong>: 複数ファイル時は AI プロンプトに <code>#添付 1</code> / <code>#添付 2</code> の見出しが付き、AI が区別して統合要約する</li>
+      <li><strong>1 ファイル上限</strong>: 3.7 MB（Server Action の 5 MB body 制限に収まる base64 換算）</li>
+      <li><strong>ファイル数上限</strong>: 2 ファイル（既定「履歴書」+「職務経歴書」を想定）</li>
+      <li><strong>UI</strong>: 1 個目を選ぶと積み上げリスト表示、追加ボタンが「📎 履歴書をアップ（2/2）」に変わり、2 個目で消える</li>
+      <li><strong>取消</strong>: 各ファイル行の <strong>「取消」</strong> ボタンで個別除外</li>
+      <li><strong>要約時</strong>: 複数ファイル時は AI プロンプトに <code>#添付 1</code> / <code>#添付 2</code> の見出しが付き、AI が区別して統合要約</li>
     </ul>
     <div class="tip">
-      <p>旧 <code>.xls</code> ファイルはブラウザ内で自動的に <code>.xlsx</code> に変換されてから送信されます（サーバー側では扱えないため）。変換中は「.xls をブラウザで .xlsx に変換中…」表示。</p>
+      <p>旧 <code>.xls</code> ファイルはブラウザ内で自動的に <code>.xlsx</code> に変換されてから送信されます（サーバー側では扱えないため）。</p>
     </div>
 
-    <h2 id="step2-excel">Excel 自動分割</h2>
+    <h2 id="step2-excel">要約テキストの Excel 自動分割</h2>
     <div class="tip">
-      <p>テキスト内に「<strong>経歴サマリ：</strong>」「<strong>主要スキル：</strong>」「<strong>強み：</strong>」の見出しを入れると、Excel エクスポート時に自動で 3 列に分割されます。</p>
+      <p>要約本文に「<strong>経歴サマリ：</strong>」「<strong>主要スキル：</strong>」「<strong>強み：</strong>」の見出しを入れると、Excel エクスポート時に自動で 3 列に分割されます。API モードのプロンプトは既定でこの形式で返します。</p>
     </div>
   </article>
 
@@ -934,6 +965,13 @@
       <li>確認ダイアログで「OK」</li>
       <li>ステータスが <span class="pill pill-pub">質問公開</span> に変わり、③ 質問エリアが触れるようになる</li>
     </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-2.png" alt="② 条件凍結">
+      </div>
+      <figcaption>② 求める人材条件エリア（凍結前 / 後で表示切替）</figcaption>
+    </figure>
 
     <div class="note">
       <p><strong>「凍結」＝今の評価条件を写真のように コピーして保存すること。</strong></p>
@@ -951,19 +989,45 @@
 
   <article class="page" id="p-step5">
     <h1>③ 質問を貼る <span class="pill pill-pub">質問公開</span></h1>
-    <p class="subtitle">候補者の経歴と条件に基づく面談質問を AI で生成、結果を貼ります。</p>
+    <p class="subtitle">候補者の経歴と凍結条件から面談質問を生成し、③ エリアに保存します。<strong>API モード</strong>（AI が自動生成）と <strong>貼付モード</strong>（AI チャット経由）の 2 通り。</p>
 
-    <h2 id="step5-howto">手順</h2>
+    <h2 id="step5-api">API モードの手順（推奨）</h2>
+    <p>キー登録済みなら 1 クリックで質問リストが生成されます。</p>
+    <ol>
+      <li>③ エリア右上の <strong>モード切替</strong> を <strong>API</strong> に</li>
+      <li>Provider / モデルを選択</li>
+      <li><strong>「AI で質問生成」</strong> ボタンをクリック</li>
+      <li>候補者要約 + 凍結条件で API を呼び出し（数秒〜30 秒）</li>
+      <li>「人間性」「技術」の 2 枠に自動振り分けされ、下部にカードプレビュー表示 → <strong>「保存」</strong></li>
+    </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-3-api.png" alt="③ API モード">
+      </div>
+      <figcaption>③ エリアで API モードに切り替えた状態</figcaption>
+    </figure>
+    <p>使用トークンは <code>/cost</code> に記録されます。事前に <a href="#settings">設定</a> で API キーの登録が必要です。</p>
+
+    <h2 id="step5-howto">貼付モードの手順</h2>
+    <p>API キー無しでも AI チャット経由で質問を生成できます。</p>
     <ol>
       <li>③ エリア上の <strong>「📋 コピー」</strong> ボタンで質問生成プロンプトをクリップボードへ</li>
-      <li>Claude などの AI に貼付 → 候補者の経歴と組み合わせて 15問前後を生成</li>
-      <li>AI 回答をコピーして ③ エリアの <strong>「人間性」</strong> 枠と <strong>「技術」</strong> 枠に振り分けて貼付
+      <li>AI チャットに貼付 → 15 問前後を生成</li>
+      <li>AI 回答をコピーして「人間性」枠 / 「技術」枠に振り分けて貼付
         <ul>
-          <li>AI が <code>## 人間性</code> / <code>## 技術</code> の見出しを付けている場合は 1 枠に全文貼付でも自動振り分けされます</li>
+          <li>AI が <code>## 人間性</code> / <code>## 技術</code> 見出しを付けていれば 1 枠に全文貼付で自動振り分け</li>
         </ul>
       </li>
-      <li><strong>「保存」</strong> をクリック → 下の「構造化プレビュー」で 1 問ずつカード表示される</li>
+      <li><strong>「保存」</strong> → 下の「構造化プレビュー」でカード表示</li>
     </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-3.png" alt="③ 貼付モード">
+      </div>
+      <figcaption>③ エリアで貼付モードの状態（既定）</figcaption>
+    </figure>
 
     <h2 id="step5-format">質問の形式</h2>
     <p>質問テキスト内で以下の接頭辞・キーワードが使えます（AI に生成させる時点でこの形式にしておくとカードに反映されます）:</p>
@@ -979,7 +1043,7 @@
 
     <h2 id="step5-count">質問数の目安</h2>
     <div class="tip">
-      <p>既定は <strong>人間性 7 問 + 技術 8 問</strong>。カウンタが目標値のとき緑、超過は黄で色付けされます。プロンプトを AI に流す前に文中の数字を書き換えれば任意の件数で生成できます。</p>
+      <p>既定は <strong>人間性 7 問 + 技術 8 問</strong>。カウンタが目標値のとき緑、超過は黄で色付けされます。プロンプトの文中の数字を書き換えれば任意の件数で生成できます。</p>
     </div>
 
     <h2 id="step5-copy">コピー系ボタン</h2>
@@ -991,7 +1055,7 @@
 
   <article class="page" id="p-step6">
     <h1>④ 面談内容を貼る <span class="pill pill-itv">→ 面談済</span></h1>
-    <p class="subtitle">面談本番の文字起こしや手書きメモをここに貼り付けます。</p>
+    <p class="subtitle">面談本番の文字起こしや手書きメモを ④ エリアに貼り付けます（モード切替なし・貼付運用のみ）。</p>
 
     <h2 id="step6-howto">手順</h2>
     <ol>
@@ -1000,6 +1064,16 @@
       <li>④ エリアに貼付 → <strong>「保存」</strong></li>
       <li>ステータスが <span class="pill pill-itv">面談済</span> に変わる</li>
     </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-4.png" alt="④ 面談内容">
+      </div>
+      <figcaption>④ 面談内容エリア</figcaption>
+    </figure>
+    <div class="note">
+      <p>長すぎる文字起こしは事前に ChatGPT / Claude で要点抽出してから貼るのがおすすめ。テキスト内に文字数の上限は約 200 万文字なので、通常の 60 分面談なら余裕で収まります。</p>
+    </div>
 
     <h2 id="step6-sample">面談内容の例（貼付イメージ）</h2>
     <p>フォーマットは自由（Teams 文字起こしそのまま／手書きメモ／整形済みどれでも可）。上限は約 200 万文字なので、通常の 60 分面談なら余裕で収まります。参考までに整形版の例：</p>
@@ -1063,20 +1137,47 @@ T5. 得意な言語と、その言語で気をつけていること
 
   <article class="page" id="p-step8">
     <h1>⑤ 評価を貼る <span class="pill pill-eval">→ 評価済</span></h1>
-    <p class="subtitle">面談内容と凍結条件から AI に評価 JSON を生成してもらい、結果を貼ります。</p>
+    <p class="subtitle">面談内容と凍結条件から評価を確定します。<strong>API モード</strong>（AI が自動評価）と <strong>貼付モード</strong>（JSON 手貼付）の 2 通り。</p>
 
-    <h2 id="step8-howto">手順</h2>
+    <h2 id="step8-api">API モードの手順（推奨）</h2>
+    <p>キー登録済みなら 1 クリックで評価が完了します。</p>
     <ol>
-      <li>⑤ エリアの「評価結果 JSON を貼り付ける」を開き、<strong>「📋 コピー」</strong> ボタンで評価プロンプトをクリップボードへ</li>
-      <li>Claude などの AI に貼付 → <strong>面談内容 + 凍結条件</strong>を組み合わせて JSON 形式で評価結果を生成</li>
+      <li>⑤ エリア右上の <strong>モード切替</strong> を <strong>API</strong> に</li>
+      <li>Provider / モデルを選択（「厳格モード」で上位モデルに切替も可）</li>
+      <li><strong>「AI で評価」</strong> ボタンをクリック</li>
+      <li>面談内容 + 凍結条件で API を呼び出し（30 秒〜数分）</li>
+      <li>各軸スコア・根拠・良い点・懸念点が自動投入 → <strong>「保存」</strong></li>
+      <li><strong>採否</strong>（採用 / 不採用 / 未確定）を選ぶ → ステータス <span class="pill pill-eval">評価済</span></li>
+    </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-5-api.png" alt="⑤ API モード">
+      </div>
+      <figcaption>⑤ エリアで API モードに切り替えた状態</figcaption>
+    </figure>
+    <p>厳格モードは通常より上位の推論モデル（Claude Opus / GPT o1 等）を使うため精度は高いが料金も高くなります。<code>/cost</code> でリアルタイム使用状況を確認できます。</p>
+
+    <h2 id="step8-howto">貼付モードの手順</h2>
+    <p>API キー無しでも AI チャット経由で評価 JSON を作って貼付できます。</p>
+    <ol>
+      <li>⑤ エリアの「評価結果 JSON を貼り付ける」を開き、<strong>「📋 コピー」</strong> で評価プロンプトをクリップボードへ</li>
+      <li>AI チャットに貼付 → 面談内容 + 凍結条件から JSON 形式で評価結果を生成</li>
       <li>AI が返す JSON を評価 JSON 枠に貼付 → <strong>「保存」</strong>
         <ul>
-          <li>AI が <code>```json</code> のフェンスで囲んでいたら囲みを除いてから貼ってください（素の JSON のみ受け付けます）</li>
+          <li>AI が <code>```json</code> フェンスで囲んでいたら囲みを除いてから貼付（素の JSON のみ受け付け）</li>
         </ul>
       </li>
       <li>各軸スコア・総合スコア・合否（合格 / 普通 / 不合格）が自動表示</li>
-      <li>最後に <strong>採否</strong>（採用 / 不採用 / 未確定）を選ぶ → ステータスが <span class="pill pill-eval">評価済</span> に</li>
+      <li><strong>採否</strong>を選ぶ → ステータス <span class="pill pill-eval">評価済</span></li>
     </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-5.png" alt="⑤ 貼付モード">
+      </div>
+      <figcaption>⑤ エリアで貼付モードの状態（既定）</figcaption>
+    </figure>
 
     <h2 id="step8-warn">注意</h2>
     <div class="warn">
@@ -1115,7 +1216,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/list.png" alt="一覧画面">
+        <img src="マニュアル/assets/list.png" alt="一覧画面">
       </div>
       <figcaption>/ — フィルタ + 検索 + セッション表</figcaption>
     </figure>
@@ -1123,7 +1224,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <h2 id="list-filter">フィルタ</h2>
     <ul>
       <li><strong>状態</strong>：編集中 / 質問公開 / 面談済 / 評価済</li>
-      <li><strong>役割</strong>：NW / Server / Dev / PMO / ITSupport / Special（マスタで追加した役割も表示）</li>
+      <li><strong>役割</strong>：Dev / ITSupport / NW / PMO / Server（マスタで追加した役割も表示）</li>
       <li><strong>合否</strong>：採用 / 不採用 / 未確定</li>
       <li><strong>氏名検索</strong>：上部の検索ボックスに入力（部分一致）</li>
     </ul>
@@ -1182,7 +1283,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/cost.png" alt="コスト試算">
+        <img src="マニュアル/assets/cost.png" alt="コスト試算">
       </div>
       <figcaption>/cost — KPI + 月別 / プロバイダ別 / モデル別 / 工程別 + 直近呼び出し</figcaption>
     </figure>
@@ -1234,7 +1335,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/master.png" alt="求人情報管理">
+        <img src="マニュアル/assets/master.png" alt="求人情報管理">
       </div>
       <figcaption>/master — 上：求人情報、下：評価条件（BARS）</figcaption>
     </figure>
@@ -1276,7 +1377,6 @@ T5. 得意な言語と、その言語で気をつけていること
         <tr><td><strong>Dev</strong></td><td>5</td><td>4</td><td>3</td><td>3</td><td>3</td><td>4.2</td></tr>
         <tr><td><strong>PMO</strong></td><td>2</td><td>3</td><td>4</td><td>4</td><td>3</td><td>3.8</td></tr>
         <tr><td><strong>ITSupport</strong></td><td>3</td><td>3</td><td>3</td><td>4</td><td>3</td><td>3.6</td></tr>
-        <tr><td><strong>Special</strong></td><td>3</td><td>3</td><td>3</td><td>3</td><td>3</td><td>4.3</td></tr>
       </tbody>
     </table>
     <div class="note">
@@ -1315,7 +1415,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/settings.png" alt="設定画面">
+        <img src="マニュアル/assets/settings.png" alt="設定画面">
       </div>
       <figcaption>/settings — データ保存先 / 保存期間 / バックアップ / 監査ログ</figcaption>
     </figure>
@@ -1360,7 +1460,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/trash.png" alt="ゴミ箱">
+        <img src="マニュアル/assets/trash.png" alt="ゴミ箱">
       </div>
       <figcaption>/trash — ソフト削除後の猶予期間内に復元できる</figcaption>
     </figure>
@@ -1391,6 +1491,13 @@ T5. 得意な言語と、その言語で気をつけていること
       <li><strong>「今すぐバックアップ」</strong> ボタンをクリック</li>
       <li>これで完了。バックアップファイルが 1 つ作られます</li>
     </ol>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/backup.png" alt="バックアップ管理カード">
+      </div>
+      <figcaption>設定 &gt; バックアップ セクション（パスワード欄・作成 / 世代整理 / 再読込 ボタン）</figcaption>
+    </figure>
     <p>面談データとマスタの中身をまるごと 1 ファイルにまとめて、入力したパスワードで暗号化して保存します。暗号化は <strong>AES-256-GCM</strong>、パスワードからの鍵導出は <strong>PBKDF2-SHA256（200,000 回反復）</strong>。パスワード無しの平文バックアップは作成できません。</p>
 
     <h2 id="backup-warn">パスワードの管理</h2>
@@ -1405,10 +1512,45 @@ T5. 得意な言語と、その言語で気をつけていること
       <li>「<strong>世代を整理</strong>」ボタンで手動掃除可能</li>
     </ul>
 
-    <h2 id="backup-restore">復元（手動）</h2>
-    <div class="warn">
-      <p>現状、GUI からの復元機能は未提供です（Phase 2 で追加予定）。緊急時は付属の CLI スクリプトで復号 → 手動配置してください。</p>
+    <h2 id="backup-restore">復元</h2>
+    <p>復元経路は 2 通りです：</p>
+    <ul>
+      <li><strong>一覧から復元</strong>: このアプリで作ったバックアップ一覧の各行の「復元」ボタン</li>
+      <li><strong>外部ファイルから復元</strong>: 別 PC / USB / 他人から受け取った <code>.enc.tar.gz</code> をアップロードして復元（上部の「📎 外部ファイルから復元」ボタン）</li>
+    </ul>
+    <p>いずれも同じ preview → confirm → restore フローで安全に処理されます。</p>
+
+    <h3>一覧から復元</h3>
+    <p>設定 &gt; バックアップ一覧の各行の <strong>「復元」</strong> ボタンから、選択したバックアップの内容で <code>master/</code> ・ <code>sessions/</code> ・ <code>settings.json</code> を復元できます。</p>
+    <ol>
+      <li>復元したいバックアップ行の <strong>「復元」</strong> ボタンをクリック</li>
+      <li>作成時に設定した <strong>暗号化パスワード</strong>を入力（上のパスワード欄が空の場合はダイアログで確認）</li>
+      <li><strong>プレビュー</strong>が表示される（アーカイブ内の master ファイル数 / セッション数 / 上書きされるセッション数 / 追加される / 消滅する内訳）</li>
+      <li>内容を確認して <strong>「復元する」</strong> をクリック</li>
+      <li>復元前の現行データは自動的に <code>data/_restore_snapshots/&lt;タイムスタンプ&gt;/</code> に退避されます（事故時のロールバック用）</li>
+    </ol>
+    <div class="tip">
+      <p>プレビューは復号のみを行い、ファイルシステムには一切書き込みません。パスワードが間違っている場合はこの段階で失敗します（現行データは無傷）。</p>
     </div>
+    <div class="warn">
+      <p><strong>復元は破壊的操作</strong>です。実行前に「今すぐバックアップ」で作業中の変更を保存してください。パスワード違い・ファイル破損・不正パスは全て自動 reject されます。</p>
+    </div>
+
+    <h3>外部ファイルから復元</h3>
+    <p>別 PC で作ったバックアップや、他人から受け取った <code>.enc.tar.gz</code> をアップロードして復元できます。</p>
+    <ol>
+      <li>設定 &gt; バックアップ セクション上部の <strong>「📎 外部ファイルから復元」</strong> ボタンをクリック</li>
+      <li>ファイル選択ダイアログで <code>.enc.tar.gz</code> を選択</li>
+      <li>選択したファイルは自動的に <code>data/_backups/</code> に取り込まれ（新しいタイムスタンプで命名）、一覧に追加される</li>
+      <li>続けてパスワード入力 → プレビュー → 確認ダイアログが表示される</li>
+      <li>「復元する」で実復元</li>
+    </ol>
+    <div class="tip">
+      <p>アップロード上限は 500 MB。元ファイル名は使わず、<code>backup-YYYYMMDD-HHmmss.enc.tar.gz</code> に自動リネーム。</p>
+    </div>
+
+    <h3>CLI 経由の復元（緊急・オフライン時）</h3>
+    <p>アプリが起動できない場合は、付属の CLI で復号 → 手動配置が可能です。</p>
     <ol>
       <li>アプリを停止（コマンドプロンプトで <kbd>Ctrl</kbd>+<kbd>C</kbd>）</li>
       <li>現在の <code>data\master\</code> と <code>data\sessions\</code> を別フォルダにコピーして退避</li>
@@ -1417,7 +1559,7 @@ T5. 得意な言語と、その言語で気をつけていること
       </li>
       <li>プロンプトに従ってパスワードを入力（<kbd>Enter</kbd> で確定）</li>
       <li><code>restored\master\</code> と <code>restored\sessions\</code> を <code>data\</code> 直下へ配置</li>
-      <li><code>start-app.bat</code> で再起動</li>
+      <li><code>start.bat</code> で再起動</li>
     </ol>
     <div class="note">
       <p>スクリプトは復号だけを行い、既存データは書き換えません。事故防止のため出力先に既に <code>master/</code> か <code>sessions/</code> があると上書きせず終了します。</p>
@@ -1432,7 +1574,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/analytics.png" alt="分析画面">
+        <img src="マニュアル/assets/analytics.png" alt="分析画面">
       </div>
       <figcaption>/analytics — KPI + 月別 + 役割別 + 軸別 + 明細</figcaption>
     </figure>
@@ -1463,7 +1605,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/compare.png" alt="比較画面（標準ビュー）">
+        <img src="マニュアル/assets/compare.png" alt="比較画面（標準ビュー）">
       </div>
       <figcaption>2〜6 件の場合：候補者を左から右に並べ、レーダーチャート＋各軸の詳細（スコア＋根拠）を表示</figcaption>
     </figure>
@@ -1472,7 +1614,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
-        <img src="assets/compare-transposed.png" alt="比較画面（転置ビュー）">
+        <img src="マニュアル/assets/compare-transposed.png" alt="比較画面（転置ビュー）">
       </div>
       <figcaption>7 件以上の場合：候補者を上から下に並べ、総合・重み付き・各軸スコアが 1 表で俯瞰できる。列ヘッダクリックでソート、行クリックで根拠展開。</figcaption>
     </figure>
@@ -1505,7 +1647,15 @@ T5. 得意な言語と、その言語で気をつけていること
 
   <article class="page" id="p-audit">
     <h1>監査ログ</h1>
-    <p class="subtitle"><code>/settings</code> 末尾の「監査ログ」セクションで操作履歴を確認できます。</p>
+    <p class="subtitle"><code>/settings</code> 末尾の「直近の監査ログ」セクションで操作履歴を確認できます。</p>
+
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/audit-log.png" alt="監査ログ Viewer">
+      </div>
+      <figcaption>設定 &gt; 直近の監査ログ（デフォルト折りたたみ、クリックで展開）</figcaption>
+    </figure>
 
     <h2 id="audit-events">記録される操作</h2>
     <ul>
@@ -1518,7 +1668,7 @@ T5. 得意な言語と、その言語で気をつけていること
     </ul>
 
     <h2 id="audit-file">ログファイル</h2>
-    <p>ファイルパス：<code>data/logs/audit.log</code>（JSON Lines 形式）</p>
+    <p>ファイルパス：<code>data/logs/audit.log</code>（JSON Lines 形式）。PII（氏名・履歴書本文・面談内容本文）は記録しない方針。表示は時刻降順、UI では最新 50 件を返します。</p>
   </article>
 
   <article class="page" id="p-faq">

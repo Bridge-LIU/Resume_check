@@ -1,6 +1,5 @@
 /**
  * 面談AI評価ツール — 共通型定義
- * 設計書 v1.0 の JSON 構造に対応。
  */
 
 export type SessionStatus = "編集中" | "質問公開" | "面談済" | "評価済";
@@ -205,7 +204,7 @@ export interface QuestionCounts {
   tech: number;
 }
 
-/** config/settings.json */
+/** data/settings.json */
 export interface Settings {
   dataRoot: string;
   /** どのプロバイダを既定にするか（②⑤⑧ で override されなければこれが使われる） */

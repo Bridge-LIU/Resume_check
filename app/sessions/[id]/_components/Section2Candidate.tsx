@@ -16,8 +16,8 @@ import {
 import type { LlmDefaults } from "../page";
 import { useStableSectionScroll } from "./useStableSectionScroll";
 import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/textarea";
 import {
   detectResumeKind,
   isLegacyXls,

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/ui/tooltip";
 import { HeartbeatPing } from "./_components/HeartbeatPing";
 import { ThemeProvider } from "./_components/ThemeProvider";
 import { SideBar } from "./_components/SideBar";

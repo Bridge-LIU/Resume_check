@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Tip } from "@/components/ui/tooltip";
+import { Button } from "@/ui/button";
+import { Tip } from "@/ui/tooltip";
 
 export function SessionsExportButton() {
   const [busy, setBusy] = useState(false);

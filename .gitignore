@@ -37,20 +37,14 @@ yarn-error.log*
 !.env.*.example
 !.env*.example
 
-# 機密：APIキー・dataRoot を含むローカル設定。サンプルは config/settings.example.json
-/config/settings.json
-
-# 機密：PII（履歴書・面談内容・評価）はローカル保存。git には上げない
+# 機密：PII（履歴書・面談内容・評価）＋ APIキー含む設定。ローカル保存、git には上げない
 /data/
 
-# 履歴書抽出のローカル検証用サンプル（scripts/gen-resume-samples.mjs 自動生成）
+# 履歴書抽出のローカル検証用サンプル（scripts/dev/gen-resume-samples.mjs 自動生成）
 /test-files/
 
-# ローカル専用：モック面談データ生成スクリプト（git には上げない）
-/scripts/seed-sessions.mjs
-
-# 機密：設計書・サンプル面談データ・履歴書チェック実データ。ローカル限定で git には上げない
-/files/
+# 開発者専用スクリプト（seed / claude-Nsplit / mockup 資材生成など、配布に含めない）
+/scripts/dev/
 
 # superpowers brainstorming セッション（ローカル一時ファイル）
 /.superpowers/

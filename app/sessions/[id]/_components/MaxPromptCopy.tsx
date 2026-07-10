@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 
 type Result = { ok: true; prompt: string } | { ok: false; error: string };
 

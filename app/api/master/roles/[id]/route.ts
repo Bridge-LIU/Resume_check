@@ -15,8 +15,8 @@ function assertRole(body: unknown): Role {
 
 /**
  * URL セグメントの `[id]` を検証する。未検証で getRole/deleteRole に渡すと
- * `..%2F..%2Fconfig%2Fsettings` のような細工で sensitive ファイル
- * （config/settings.json には API キーが平文で入る）を読み書き／削除できる。
+ * `..%2F..%2Fdata%2Fsettings` のような細工で sensitive ファイル
+ * （data/settings.json には API キーが平文で入る）を読み書き／削除できる。
  */
 function assertUrlId(id: string): string {
   const v = validateRoleMasterId(id);

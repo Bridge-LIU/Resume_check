@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Tip } from "@/components/ui/tooltip";
+import { Button } from "@/ui/button";
+import { Tip } from "@/ui/tooltip";
 
 export default function MasterIO() {
   const [busy, setBusy] = useState<"export" | "xlsx" | null>(null);

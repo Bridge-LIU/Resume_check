@@ -4,15 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 import { Lock } from "lucide-react";
 import type { Role } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/ui/select";
 import { validateName, validateRoleIdRef } from "@/lib/validation";
 import { createSessionAction } from "../actions";
 

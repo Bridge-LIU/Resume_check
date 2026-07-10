@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import type { SessionMeta } from "@/lib/types";
 import { rolePillClass, statusPillClass, verdictPillClass } from "@/lib/uiClass";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tip } from "@/components/ui/tooltip";
-import { useConfirm } from "@/components/ui/use-confirm";
+import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/checkbox";
+import { Tip } from "@/ui/tooltip";
+import { useConfirm } from "@/ui/use-confirm";
 import {
   bulkSoftDeleteSessionsAction,
   softDeleteSessionAction,

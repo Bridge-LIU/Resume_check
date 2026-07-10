@@ -1,15 +1,14 @@
 /**
- * 面談AI評価ツール — バックアップ層（Phase 4）
+ * 面談AI評価ツール — バックアップ層
  *
  * data/sessions/ と data/master/ を tar.gz 形式でまとめ、data/_backups/ に保存する。
  * パスワード指定時は AES-256-GCM で暗号化し、salt(16) + iv(12) + ciphertext + tag(16)
  * の形式で 1 ファイルに封入する。
  *
- * ⚠️ §7.5 / §11 との整合（別タスク）：
+ * ⚠️ 保存期間スイープとの整合：
  *   - 保存期間スイープは sessions/ を消すが、バックアップを残すと「複製」が残り続け
- *     PII 漏えいの観点で削除の意味が薄れる。バックアップ世代にも `retention` を適用
- *     して期限管理する必要がある（暗号化済でも保管期間は短くするのが安全側）。
- *   - 本ファイルでは作成/列挙/削除のみを提供し、retention の自動適用は別タスクに切り出す。
+ *     PII 漏えいの観点で削除の意味が薄れる。バックアップ世代にも retention を適用
+ *     して期限管理する（暗号化済でも保管期間は短くするのが安全側）。
  */
 
 import "server-only";
@@ -22,6 +21,7 @@ import { getDataRoot, loadSettings } from "./storage";
 import { writeAudit } from "./auditLog";
 
 const gzipAsync = promisify(zlib.gzip);
+const gunzipAsync = promisify(zlib.gunzip);
 
 const TAR_BLOCK = 512;
 const PBKDF2_ITERATIONS = 200_000;
@@ -30,7 +30,10 @@ const IV_BYTES = 12;
 const TAG_BYTES = 16;
 const KEY_BYTES = 32;
 
-const BACKUP_NAME_PATTERN = /^backup-\d{8}-\d{4}(\.enc)?\.tar\.gz$/;
+// 命名パターン：
+//   ・定期作成:   backup-YYYYMMDD-HHmm.enc.tar.gz   （4 桁時刻）
+//   ・アップロード時: backup-YYYYMMDD-HHmmss.enc.tar.gz（6 桁時刻、秒単位で衝突回避）
+const BACKUP_NAME_PATTERN = /^backup-\d{8}-\d{4,6}(\.enc)?\.tar\.gz$/;
 
 type TarEntry = {
   absPath: string;
@@ -184,22 +187,32 @@ export async function createBackup(opts: {
 }): Promise<{ path: string; size: number; encrypted: boolean }> {
   const password = opts.password.trim();
   if (!password) {
-    throw new Error(
-      "暗号化パスワードは必須です（設計書 §11 / 平文バックアップは禁止）",
-    );
+    throw new Error("暗号化パスワードは必須です（平文バックアップは無効）");
   }
 
   const dataRoot = getDataRoot();
   const backupsDir = backupsDirPath();
   fs.mkdirSync(backupsDir, { recursive: true });
 
-  // 走査対象は master/ と sessions/ のみ。_backups/ は自己包含を避けるため除外する。
+  // 走査対象は master/ と sessions/ と settings.json。_backups/ は自己包含を避けるため除外する。
   const entries: TarEntry[] = [
     ...listEntriesRecursive(path.join(dataRoot, "master"), "master"),
     ...listEntriesRecursive(path.join(dataRoot, "sessions"), "sessions"),
   ];
+  // settings.json は個別ファイル。存在する場合のみ含める。
+  const settingsAbs = path.join(dataRoot, "settings.json");
+  if (fs.existsSync(settingsAbs)) {
+    const st = fs.statSync(settingsAbs);
+    entries.push({
+      absPath: settingsAbs,
+      archivePath: "settings.json",
+      isDir: false,
+      mtime: st.mtime,
+      size: st.size,
+    });
+  }
   if (entries.length === 0) {
-    throw new Error("バックアップ対象が空です（master / sessions が存在しません）");
+    throw new Error("バックアップ対象が空です（master / sessions / settings.json が存在しません）");
   }
 
   const tarBuf = buildTar(entries);
@@ -246,7 +259,7 @@ export function listBackups(): {
 
 /**
  * 1 件削除。data/_backups/ 配下かつ backup-* 命名のファイルのみ削除可能（パストラバーサル防止）。
- * 世代の自動削除は sweepBackups() を参照（§7.5 / §11 の retention 連動）。
+ * 世代の自動削除は sweepBackups() を参照（retention 連動）。
  */
 export function deleteBackup(targetPath: string): void {
   const backupsDir = path.resolve(backupsDirPath());
@@ -267,7 +280,7 @@ export function deleteBackup(targetPath: string): void {
   fs.rmSync(resolved);
 }
 
-/* ───────────── 世代の自動削除（§7.5 / §11 連動） ───────────── */
+/* ───────────── 世代の自動削除（retention 連動） ───────────── */
 
 const DEFAULT_BACKUP_KEEP_DAYS = 90;
 const DEFAULT_BACKUP_MAX_GENERATIONS = 0; // 0 = 無制限
@@ -299,7 +312,7 @@ function resolveSweepOpts(opts?: {
 }
 
 /**
- * バックアップ世代を整理する（§7.5 / §11 の retention 連動の本体）。
+ * バックアップ世代を整理する（retention 連動の本体）。
  *
  * - data/_backups/ 内のファイルを mtime 降順（新しい順）で並べる
  * - maxGenerations を超えた末尾（古い側）を削除候補に
@@ -355,4 +368,373 @@ export function sweepBackups(opts?: {
   }
 
   return { deleted, kept: all.length - deleted.length };
+}
+
+/* ───────────── 外部ファイルアップロード ───────────── */
+
+/**
+ * 外部から受け取ったバックアップファイルを検証して data/_backups/ に保存する。
+ * 復号自体は行わない（restoreBackup で改めて実行）。
+ *
+ * - 最小サイズ / 巨大サイズを reject（誤ファイル・DoS 防御）
+ * - 保存名は当該環境の 秒精度タイムスタンプで再生成（元ファイル名は信用しない）
+ * - 同一秒に複数回来た場合は 1..N のカウンタで衝突回避
+ */
+export function writeUploadedBackup(
+  buf: Buffer,
+): { path: string; size: number } {
+  const minLen = SALT_BYTES + IV_BYTES + TAG_BYTES + 20;
+  if (buf.length < minLen) {
+    throw new Error("ファイルが短すぎます（バックアップ形式ではない可能性）");
+  }
+  const backupsDir = backupsDirPath();
+  fs.mkdirSync(backupsDir, { recursive: true });
+
+  // 秒精度のタイムスタンプ（HHmmss）で保存
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const stampSec =
+    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  let finalPath = path.join(backupsDir, `backup-${stampSec}.enc.tar.gz`);
+  // 万一衝突したら +1 秒相当で再生成（極稀）
+  let counter = 1;
+  while (fs.existsSync(finalPath)) {
+    const alt = `backup-${stampSec.slice(0, -2)}${pad(Number(stampSec.slice(-2)) + counter)}.enc.tar.gz`;
+    finalPath = path.join(backupsDir, alt);
+    counter++;
+    if (counter > 60) throw new Error("命名衝突が続いています。しばらく待ってから再試行してください");
+  }
+
+  fs.writeFileSync(finalPath, buf);
+  const size = fs.statSync(finalPath).size;
+  return { path: finalPath, size };
+}
+
+/* ───────────── tar パーサ（復元用） ───────────── */
+
+interface ParsedTarEntry {
+  name: string;
+  size: number;
+  isDir: boolean;
+  content: Buffer | null;
+}
+
+function parseTar(buf: Buffer): ParsedTarEntry[] {
+  const entries: ParsedTarEntry[] = [];
+  let offset = 0;
+  while (offset + TAR_BLOCK <= buf.length) {
+    const header = buf.subarray(offset, offset + TAR_BLOCK);
+    // 終端: ゼロブロック
+    let allZero = true;
+    for (let i = 0; i < TAR_BLOCK; i++) {
+      if (header[i] !== 0) { allZero = false; break; }
+    }
+    if (allZero) { offset += TAR_BLOCK; continue; }
+
+    const readStr = (start: number, len: number): string => {
+      const end = start + len;
+      let e = start;
+      while (e < end && header[e] !== 0) e++;
+      return header.subarray(start, e).toString("utf8");
+    };
+    const readOctal = (start: number, len: number): number => {
+      const s = readStr(start, len).trim();
+      return s ? parseInt(s, 8) : 0;
+    };
+    const nameField = readStr(0, 100);
+    const size = readOctal(124, 12);
+    const typeflag = String.fromCharCode(header[156]) || "0";
+    const magic = readStr(257, 6);
+    const prefix = magic.startsWith("ustar") ? readStr(345, 155) : "";
+    const fullName = prefix ? `${prefix}/${nameField}` : nameField;
+    offset += TAR_BLOCK;
+
+    const isDir = typeflag === "5" || fullName.endsWith("/");
+    let content: Buffer | null = null;
+    if (!isDir && size > 0) {
+      content = buf.subarray(offset, offset + size);
+    }
+    const pad = size % TAR_BLOCK === 0 ? 0 : TAR_BLOCK - (size % TAR_BLOCK);
+    offset += size + pad;
+    entries.push({ name: fullName, size, isDir, content });
+  }
+  return entries;
+}
+
+/**
+ * 復号のみ実行してアーカイブ内容の概要を返す（fs 書き込みなし・非破壊）。
+ * 復元前の確認 UI で「N セッションが上書きされる」を表示するのに使う。
+ */
+export async function previewBackup(opts: {
+  path: string;
+  password: string;
+}): Promise<{
+  archiveMasterFiles: number;
+  archiveSessionIds: string[];
+  archiveHasSettings: boolean;
+  currentSessionIds: string[];
+  overlapSessionIds: string[];
+  onlyInArchive: string[];
+  onlyInCurrent: string[];
+}> {
+  const password = opts.password.trim();
+  if (!password) throw new Error("復号パスワードは必須です");
+
+  const backupsDir = path.resolve(backupsDirPath());
+  const resolvedBackup = path.resolve(opts.path);
+  if (
+    resolvedBackup !== backupsDir &&
+    !resolvedBackup.startsWith(backupsDir + path.sep)
+  ) {
+    throw new Error("バックアップディレクトリ外のパスは復元できません");
+  }
+  const baseName = path.basename(resolvedBackup);
+  if (!BACKUP_NAME_PATTERN.test(baseName)) {
+    throw new Error("バックアップファイル名の形式と一致しません");
+  }
+  if (!fs.existsSync(resolvedBackup)) {
+    throw new Error("バックアップファイルが存在しません");
+  }
+
+  const buf = fs.readFileSync(resolvedBackup);
+  const minLen = SALT_BYTES + IV_BYTES + TAG_BYTES + 20;
+  if (buf.length < minLen) throw new Error("バックアップファイルが短すぎます");
+
+  const salt = buf.subarray(0, SALT_BYTES);
+  const iv = buf.subarray(SALT_BYTES, SALT_BYTES + IV_BYTES);
+  const tag = buf.subarray(buf.length - TAG_BYTES);
+  const ct = buf.subarray(SALT_BYTES + IV_BYTES, buf.length - TAG_BYTES);
+  const key = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, KEY_BYTES, "sha256");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  let gz: Buffer;
+  try {
+    gz = Buffer.concat([decipher.update(ct), decipher.final()]);
+  } catch {
+    throw new Error("復号失敗：パスワードが違うか、ファイルが壊れています");
+  }
+  const tarBuf = await gunzipAsync(gz);
+  const entries = parseTar(tarBuf);
+  if (entries.length === 0) throw new Error("復号後のアーカイブが空です");
+
+  const archiveSessionSet = new Set<string>();
+  let archiveMasterFiles = 0;
+  let archiveHasSettings = false;
+  for (const e of entries) {
+    if (e.isDir) continue;
+    if (e.name === "settings.json") {
+      archiveHasSettings = true;
+      continue;
+    }
+    const parts = e.name.split("/");
+    if (parts[0] === "master") archiveMasterFiles++;
+    else if (parts[0] === "sessions" && parts.length >= 2 && parts[1]) {
+      archiveSessionSet.add(parts[1]);
+    }
+  }
+  const archiveSessionIds = Array.from(archiveSessionSet).sort();
+
+  // 現行データと比較
+  const dataRoot = path.resolve(getDataRoot());
+  const curSessDir = path.join(dataRoot, "sessions");
+  const currentSessionSet = new Set<string>();
+  if (fs.existsSync(curSessDir)) {
+    for (const n of fs.readdirSync(curSessDir)) {
+      const st = fs.statSync(path.join(curSessDir, n));
+      if (st.isDirectory()) currentSessionSet.add(n);
+    }
+  }
+  const currentSessionIds = Array.from(currentSessionSet).sort();
+
+  const overlap = archiveSessionIds.filter((id) => currentSessionSet.has(id));
+  const onlyInArchive = archiveSessionIds.filter((id) => !currentSessionSet.has(id));
+  const onlyInCurrent = currentSessionIds.filter((id) => !archiveSessionSet.has(id));
+
+  return {
+    archiveMasterFiles,
+    archiveSessionIds,
+    archiveHasSettings,
+    currentSessionIds,
+    overlapSessionIds: overlap,
+    onlyInArchive,
+    onlyInCurrent,
+  };
+}
+
+/**
+ * バックアップから復元する。data/master/, data/sessions/, data/settings.json を
+ * archive の内容で置換する。
+ *
+ * 手順（atomic 化を強く意識）:
+ *   1. パスワードで復号 → gunzip → tar パース（メモリ上）
+ *   2. path traversal / 想定外パスを reject
+ *   3. archive 内容を一時ディレクトリに書き出す（stage/）
+ *   4. 現行 data/master , sessions , settings.json を「復元前スナップショット」に退避
+ *      （data/_restore_snapshots/<timestamp>/）
+ *   5. stage/ の内容を data/ へ rename で移動（atomic swap）
+ *   6. 何か失敗したら snapshot から復旧を試みる
+ *
+ * 事故防止:
+ *   - salt / iv / tag のサイズを検証
+ *   - archive 内エントリー数が 0 なら reject
+ *   - archive 内パスは `master/`, `sessions/`, `settings.json` に限定
+ */
+export async function restoreBackup(opts: {
+  path: string;
+  password: string;
+}): Promise<{
+  restoredMaster: number;
+  restoredSessions: number;
+  restoredSettings: boolean;
+  snapshotPath: string;
+}> {
+  const password = opts.password.trim();
+  if (!password) throw new Error("復号パスワードは必須です");
+
+  // 1. バックアップファイルの妥当性
+  const backupsDir = path.resolve(backupsDirPath());
+  const resolvedBackup = path.resolve(opts.path);
+  if (
+    resolvedBackup !== backupsDir &&
+    !resolvedBackup.startsWith(backupsDir + path.sep)
+  ) {
+    throw new Error("バックアップディレクトリ外のパスは復元できません");
+  }
+  const baseName = path.basename(resolvedBackup);
+  if (!BACKUP_NAME_PATTERN.test(baseName)) {
+    throw new Error("バックアップファイル名の形式と一致しません");
+  }
+  if (!fs.existsSync(resolvedBackup)) {
+    throw new Error("バックアップファイルが存在しません");
+  }
+
+  const buf = fs.readFileSync(resolvedBackup);
+  const minLen = SALT_BYTES + IV_BYTES + TAG_BYTES + 20;
+  if (buf.length < minLen) {
+    throw new Error("バックアップファイルが短すぎます（破損の可能性）");
+  }
+
+  // 2. 復号
+  const salt = buf.subarray(0, SALT_BYTES);
+  const iv = buf.subarray(SALT_BYTES, SALT_BYTES + IV_BYTES);
+  const tag = buf.subarray(buf.length - TAG_BYTES);
+  const ct = buf.subarray(SALT_BYTES + IV_BYTES, buf.length - TAG_BYTES);
+  const key = crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, KEY_BYTES, "sha256");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  let gz: Buffer;
+  try {
+    gz = Buffer.concat([decipher.update(ct), decipher.final()]);
+  } catch {
+    throw new Error("復号失敗：パスワードが違うか、ファイルが壊れています");
+  }
+
+  // 3. gunzip + tar パース
+  const tarBuf = await gunzipAsync(gz);
+  const entries = parseTar(tarBuf);
+  if (entries.length === 0) {
+    throw new Error("復号後のアーカイブが空です");
+  }
+
+  // 4. パス検証 — 許可: master/, sessions/, settings.json
+  const dataRoot = path.resolve(getDataRoot());
+  const stageRoot = path.join(dataRoot, `_restore_stage_${timestampStamp()}`);
+  const snapshotRoot = path.join(dataRoot, `_restore_snapshots`, timestampStamp());
+
+  let masterCount = 0;
+  let sessionsCount = 0;
+  let settingsFound = false;
+
+  for (const e of entries) {
+    if (/^\.\.?(\/|$)|(\/\.\.?)(\/|$)|^\/|^[A-Za-z]:/.test(e.name)) {
+      throw new Error(`不正なパスがアーカイブに含まれています: ${e.name}`);
+    }
+    const first = e.name.split("/")[0];
+    if (first !== "master" && first !== "sessions" && e.name !== "settings.json") {
+      throw new Error(`許可されていないエントリー: ${e.name}`);
+    }
+    if (!e.isDir) {
+      if (e.name === "settings.json") settingsFound = true;
+      else if (first === "master") masterCount++;
+      else if (first === "sessions") sessionsCount++;
+    }
+  }
+
+  // 5. stage/ に書き出し
+  fs.mkdirSync(stageRoot, { recursive: true });
+  try {
+    for (const e of entries) {
+      const target = path.join(stageRoot, e.name);
+      // 二重チェック: stage 外に出ていないか
+      const resolvedTarget = path.resolve(target);
+      if (
+        resolvedTarget !== stageRoot &&
+        !resolvedTarget.startsWith(stageRoot + path.sep)
+      ) {
+        throw new Error(`stage 外への書き出しを検出: ${e.name}`);
+      }
+      if (e.isDir) {
+        fs.mkdirSync(target, { recursive: true });
+      } else {
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, e.content ?? Buffer.alloc(0));
+      }
+    }
+
+    // 6. 現行を snapshot に退避
+    fs.mkdirSync(snapshotRoot, { recursive: true });
+    const swap = (name: string) => {
+      const cur = path.join(dataRoot, name);
+      const saved = path.join(snapshotRoot, name);
+      if (fs.existsSync(cur)) fs.renameSync(cur, saved);
+    };
+    swap("master");
+    swap("sessions");
+    swap("settings.json");
+
+    // 7. stage/ → data/ に移動
+    const move = (name: string) => {
+      const src = path.join(stageRoot, name);
+      const dst = path.join(dataRoot, name);
+      if (fs.existsSync(src)) fs.renameSync(src, dst);
+    };
+    try {
+      move("master");
+      move("sessions");
+      move("settings.json");
+    } catch (e) {
+      // 8. rollback: snapshot から戻す
+      const rollback = (name: string) => {
+        const cur = path.join(dataRoot, name);
+        const saved = path.join(snapshotRoot, name);
+        try { if (fs.existsSync(cur)) fs.rmSync(cur, { recursive: true, force: true }); } catch { /* noop */ }
+        try { if (fs.existsSync(saved)) fs.renameSync(saved, cur); } catch { /* noop */ }
+      };
+      rollback("master");
+      rollback("sessions");
+      rollback("settings.json");
+      throw new Error(`復元に失敗、rollback しました: ${(e as Error).message}`);
+    }
+  } finally {
+    // stage/ の残骸を掃除
+    try { fs.rmSync(stageRoot, { recursive: true, force: true }); } catch { /* noop */ }
+  }
+
+  writeAudit("backup.restore", {
+    meta: {
+      file: baseName,
+      restoredMaster: masterCount,
+      restoredSessions: sessionsCount,
+      restoredSettings: settingsFound,
+      snapshotPath: path.relative(dataRoot, snapshotRoot),
+    },
+  });
+
+  return {
+    restoredMaster: masterCount,
+    restoredSessions: sessionsCount,
+    restoredSettings: settingsFound,
+    snapshotPath: snapshotRoot,
+  };
 }

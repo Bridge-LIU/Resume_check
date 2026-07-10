@@ -7,8 +7,8 @@ import {
   restoreSessionAction,
 } from "../../settings/actions";
 import type { TrashItem } from "@/lib/retention";
-import { useConfirm } from "@/components/ui/use-confirm";
-import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/ui/use-confirm";
+import { Button } from "@/ui/button";
 
 export function TrashList({ items: initial }: { items: TrashItem[] }) {
   const [items, setItems] = useState(initial);

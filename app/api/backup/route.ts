@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (raw === undefined || raw === null || raw === "") {
       throw new ApiError(
         "PASSWORD_REQUIRED",
-        "暗号化パスワードは必須です（設計書 §11）",
+        "暗号化パスワードは必須です",
         400,
       );
     }

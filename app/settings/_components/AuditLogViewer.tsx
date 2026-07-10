@@ -4,7 +4,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/ui/collapsible";
 
 const EVENT_LABEL: Record<AuditEvent, string> = {
   "session.create": "セッション作成",
@@ -20,6 +20,7 @@ const EVENT_LABEL: Record<AuditEvent, string> = {
   "master.import": "マスタ取込",
   "backup.create": "バックアップ作成",
   "backup.delete": "バックアップ削除",
+  "backup.restore": "バックアップから復元",
   "retention.schedulerStart": "定期スイープ開始",
   "retention.sweep.auto": "自動スイープ実行",
   "session.candidateSummarize": "①候補者 API 要約",
@@ -94,7 +95,7 @@ export function AuditLogViewer({ limit = 50 }: { limit?: number }) {
   }
 
   return (
-    <div className="bg-card rounded-xl border shadow-sm">
+    <div className="bg-card rounded-xl border shadow-sm" data-manual-shot="audit-log">
       <Collapsible>
         <CollapsibleTrigger className="group w-full p-6 flex items-center gap-3 hover:bg-accent/50 rounded-xl">
           <svg

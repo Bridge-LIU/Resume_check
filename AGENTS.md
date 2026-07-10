@@ -32,7 +32,7 @@ export async function GET(_req: Request, ctx: RouteContext<'/api/sessions/[id]'>
 
 - 採用面談ツールのローカル版。各セクション（①面談者情報 / ③質問リスト / ⑤評価）で「貼付」「API」をユーザがトグル切替。
 - API モード（①要約 / ③質問 / ④面談内容 / ⑤評価）は `lib/llm/*` + `xxxApiAction` に実装。`/settings` で Provider (Anthropic / OpenAI / Google) を設定すれば利用可能。
-- 設計書: `files/面談AI評価ツール_設計書.md`
+- 設計書: `.preview/files/面談AI評価ツール_設計書.md`
 - スタック: Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4 + npm / ポート 3939
 - UI 方針: 業務標準・表中心。**実装が正本**（過去の mockup HTML は削除済）。
 
@@ -46,11 +46,12 @@ Resume_Claude/
 │   ├─ error.tsx            ← グローバルエラー境界
 │   ├─ loading.tsx          ← 一覧スケルトン
 │   ├─ page.tsx             ← / 面談一覧
-│   ├─ _components/         ← 一覧用クライアント部品
+│   ├─ _components/         ← 一覧用クライアント部品 + ui/（shadcn 由来 UI 部品、`@/ui/*` alias で参照）
 │   ├─ new/                 ← /new 新規面談
 │   │   ├─ page.tsx
 │   │   ├─ actions.ts       ← createSessionAction
 │   │   └─ _components/
+│   ├─ list/                ← /list 面談一覧（ホームからリンク）
 │   ├─ sessions/[id]/       ← /sessions/[id] セッション
 │   │   ├─ page.tsx
 │   │   ├─ actions.ts       ← 各セクション保存・状態遷移
@@ -66,8 +67,9 @@ Resume_Claude/
 │   ├─ compare/             ← /compare 横断比較ビュー
 │   ├─ cost/                ← /cost API コスト集計（設計書 §8.5）
 │   ├─ trash/               ← /trash ゴミ箱（設計書 §7.5）
-│   └─ api/                 ← Route Handlers（backup/master 系）
-├─ components/ui/           ← shadcn 由来 UI 部品
+│   ├─ manual/              ← /manual 静的マニュアル配信
+│   ├─ api/                 ← Route Handlers（backup/master 系）
+│   └─ preview*/            ← 開発用プレビュー・提案モック（配布物には含めない）
 ├─ lib/
 │   ├─ types.ts             ← 共通型（必ずここから import）
 │   ├─ storage.ts           ← fs アクセス層（必ずここを通す）
@@ -87,8 +89,8 @@ Resume_Claude/
 │   ├─ summaryFormat.ts
 │   ├─ crashGuard.ts
 │   └─ llm/                 ← API モード実装（Provider / モデル抽象）
-├─ config/settings.json     ← API キー / dataRoot / 保存期間設定
-├─ data/                    ← settings.dataRoot のデフォルト
+├─ data/                    ← settings + ユーザーデータ（全て gitignore）
+│   ├─ settings.json        ← API キー / dataRoot / 保存期間設定
 │   ├─ master/roles/<id>.json
 │   ├─ master/eval_criteria.json
 │   ├─ sessions/<id>/
@@ -99,38 +101,44 @@ Resume_Claude/
 │   │   ├─ minutes.json
 │   │   └─ evaluation.json
 │   └─ analytics/<idHash>.json
-├─ manual/                  ← エンドユーザ向けマニュアル一式
-│   ├─ 運用ガイド.md         ← インストール / 起動 / データ場所 / トラブル
-│   ├─ 操作マニュアル.html   ← 画面操作の視覚マニュアル
-│   ├─ assets/               ← マニュアル用画面ショット
-│   └─ screenshot.sh         ← 画面ショット撮り直しスクリプト
-├─ scripts/                 ← 開発・運用補助スクリプト（seed / decrypt-backup 等）
-├─ public/                  ← 静的資源
-└─ files/                   ← 設計書・サンプル面談データ・履歴書チェック（gitignore）
-    └─ 面談AI評価ツール_設計書.md
+├─ 運用マニュアル.HTML       ← エンドユーザ向け統合マニュアル（ルート直下、ダブルクリック起動対応）
+├─ マニュアル/               ← マニュアル用資材
+│   └─ assets/               ← 画面ショット等
+├─ scripts/                 ← 運用・ビルド補助（配布に含む）
+│   ├─ next-with-port.mjs   ← npm run dev/start が呼ぶ起動ラッパー
+│   ├─ decrypt-backup.mjs   ← バックアップ復号ツール
+│   ├─ verify-backup.mjs    ← バックアップ整合性検証
+│   ├─ trigger-mirror.mjs   ← Excel ミラー手動再生成
+│   ├─ preview-xlsx-cells.mjs ← xlsx セル値ダンプ（デバッグ）
+│   └─ dev/                 ← 🚫 開発者専用（配布に含めない・gitignore）
+│       ├─ seed-sessions.bat / seed-sessions.mjs   ← モック面談データ生成
+│       ├─ gen-resume-samples.mjs                  ← 履歴書サンプル生成
+│       ├─ manual-screenshot.mjs                   ← マニュアル画面ショット撮影
+│       ├─ update-app.bat                          ← git pull → npm install → build（git clone 環境向け）
+│       └─ claude-{2,3,4}split.bat                 ← Claude Code 個人ワークフロー
+└─ public/                  ← 静的資源
+
+（設計書・サンプル面談データ・履歴書チェックなどのローカル資料は `.preview/files/` に配置、gitignore）
 ```
 
 ### 根直下のフォルダ / ファイル一覧
 
 | 対象 | 用途 | git |
 |---|---|---|
-| `app/` | Next.js App Router — 全ページ | ✅ |
-| `components/` | 共用 UI 部品（shadcn 系） | ✅ |
-| `lib/` | サーバー側ロジック | ✅ |
-| `config/` | 設定ファイル | 🚫 gitignore（APIキー保護） |
-| `data/` | ユーザーデータ（PII） | 🚫 gitignore |
-| `files/` | 設計書・サンプル | 🚫 gitignore |
-| `manual/` | エンドユーザ向けマニュアル | ✅ |
-| `scripts/` | 開発・運用補助スクリプト | ✅ |
+| `app/` | Next.js App Router — 全ページ + 共用 UI 部品（`app/_components/ui/`、`@/ui/*` alias） | ✅ |
+| `lib/` | サーバー側ロジック + ローカル型宣言（.d.ts） | ✅ |
+| `運用マニュアル.HTML` | エンドユーザ向け統合マニュアル（ルート直下） | ✅ |
+| `マニュアル/` | 上記 HTML の資材（画像等） | ✅ |
+| `scripts/` | 運用・ビルド補助（配布に含む） | ✅ |
+| `scripts/dev/` | 開発者専用スクリプト（配布に含めない） | 🚫 gitignore |
 | `public/` | 静的資源 | ✅ |
-| `.preview/` | ローカル画面ショット・mockup | 🚫 gitignore |
+| `data/` | 設定 + ユーザーデータ（PII） | 🚫 gitignore |
+| `.preview/` | ローカル画面ショット・mockup + 設計書 (`.preview/files/`) | 🚫 gitignore |
 | `.superpowers/` | Claude Code 一時 | 🚫 gitignore |
 | `start.bat` | 起動スクリプト（本番モード・ダブルクリック起動） | ✅ |
-| `update-app.bat` | `git pull` → `npm install` → `next build` | ✅ |
-| `claude-Nsplit.bat` | Claude Code の分屏起動補助（個人ツール） | ✅ |
+| `.env.local.example` | 環境変数テンプレ | ✅ |
 | `README.md` | プロジェクト概要（開発者向け） | ✅ |
 | `AGENTS.md` / `CLAUDE.md` | エージェント作業規約 | ✅ |
-| `word-extractor.d.ts` | word-extractor（.doc 抽出）の型宣言 | ✅ |
 
 ## 厳守ルール
 
@@ -146,7 +154,7 @@ Resume_Claude/
 10. **番号系は 2 系統併存**：
     - **UI 表示・ユーザー可視な文字列**（画面ラベル / エラーメッセージ / コピー用プロンプトの見出し / 監査ログのラベル / `/cost` の工程ラベル / ダイアログ本文）は**必ず 5 段の連番 `①②③④⑤`** を使う。
     - **内部識別子**（コンポーネント名 `Section2/4/5/6/8`、URL パラメータ `s2/s4/s5/s6/s8`、監査イベント名、`Stage` 型のリテラル以外の JSDoc コメント）は**設計書と揃えた 8 段番号のまま温存**する（URL 互換／履歴データ互換のため）。
-    - **対応表**は `files/面談AI評価ツール_設計書.md` 冒頭の「番号対応表」を単一の正本とする。設計書の ②④⑤⑥⑧ を UI 文言にコピペするときは必ず ①②③④⑤ に読み替えること。
+    - **対応表**は `.preview/files/面談AI評価ツール_設計書.md` 冒頭の「番号対応表」を単一の正本とする。設計書の ②④⑤⑥⑧ を UI 文言にコピペするときは必ず ①②③④⑤ に読み替えること。
 
 ## UI 規約
 
@@ -214,5 +222,5 @@ npm run lint    # ESLint
 
 ## 参考リンク
 
-- 設計書: `files/面談AI評価ツール_設計書.md`（§4〜§9 が機能仕様、§7.5 が保存期間、§8.5 がコスト集計）
+- 設計書: `.preview/files/面談AI評価ツール_設計書.md`（§4〜§9 が機能仕様、§7.5 が保存期間、§8.5 がコスト集計）
 - Next.js 16 ドキュメント: `node_modules/next/dist/docs/`

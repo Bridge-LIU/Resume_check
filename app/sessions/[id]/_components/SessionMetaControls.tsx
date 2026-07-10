@@ -2,16 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { Copy, Trash2, Lock, LockOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/ui/select";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -19,9 +19,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Tip } from "@/components/ui/tooltip";
-import { useConfirm } from "@/components/ui/use-confirm";
+} from "@/ui/alert-dialog";
+import { Tip } from "@/ui/tooltip";
+import { useConfirm } from "@/ui/use-confirm";
 import {
   duplicateSessionAction,
   setResultAction,

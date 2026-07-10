@@ -1,5 +1,5 @@
 /**
- * 保存期間スイープの定期実行スケジューラ（設計書 §7.5）
+ * 保存期間スイープの定期実行スケジューラ
  *
  * - settings.retention.enabled=true: 起動時 1 回 + 24h ごとに runSweep() を呼ぶ
  * - settings.retention.enabled=false: 何もしない

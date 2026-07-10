@@ -52,7 +52,7 @@ export default async function AnalyticsPage() {
           </div>
           <div className="text-xs text-muted-foreground border-t pt-3">
             参考：このデータは PII（氏名・履歴書・面談内容）を含まない匿名集計です。
-            設計書 §7.5。元のセッションが完全削除されても残せます。
+            元のセッションが完全削除されても残せます。
           </div>
         </div>
       </div>
@@ -242,7 +242,7 @@ export default async function AnalyticsPage() {
 
       <div className="text-xs text-muted-foreground leading-relaxed">
         ⚠️ 匿名サマリは <code>data/analytics/&lt;idHash&gt;.json</code> に保存。
-        氏名・履歴書・面談内容は含みません（設計書 §7.5）。元セッションが完全削除されても
+        氏名・履歴書・面談内容は含みません。元セッションが完全削除されても
         統計だけは長期保持できます。
       </div>
     </div>

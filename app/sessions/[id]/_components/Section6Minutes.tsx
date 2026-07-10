@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Minutes } from "@/lib/types";
 import { saveMinutesAction } from "../actions";
-import { Textarea } from "@/components/ui/textarea";
-import { Tip } from "@/components/ui/tooltip";
+import { Textarea } from "@/ui/textarea";
+import { Tip } from "@/ui/tooltip";
 import { SectionHeaderBar } from "./SectionHeaderBar";
 import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
 

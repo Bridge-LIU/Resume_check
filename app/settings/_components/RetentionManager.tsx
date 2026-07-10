@@ -9,13 +9,14 @@ import {
 } from "../actions";
 import type { PreviewItem, SweepResult } from "@/lib/retention";
 import type { RetentionSchedulerStatus } from "@/lib/retentionScheduler";
-import { useConfirm } from "@/components/ui/use-confirm";
-import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/ui/use-confirm";
+import { Button } from "@/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/ui/collapsible";
+import { ChevronRight } from "lucide-react";
 
 function formatJp(iso: string | null): string {
   if (!iso) return "—";
@@ -232,7 +233,8 @@ export function RetentionManager() {
 
       {log && (
         <Collapsible defaultOpen className="border rounded text-sm">
-          <CollapsibleTrigger className="w-full px-3 py-1.5 bg-muted text-xs text-muted-foreground">
+          <CollapsibleTrigger className="group w-full flex items-center gap-2 px-3 py-1.5 bg-muted text-xs text-muted-foreground hover:bg-muted/70 transition-colors rounded-t">
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
             削除ログ（直近30件）
           </CollapsibleTrigger>
           <CollapsibleContent>

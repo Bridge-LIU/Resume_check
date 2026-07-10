@@ -4,19 +4,19 @@ import { useState } from "react";
 import { Lock, LockOpen } from "lucide-react";
 import type { ProviderId, ProviderSafeStatus } from "@/lib/types";
 import { PROVIDER_IDS_ACTIVE, PROVIDERS, TIER_ICON } from "@/lib/llm/registry";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Checkbox } from "@/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useConfirm } from "@/components/ui/use-confirm";
+} from "@/ui/select";
+import { useConfirm } from "@/ui/use-confirm";
 
 interface Props {
   defaultProvider: ProviderId;
@@ -167,6 +167,12 @@ function ProviderCard({
             disabled={inputDisabled}
             placeholder={placeholder}
             title={inputDisabled ? "右の鍵アイコンをクリックして編集" : ""}
+            onBlur={(e) => {
+              // フォーカスアウトで Enter を押したのと同じ挙動：親フォームを常に送信する。
+              // 空欄でも updateSettings 側で「空 → 現状維持」に落ちる（キーは wipe されない）。
+              if (!editing) return;
+              e.currentTarget.form?.requestSubmit();
+            }}
             className={`font-mono text-xs ${inputDisabled ? "cursor-not-allowed" : ""}`}
           />
           <Button

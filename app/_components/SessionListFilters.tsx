@@ -7,15 +7,15 @@ import { useRouter } from "next/navigation";
 // react-hooks/set-state-in-effect ルールに抵触するため key パターンへ移行。
 import { X } from "lucide-react";
 import type { SessionMeta } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/ui/select";
 
 /** "" は「すべて」を意味する。Select は "" を許容しないので __all__ を内部値に使う */
 const ALL = "__all__";

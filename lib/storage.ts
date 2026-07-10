@@ -1,8 +1,8 @@
 /**
  * 面談AI評価ツール — ストレージ層
  *
- * すべての fs アクセスはここを通す。設計書 §7 のフォルダ構成に従う。
- * - settings は <project>/config/settings.json に固定
+ * すべての fs アクセスはここを通す。
+ * - settings は <project>/data/settings.json に固定（dataRoot 設定に依存しない）
  * - その他データは settings.dataRoot 配下（既定: <project>/data）
  *
  * 注意: サーバ側専用（route handler / Server Component から呼ぶ）。
@@ -32,7 +32,7 @@ import {
 import { PROVIDER_IDS_ACTIVE } from "./llm/registry";
 
 const PROJECT_ROOT = process.cwd();
-const SETTINGS_PATH = path.join(PROJECT_ROOT, "config", "settings.json");
+const SETTINGS_PATH = path.join(PROJECT_ROOT, "data", "settings.json");
 
 /* ───────────── settings ───────────── */
 
@@ -70,8 +70,9 @@ const PROVIDER_DEFAULTS: Record<ProviderId, ProviderConfig> = {
   },
 };
 
-/** 旧 settings.json（api.key 一本）を新形式に正規化する */
-function migrateSettings(raw: unknown): Settings {
+/** 旧 settings.json（api.key 一本）を新形式に正規化する。
+ * 空オブジェクト `{}` を渡すと素の既定値（配布用 ZIP に埋め込むデフォルト）が得られる。 */
+export function migrateSettings(raw: unknown): Settings {
   const s = raw as Partial<Settings> & {
     api?: { key?: string; defaultModel?: string };
   };
@@ -164,7 +165,6 @@ export const loadSettings = cache((): Settings => {
  *     ここを誤指定すると OS そのものを破壊しうる
  *   - ファイルシステム/ドライブのルート（C:\, /）
  *   - 通常ファイル（ディレクトリでない）
- *   - 設定ファイル自身が住む config/ ── settings.json を巻き込むため
  *
  * 戻り値: 保存時の dataRoot 文字列（入力フォーマット — 相対 or 絶対 — は保つ）。
  * 不正なら Error を投げる（呼び出し側で UI に出すなりキャッチするなり）。
@@ -240,13 +240,6 @@ export function validateDataRoot(input: unknown): string {
   if (isSystemPath(absolute)) {
     throw new Error(
       `dataRoot にシステムディレクトリは指定できません: ${absolute}`,
-    );
-  }
-  // config/ 自身を巻き込まないように
-  const configDir = path.dirname(SETTINGS_PATH);
-  if (absolute === configDir || absolute.startsWith(configDir + path.sep)) {
-    throw new Error(
-      `dataRoot にアプリ設定ディレクトリ (${configDir}) は指定できません`,
     );
   }
   // 既存パスが通常ファイルなら拒否（ディレクトリ作成時にエラーになる前にここで弾く）

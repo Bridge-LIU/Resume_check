@@ -34,14 +34,15 @@ import {
   type Role,
   type RoleEvalOverride,
 } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { NumberInput } from "@/components/ui/number-input";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { NumberInput } from "@/ui/number-input";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/ui/collapsible";
+import { ChevronRight } from "lucide-react";
 
 const WEIGHT_MIN = 1;
 const WEIGHT_MAX = 5;
@@ -475,7 +476,8 @@ export default function EvalCriteriaEditor({
 
         {/* ─── 詳細（折りたたみ） ─── */}
         <Collapsible className="text-sm">
-          <CollapsibleTrigger className="text-muted-foreground hover:text-foreground text-xs">
+          <CollapsibleTrigger className="group inline-flex items-center gap-1 text-muted-foreground hover:text-foreground text-xs">
+            <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
             スケール・自己解決レベル・出力項目（詳細）
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-3 space-y-4">
@@ -543,9 +545,6 @@ export default function EvalCriteriaEditor({
                     {item}
                   </span>
                 ))}
-              </div>
-              <div className="text-xs text-muted-foreground opacity-70 mt-1">
-                ※ 設計書 §6 準拠
               </div>
             </div>
           </CollapsibleContent>

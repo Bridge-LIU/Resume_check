@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Tip } from "@/components/ui/tooltip";
+import { Tip } from "@/ui/tooltip";
 import { PageHeader } from "@/app/_components/PageHeader";
 import {
   getConditionsSnapshot,

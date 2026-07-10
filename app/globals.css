@@ -130,7 +130,7 @@
   }
 
   /* ネイティブの数値入力 spin ボタンはブラウザごとに見た目が違い野暮ったいので全 UI で隠す。
-     +/- が必要な箇所は components/ui/number-input.tsx で独自 chevron を描画する。 */
+     +/- が必要な箇所は app/_components/ui/number-input.tsx で独自 chevron を描画する。 */
   input[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;

@@ -9,7 +9,7 @@ npm install
 npm run dev    # http://127.0.0.1:3939 で開発サーバ
 ```
 
-エンドユーザ向けの起動は `start.bat` をダブルクリック（初回のみ `npm install` + `next build`、以降はビルド済みで数秒起動）。運用マニュアルは [`manual/運用ガイド.md`](manual/運用ガイド.md)。
+エンドユーザ向けの起動は `start.bat` をダブルクリック（初回のみ `npm install` + `next build`、以降はビルド済みで数秒起動）。操作マニュアルは `運用マニュアル.HTML` をダブルクリック、もしくはアプリ起動後に `/manual` からも同じ内容を配信。
 
 ## モード
 
@@ -21,7 +21,7 @@ npm run dev    # http://127.0.0.1:3939 で開発サーバ
 ## 開発者向け
 
 - 実装規約: [`AGENTS.md`](AGENTS.md)
-- 設計書: `files/面談AI評価ツール_設計書.md`（gitignore）
+- 設計書: `.preview/files/面談AI評価ツール_設計書.md`（gitignore）
 - 主要コマンド:
 
   ```powershell

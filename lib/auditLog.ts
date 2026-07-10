@@ -1,5 +1,5 @@
 /**
- * 監査ログ（Phase 4 §11）
+ * 監査ログ
  *
  * data/logs/audit.log に JSONL で1行ずつ追記。
  * PII（氏名・履歴書本文・面談内容本文）は payload.meta に絶対に積まない（呼び出し側責任）。
@@ -29,6 +29,7 @@ export type AuditEvent =
   | "master.import"
   | "backup.create"
   | "backup.delete"
+  | "backup.restore"
   | "retention.schedulerStart"
   | "retention.sweep.auto";
 
