@@ -82,7 +82,7 @@ function bumpSession(id: string): void {
 }
 
 /**
- * 設計書 §9 の状態遷移を進める汎用ヘルパー。
+ * 状態遷移を進める汎用ヘルパー。
  * - 後退しない（評価済 → 質問公開 のような下げは行わない）
  * - 同じ status のときは何もしない
  * - status の順序: 編集中(0) < 質問公開(1) < 面談済(2) < 評価済(3)
@@ -168,7 +168,11 @@ export async function duplicateSessionAction(
       JSON.stringify(name),
     );
   }
-  console.log("[duplicateSessionAction] start", { id, role });
+  // id/role は氏名を含むため、デバッグ環境変数下でのみ stdout に出力
+  // （lib/storage.ts:duplicateSession の DEBUG_DUPLICATE と揃える）。
+  if (process.env.DEBUG_DUPLICATE === "1") {
+    console.log("[duplicateSessionAction] start", { id, role });
+  }
 
   let newId: string | null = null;
   try {
@@ -189,13 +193,15 @@ export async function duplicateSessionAction(
     const meta = duplicateSession(id, { 氏名: name, 役割: role });
     if (!meta) throw new Error("複製元のセッションが見つかりません");
     newId = meta.id;
-    console.log(
-      "[duplicateSessionAction] copied",
-      "newId=",
-      newId,
-      "hex=",
-      Buffer.from(newId, "utf-8").toString("hex").slice(0, 80) + "...",
-    );
+    if (process.env.DEBUG_DUPLICATE === "1") {
+      console.log(
+        "[duplicateSessionAction] copied",
+        "newId=",
+        newId,
+        "hex=",
+        Buffer.from(newId, "utf-8").toString("hex").slice(0, 80) + "...",
+      );
+    }
     writeAudit("session.duplicate", {
       sessionId: meta.id,
       meta: {
@@ -206,7 +212,9 @@ export async function duplicateSessionAction(
     });
     revalidatePath("/");
   revalidatePath("/list");
-    console.log("[duplicateSessionAction] redirecting to", newId);
+    if (process.env.DEBUG_DUPLICATE === "1") {
+      console.log("[duplicateSessionAction] redirecting to", newId);
+    }
   } catch (e) {
     console.error("[duplicateSessionAction] failed", e);
     throw e;
@@ -493,7 +501,7 @@ export async function saveQuestionsAction(
   rawText: string,
 ): Promise<void> {
   assertTextWithinLimit(rawText, MAX_TEXT_BYTES, "質問テキスト");
-  // 設計書 §5 ⑤: 構造化パーサーで items も自動生成して保存
+  // ⑤ 質問リスト: 構造化パーサーで items も自動生成して保存
   const { nonTech, tech } = parseQuestions(rawText);
   const items = flattenToItems(nonTech, tech).map((q) => ({
     star: q.star,
@@ -508,7 +516,7 @@ export async function saveQuestionsAction(
     updatedAt: nowIso(),
   };
   saveQuestions(id, data);
-  // 設計書 §9：⑤を公開（質問テキストが空でないとき）で 編集中 → 質問公開 へ
+  // ⑤を公開（質問テキストが空でないとき）で 編集中 → 質問公開 へ
   if (rawText.trim().length > 0) {
     advanceStatus(id, "質問公開");
   }
@@ -706,7 +714,7 @@ export async function saveMinutesAction(
   assertTextWithinLimit(text, MAX_MINUTES_BYTES, "面談内容");
   const data: Minutes = { text, updatedAt: nowIso() };
   saveMinutes(id, data);
-  // 設計書 §9：⑥面談内容を登録（テキストが空でないとき）で 質問公開 → 面談済 へ
+  // ⑥面談内容を登録（テキストが空でないとき）で 質問公開 → 面談済 へ
   if (text.trim().length > 0) {
     advanceStatus(id, "面談済");
   }
@@ -722,7 +730,7 @@ const MINUTES_SUMMARIZE_INSTRUCTION =
   "--- 面談内容ここから ---\n";
 
 /**
- * ⑥ 面談内容の任意 API 要約（設計書 §5 ⑥：既定 OFF）。
+ * ⑥ 面談内容の任意 API 要約（既定 OFF）。
  * 既存本文を要約結果で上書きし、summarized=true フラグを立てる。
  * 元の本文は履歴として残さない（PII の二重保有を避ける方針）。
  */
@@ -1038,7 +1046,7 @@ export async function buildEvaluationPromptAction(id: string): Promise<PromptRes
   return { ok: true, prompt };
 }
 
-// 設計書 v1.0 の文言。短く、JSON のみ返させる最小ルールに揃える。
+// 短く、JSON のみ返させる最小ルールに揃える。
 const EVAL_SYSTEM_PROMPT =
   "あなたは採用評価の専門家です。BARS（行動基準評価）で厳正に採点し、説明文や前置きなしに、指定スキーマのJSONのみを出力してください。\n" +
   "重要ルール:\n" +

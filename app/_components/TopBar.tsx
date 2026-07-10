@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ThemeToggle } from "./ThemeToggle";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 
 export function TopBar() {
   return (
@@ -15,11 +15,6 @@ export function TopBar() {
         <Link href="/new">＋ 新規面談</Link>
       </Button>
       <ThemeToggle />
-      {/* アバター（現状はローカル運用のためユーザ切替なし。将来の識別用にプレースホルダを置く） */}
-      <div
-        aria-label="ユーザ"
-        className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 shrink-0"
-      />
     </div>
   );
 }

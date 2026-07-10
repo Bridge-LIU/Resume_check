@@ -2,6 +2,7 @@ import { listRoles, getEvalCriteria } from "@/lib/storage";
 import RolesEditor from "./RolesEditor";
 import EvalCriteriaEditor from "./EvalCriteriaEditor";
 import MasterIO from "./MasterIO";
+import { PageHeader } from "@/app/_components/PageHeader";
 import type { EvalCriteria } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,24 +37,18 @@ export default async function MasterPage() {
   return (
     <div className="space-y-6">
       <div className="bg-card rounded-xl border shadow-sm">
-        <div className="p-6 space-y-3">
-          <div className="flex items-start gap-3 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-lg">求人情報管理</h1>
-              <p className="text-xs text-muted-foreground mt-2">
-                役割別の「求める人材条件」と、共通の「評価条件（BARS）」を編集します。
-                ここでの変更は<strong className="text-foreground/85">これから作成する面談</strong>に反映されます。
-                既存の面談は②確定時の凍結スナップショットを使うため影響を受けません。
-              </p>
-            </div>
-            <div className="shrink-0">
-              <div className="text-xs text-muted-foreground mb-1 text-right">
-                役割 + 評価条件をまとめて書き出し
-              </div>
-              <MasterIO />
-            </div>
-          </div>
-        </div>
+        <PageHeader
+          title="求人情報管理"
+          description={
+            <>
+              役割別の「求める人材条件」と、共通の「評価条件（BARS）」を編集します。
+              ここでの変更は
+              <strong className="text-foreground/85">これから作成する面談</strong>
+              に反映されます。既存の面談は②確定時の凍結スナップショットを使うため影響を受けません。
+            </>
+          }
+          suffix={<MasterIO />}
+        />
       </div>
 
       <RolesEditor initialRoles={roles} />

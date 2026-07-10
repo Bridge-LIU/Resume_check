@@ -19,15 +19,16 @@ import {
 import type { LlmDefaults } from "../page";
 import { useStableSectionScroll } from "./useStableSectionScroll";
 import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
-import { useConfirm } from "@/components/ui/use-confirm";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Tip } from "@/components/ui/tooltip";
+import { useConfirm } from "@/ui/use-confirm";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/textarea";
+import { Tip } from "@/ui/tooltip";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/ui/collapsible";
+import { ChevronRight } from "lucide-react";
 
 const NON_TECH_HEADER = "## 人間性";
 const TECH_HEADER = "## 技術";
@@ -335,13 +336,13 @@ export function Section5Questions({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* 左: 人間性 */}
         <div>
-          <div className="text-xs font-medium text-emerald-800 mb-1 flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-emerald-100">人間性</span>
+          <div className="text-xs font-medium text-emerald-800 dark:text-emerald-300 mb-1 flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20">人間性</span>
             <span className="text-muted-foreground">候補者によらない共通質問</span>
           </div>
           <div className="relative">
             <Textarea
-              className="w-full text-sm font-mono bg-emerald-50 pr-3 pb-6"
+              className="w-full text-sm font-mono bg-emerald-50 dark:bg-emerald-500/10 pr-3 pb-6"
               rows={14}
               placeholder={DEFAULT_NON_TECH_TEMPLATE}
               value={nonTech}
@@ -354,13 +355,13 @@ export function Section5Questions({
 
         {/* 右: 技術 */}
         <div>
-          <div className="text-xs font-medium text-blue-800 mb-1 flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded bg-blue-100">技術</span>
+          <div className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-1 flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20">技術</span>
             <span className="text-muted-foreground">候補者の経歴に合わせた専門質問</span>
           </div>
           <div className="relative">
             <Textarea
-              className="w-full text-sm font-mono bg-blue-50 pr-3 pb-6"
+              className="w-full text-sm font-mono bg-blue-50 dark:bg-blue-500/10 pr-3 pb-6"
               rows={14}
               placeholder={TECH_PLACEHOLDER}
               value={tech}
@@ -422,10 +423,13 @@ function StructuredPreview({ combined }: { combined: string }) {
 
   return (
     <Collapsible defaultOpen className="mt-3 border rounded-lg">
-      <CollapsibleTrigger className="w-full text-xs text-muted-foreground px-3 py-2 bg-muted select-none">
-        構造化プレビュー — {total} 問（人間性 {nonTech.length} / 技術 {tech.length}）
-        <span className="text-muted-foreground opacity-70 ml-2">
-          ※ 保存時に questions.json の items 配列に同じ内容が入ります
+      <CollapsibleTrigger className="group w-full flex items-center gap-2 text-xs text-muted-foreground px-3 py-2 bg-muted select-none hover:bg-muted/70 transition-colors rounded-t-lg">
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+        <span>
+          構造化プレビュー — {total} 問（人間性 {nonTech.length} / 技術 {tech.length}）
+          <span className="text-muted-foreground opacity-70 ml-2">
+            ※ 保存時に questions.json の items 配列に同じ内容が入ります
+          </span>
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">

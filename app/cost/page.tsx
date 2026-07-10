@@ -22,11 +22,13 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/ui/collapsible";
+import { ChevronRight } from "lucide-react";
 import {
   RecentCallsFilter,
   type RecentRow,
 } from "./_components/RecentCallsFilter";
+import { PageHeader } from "@/app/_components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -63,8 +65,8 @@ export default async function CostPage() {
       <div className="space-y-4">
         <PricingPreviewCard />
         <div className="bg-card rounded-xl border shadow-sm">
+          <PageHeader title="コスト実績" />
           <div className="p-6 space-y-3">
-            <h1 className="font-bold text-lg">コスト実績</h1>
             <div className="text-sm text-muted-foreground leading-relaxed">
               LLM API 呼び出しの記録がまだありません。
               <br />
@@ -126,14 +128,11 @@ export default async function CostPage() {
     <div className="space-y-4">
       {/* ═══ ヘッダ + KPI ═══ */}
       <div className="bg-card rounded-xl border shadow-sm">
+        <PageHeader
+          title="コスト試算"
+          meta={`${records.length} 件の呼び出し ・ 直近 5000 件まで`}
+        />
         <div className="p-6 space-y-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-bold text-lg">コスト試算</h1>
-            <span className="text-xs text-muted-foreground">
-              {records.length} 件の呼び出し ・ 直近 5000 件まで
-            </span>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KpiCard
               label="累計"
@@ -341,7 +340,8 @@ function PricingCards({ estimates }: { estimates: ModelEstimate[] }) {
 
         {/* 工程別内訳 (折り畳み) */}
         <Collapsible className="border-t pt-3">
-          <CollapsibleTrigger className="text-xs text-primary hover:underline">
+          <CollapsibleTrigger className="group inline-flex items-center gap-1 text-xs text-primary hover:underline">
+            <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
             工程別内訳を展開
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-3 overflow-x-auto">

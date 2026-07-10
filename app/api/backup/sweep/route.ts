@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { sweepBackups } from "@/lib/backup";
-import { ApiError, apiErrorResponse } from "@/lib/apiError";
+import { ApiError, apiErrorResponse, ensureLocalOrigin } from "@/lib/apiError";
 
 function parseOptionalNumber(raw: unknown, field: string): number | undefined {
   if (raw === undefined || raw === null || raw === "") return undefined;
@@ -16,6 +16,7 @@ function parseOptionalNumber(raw: unknown, field: string): number | undefined {
 
 export async function POST(req: Request) {
   try {
+    ensureLocalOrigin(req);
     const body = await req.json().catch(() => ({}));
     if (body !== null && typeof body !== "object") {
       throw new ApiError("INVALID_BODY", "リクエスト本文が不正です", 400);

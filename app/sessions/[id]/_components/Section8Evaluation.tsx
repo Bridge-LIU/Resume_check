@@ -19,16 +19,17 @@ import {
 import type { LlmDefaults } from "../page";
 import { useStableSectionScroll } from "./useStableSectionScroll";
 import { AutoSaveIndicator, useAutoSave } from "./useAutoSave";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Tip } from "@/components/ui/tooltip";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/textarea";
+import { Label } from "@/ui/label";
+import { Switch } from "@/ui/switch";
+import { Tip } from "@/ui/tooltip";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/ui/collapsible";
+import { ChevronRight } from "lucide-react";
 import { scoreBarColor } from "@/lib/uiClass";
 
 const SAMPLE = `{
@@ -188,7 +189,7 @@ export function Section8Evaluation({
             <div
               role="alert"
               aria-live="assertive"
-              className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2"
+              className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/40 rounded px-3 py-2"
             >
               {error}
             </div>
@@ -199,12 +200,12 @@ export function Section8Evaluation({
       {current && staleReasons.length > 0 && (
         <div
           role="status"
-          className="mb-3 text-sm border border-amber-300 bg-amber-50 text-amber-900 rounded px-3 py-2 flex items-start gap-2"
+          className="mb-3 text-sm border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 text-amber-900 dark:text-amber-200 rounded px-3 py-2 flex items-start gap-2"
         >
           <span aria-hidden="true">⚠️</span>
           <div>
             <div className="font-medium">この評価結果は最新ではありません</div>
-            <div className="text-xs text-amber-800 mt-0.5">
+            <div className="text-xs text-amber-800 dark:text-amber-300/90 mt-0.5">
               {staleReasons.join(" / ")} が評価保存後に更新されています。再評価を推奨します。
             </div>
           </div>
@@ -215,7 +216,8 @@ export function Section8Evaluation({
 
       {/* 既に current があっても JSON 貼直し UI が畳まれると動線が消えるので常に open */}
       <Collapsible defaultOpen className="mt-3">
-        <CollapsibleTrigger className="text-sm text-muted-foreground">
+        <CollapsibleTrigger className="group inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-90" />
           {current ? "貼り直す（JSON）" : "評価結果 JSON を貼り付ける"}
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-2 space-y-2">
@@ -248,7 +250,7 @@ export function Section8Evaluation({
             <div
               role="alert"
               aria-live="assertive"
-              className="text-xs text-red-700 border border-red-200 bg-red-50 rounded p-2"
+              className="text-xs text-red-700 dark:text-red-300 border border-red-200 dark:border-red-500/40 bg-red-50 dark:bg-red-500/10 rounded p-2"
             >
               {error}
             </div>
@@ -278,13 +280,25 @@ function passingClass(g: Evaluation["合否"] | string | undefined): { text: str
   // 入ることがあるので、defensive に既定値を返す（画面が真っ白になるより見えたほうが良い）
   switch (g) {
     case "合格":
-      return { text: "text-emerald-700", ring: "from-emerald-50 to-blue-50" };
+      return {
+        text: "text-emerald-700 dark:text-emerald-300",
+        ring: "from-emerald-50 to-blue-50 dark:from-emerald-500/10 dark:to-blue-500/10",
+      };
     case "普通":
-      return { text: "text-amber-700", ring: "from-amber-50 to-zinc-50" };
+      return {
+        text: "text-amber-700 dark:text-amber-300",
+        ring: "from-amber-50 to-zinc-50 dark:from-amber-500/10 dark:to-zinc-800/50",
+      };
     case "不合格":
-      return { text: "text-red-700", ring: "from-red-50 to-zinc-50" };
+      return {
+        text: "text-red-700 dark:text-red-300",
+        ring: "from-red-50 to-zinc-50 dark:from-red-500/10 dark:to-zinc-800/50",
+      };
     default:
-      return { text: "text-foreground/85", ring: "from-zinc-50 to-zinc-100" };
+      return {
+        text: "text-foreground/85",
+        ring: "from-zinc-50 to-zinc-100 dark:from-zinc-800/50 dark:to-zinc-800",
+      };
   }
 }
 
@@ -382,7 +396,10 @@ function EvaluationView({ evaluation }: { evaluation: Evaluation }) {
 
       {allSubAxes.some((a) => a.根拠) && (
         <Collapsible className="text-xs text-muted-foreground pt-2 border-t border-border/60">
-          <CollapsibleTrigger>軸別の根拠を表示</CollapsibleTrigger>
+          <CollapsibleTrigger className="group inline-flex items-center gap-1 hover:text-foreground">
+            <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
+            軸別の根拠を表示
+          </CollapsibleTrigger>
           <CollapsibleContent>
             <dl className="mt-2 space-y-1">
               {CATEGORY_KEYS.flatMap((k) =>

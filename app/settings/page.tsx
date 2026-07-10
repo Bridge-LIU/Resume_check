@@ -1,7 +1,9 @@
 import "server-only";
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { listTrash } from "@/lib/retention";
 import { loadSettings, saveSettings, validateDataRoot } from "@/lib/storage";
 import type {
   LlmStage,
@@ -10,15 +12,16 @@ import type {
   ProviderSafeStatus,
   Settings,
 } from "@/lib/types";
+import { PageHeader } from "@/app/_components/PageHeader";
 import { AuditLogViewer } from "./_components/AuditLogViewer";
 import { DataRootField } from "./_components/DataRootField";
 import { RetentionManager } from "./_components/RetentionManager";
 import { BackupManager } from "./_components/BackupManager";
 import { ProvidersField } from "./_components/ProvidersField";
 import { SaveSettingsButton } from "./_components/SaveSettingsButton";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Switch } from "@/ui/switch";
 import { PROVIDER_IDS_ACTIVE } from "@/lib/llm/registry";
 
 const STAGES: LlmStage[] = ["summary", "questions", "evaluation", "evaluationStrict"];
@@ -131,16 +134,17 @@ async function updateSettings(formData: FormData) {
     redirect(`/settings?error=${encodeURIComponent(msg)}`);
   }
   revalidatePath("/settings");
-  redirect("/settings?saved=1");
+  redirect("/settings");
 }
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const { error: errorMsg, saved } = await searchParams;
+  const { error: errorMsg } = await searchParams;
   const s = loadSettings();
+  const trashCount = listTrash().length;
   // 画面には key そのものは出さない。設定済かどうかと、環境変数優先かのみ表示。
   // 現在は Claude のみ UI 表示。非表示プロバイダの env 判定は無用（UI に出さない）。
   const envStatus: Partial<Record<ProviderId, boolean>> = {
@@ -161,9 +165,8 @@ export default async function Page({
     <div className="space-y-4">
       {/* 既存設定フォーム */}
       <div className="bg-card rounded-xl border shadow-sm">
+        <PageHeader title="設定" />
         <div className="p-6 space-y-6">
-          <h1 className="font-bold text-lg">設定</h1>
-
           {errorMsg && (
             <div
               role="alert"
@@ -172,15 +175,6 @@ export default async function Page({
               保存できませんでした: {errorMsg}
             </div>
           )}
-          {saved && !errorMsg && (
-            <div
-              role="status"
-              className="border border-emerald-300 bg-emerald-50 text-emerald-800 text-sm rounded px-3 py-2"
-            >
-              設定を保存しました。
-            </div>
-          )}
-
           <form action={updateSettings} className="space-y-6">
             <DataRootField defaultValue={s.dataRoot} />
 
@@ -231,7 +225,7 @@ export default async function Page({
 
             {/* 保存期間（編集可能化） */}
             <section className="space-y-3">
-              <div className="font-medium text-sm">保存期間（§7.5）</div>
+              <div className="font-medium text-sm">保存期間</div>
               <div className="text-xs text-muted-foreground">
                 判定確定日（closedAt）からの自動削除。0 = 自動削除しない。下の「スイープ実行」で手動起動できます（定期実行は今後）。
               </div>
@@ -317,7 +311,7 @@ export default async function Page({
                 </div>
               </div>
 
-              {/* バックアップ世代の保持（§11 / 別タスクで自動掃除に連動） */}
+              {/* バックアップ世代の保持（自動掃除に連動） */}
               <div className="grid grid-cols-2 gap-3 pt-3 border-t">
                 <div className="space-y-1.5">
                   <Label htmlFor="backupKeepDays" className="text-xs text-muted-foreground">
@@ -373,20 +367,26 @@ export default async function Page({
             </span>
             <Link
               href="/trash"
-              className="ml-auto text-xs text-primary hover:underline"
+              className="ml-auto inline-flex items-center gap-1.5 border hover:bg-accent text-xs px-2.5 py-1 rounded transition-colors"
             >
-              ゴミ箱を開く →
+              <Trash2 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+              <span>ゴミ箱</span>
+              {trashCount > 0 && (
+                <span className="tabular font-medium bg-muted text-foreground rounded-full px-1.5 min-w-[18px] text-center text-2xs leading-4">
+                  {trashCount}
+                </span>
+              )}
             </Link>
           </div>
           <div className="text-xs text-muted-foreground">
-            設計書 §7.5 の二段階削除（sessions/ → _trash/ → 完全削除）。実行前に必ず「次に消える面談を確認」してください。移動済みの面談は猶予期間内ならゴミ箱から復元できます。
+            二段階削除（sessions/ → _trash/ → 完全削除）。実行前に必ず「次に消える面談を確認」してください。移動済みの面談は猶予期間内ならゴミ箱から復元できます。
           </div>
           <RetentionManager />
         </div>
       </div>
 
-      {/* バックアップ管理（Phase 4 / §11） */}
-      <div className="bg-card rounded-xl border shadow-sm">
+      {/* バックアップ管理 */}
+      <div className="bg-card rounded-xl border shadow-sm" data-manual-shot="backup">
         <div className="p-6 space-y-3">
           <div className="flex items-center gap-3">
             <h3 className="font-bold">バックアップ</h3>
@@ -401,8 +401,39 @@ export default async function Page({
         </div>
       </div>
 
-      {/* 監査ログリーダー（Phase 4 / §11） */}
+      {/* 監査ログリーダー */}
       <AuditLogViewer limit={50} />
+
+      {/* 開発者向け：配布用 ZIP 出力
+       * .env.local に ENABLE_DEV_EXPORT=1 を設定した開発環境でのみ表示される。
+       * 配布版（env 変数が無い）では非表示、かつ Route Handler 側も 404 を返す。 */}
+      {process.env.ENABLE_DEV_EXPORT === "1" && (
+        <div className="bg-card rounded-xl border shadow-sm" data-manual-hide>
+          <div className="p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <h3 className="font-bold">⚙️ 開発者向け：配布用 ZIP 出力</h3>
+              <span className="text-xs text-muted-foreground">
+                あなたのデータは含まれません
+              </span>
+            </div>
+            <div className="text-xs text-muted-foreground leading-relaxed">
+              ソースコード一式＋ 5 種のデフォルト求人テンプレート（Dev / ITSupport / NW / PMO /
+              Server）を含む、配布可能な ZIP を生成します。
+              API キー・面談セッション・独自求人・分析データは含まれません。
+              受け取った側は解凍して <code className="px-1 rounded bg-muted">start.bat</code>{" "}
+              をダブルクリックすれば起動します（Node.js 20 以降が必要）。
+            </div>
+            <div>
+              <a
+                href="/api/settings/export-clean"
+                className="border hover:bg-zinc-50 text-sm px-3 py-1 rounded inline-block"
+              >
+                配布用 ZIP をダウンロード
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
