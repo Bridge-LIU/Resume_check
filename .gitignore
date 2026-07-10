@@ -46,6 +46,9 @@ yarn-error.log*
 # 履歴書抽出のローカル検証用サンプル（scripts/gen-resume-samples.mjs 自動生成）
 /test-files/
 
+# ローカル専用：モック面談データ生成スクリプト（git には上げない）
+/scripts/seed-sessions.mjs
+
 # 機密：設計書・サンプル面談データ・履歴書チェック実データ。ローカル限定で git には上げない
 /files/
 
