@@ -398,12 +398,29 @@ function RoleEditForm({
         </label>
         <label className="col-span-3 text-sm">
           <div className="text-xs text-muted-foreground mb-1">経験</div>
-          <Input
-            value={editing.経験}
-            onChange={(e) => onChange({ ...editing, 経験: e.target.value })}
-            placeholder="3年以上 など"
-            className="w-full bg-card"
-          />
+          <div className="relative">
+            <Input
+              value={editing.経験}
+              onChange={(e) => onChange({ ...editing, 経験: e.target.value })}
+              onBlur={(e) => {
+                // 数値のみ（半角/全角対応、小数 OK）が入力されたら「年」を自動補完
+                //   "1" → "1年"、"0.5" → "0.5年"、"3年以上" などはそのまま
+                const raw = e.target.value.trim();
+                if (!raw) return;
+                if (/^[0-9０-９]+(\.[0-9０-９]+)?$/.test(raw)) {
+                  onChange({ ...editing, 経験: `${raw}年` });
+                }
+              }}
+              placeholder="1 / 0.5 / 3年以上 など"
+              className="w-full bg-card pr-8"
+            />
+            <span
+              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
+              aria-hidden="true"
+            >
+              年
+            </span>
+          </div>
         </label>
       </div>
 
