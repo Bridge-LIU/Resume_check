@@ -68,8 +68,7 @@ Resume_Claude/
 │   ├─ cost/                ← /cost API コスト集計（設計書 §8.5）
 │   ├─ trash/               ← /trash ゴミ箱（設計書 §7.5）
 │   ├─ manual/              ← /manual 静的マニュアル配信
-│   ├─ api/                 ← Route Handlers（backup/master 系）
-│   └─ preview*/            ← 開発用プレビュー・提案モック（配布物には含めない）
+│   └─ api/                 ← Route Handlers（backup/master 系）
 ├─ lib/
 │   ├─ types.ts             ← 共通型（必ずここから import）
 │   ├─ storage.ts           ← fs アクセス層（必ずここを通す）
@@ -215,7 +214,7 @@ getEvaluation(id) / saveEvaluation(id, data)     // 保存時に SessionMeta.総
 ## 確認コマンド
 
 ```
-npm run dev     # http://127.0.0.1:3939
+npm run dev     # http://localhost:3939
 npm run build   # 型エラー確認（Turbopack）
 npm run lint    # ESLint
 ```

@@ -29,6 +29,7 @@ import {
   type RecentRow,
 } from "./_components/RecentCallsFilter";
 import { PageHeader } from "@/app/_components/PageHeader";
+import { ActionLink } from "@/app/_components/ui/action-link";
 
 export const dynamic = "force-dynamic";
 
@@ -340,9 +341,11 @@ function PricingCards({ estimates }: { estimates: ModelEstimate[] }) {
 
         {/* 工程別内訳 (折り畳み) */}
         <Collapsible className="border-t pt-3">
-          <CollapsibleTrigger className="group inline-flex items-center gap-1 text-xs text-primary hover:underline">
-            <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
-            工程別内訳を展開
+          <CollapsibleTrigger asChild>
+            <ActionLink className="text-xs">
+              <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]:rotate-90" />
+              工程別内訳を展開
+            </ActionLink>
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-3 overflow-x-auto">
             <table className="w-full text-sm">
@@ -529,7 +532,11 @@ function DailyChartSection({ points }: { points: DailyPoint[] }) {
             直近 30 日の記録がありません
           </div>
         ) : (
-          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-40">
+          <div
+            className="relative mx-auto w-full max-w-3xl"
+            style={{ aspectRatio: `${W} / ${H}` }}
+          >
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
             <defs>
               <linearGradient id="costGrad" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
@@ -564,6 +571,18 @@ function DailyChartSection({ points }: { points: DailyPoint[] }) {
             {/* Area + line */}
             <path d={pathArea} fill="url(#costGrad)" />
             <path d={pathLine} fill="none" stroke="#2563eb" strokeWidth={2} />
+            {/* データ点（値のある日だけ小さな丸を表示） */}
+            {points.map((p, i) =>
+              p.totalJpy > 0 ? (
+                <circle
+                  key={`dot-${i}`}
+                  cx={xOf(i)}
+                  cy={yOf(p.totalJpy)}
+                  r={2.5}
+                  fill="#2563eb"
+                />
+              ) : null,
+            )}
             {/* X labels */}
             <text x={padL} y={H - 6} fontSize="10" fill="#a1a1aa">
               {firstDate.slice(5)}
@@ -581,6 +600,27 @@ function DailyChartSection({ points }: { points: DailyPoint[] }) {
               {lastDate.slice(5)}
             </text>
           </svg>
+          {/* HTML オーバーレイ: 各日 1 スライスを絶対配置。データ点の x 位置を中心にヒットエリアを配置し、
+              flex 等分だと発生する両端のズレを回避する。
+              SVG 内に <title> を置くと React 19 が <head> にホイストしてハイドレーション崩れになるため
+              HTML title 属性で代替。 */}
+          <div className="absolute inset-0">
+            {points.map((p, i) => {
+              const halfSlice =
+                points.length > 1 ? innerW / (points.length - 1) / 2 : innerW / 2;
+              const leftPct = ((xOf(i) - halfSlice) / W) * 100;
+              const widthPct = ((halfSlice * 2) / W) * 100;
+              return (
+                <div
+                  key={`hit-${i}`}
+                  className="absolute top-0 bottom-0 hover:bg-blue-500/10 transition-colors"
+                  style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                  title={`${p.date} ・ ${fmtJpy(p.totalJpy)}${p.count > 0 ? ` ・ ${p.count} 件` : ""}`}
+                />
+              );
+            })}
+          </div>
+          </div>
         )}
       </div>
     </div>

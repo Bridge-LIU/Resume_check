@@ -6,6 +6,24 @@ export type SessionStatus = "編集中" | "質問公開" | "面談済" | "評価
 export type Result = "採用" | "不採用" | "未確定";
 export type Mode = "paste" | "api";
 
+/**
+ * 不採用理由の分類（複数選択可）。
+ * `/analytics` の集計で「なぜ落ちたか」の傾向を出すのに使う。
+ * "その他" は自由文（rejectNote）を促す用。
+ * 順序は UI 表示順（頻出想定順）。
+ */
+export const REJECT_REASONS = [
+  "スキル不足",
+  "経験不足",
+  "経験過剰",
+  "カルチャー不適合",
+  "コミュニケーション",
+  "志望動機弱",
+  "給与ミスマッチ",
+  "その他",
+] as const;
+export type RejectReason = (typeof REJECT_REASONS)[number];
+
 /** master/roles/<id>.json — 役割別 求める人材条件マスタ */
 export interface Role {
   id: string;
@@ -92,6 +110,17 @@ export interface SessionMeta {
    * 表示するために使う。旧データには無いため optional、読み出し側で遅延バックフィル。
    */
   合否?: "合格" | "普通" | "不合格";
+  /**
+   * 不採用理由（複数選択）。`result === "不採用"` のセッションでのみ意味を持つ。
+   * 過去データ（既に "不採用" だが理由未記入）は空/未設定のまま残る（マイグレーションしない）。
+   * result が "不採用" 以外に切り替わると setResultAction が空配列にリセットする。
+   */
+  rejectReasons?: RejectReason[];
+  /**
+   * 不採用理由の自由記入（任意）。具体的な発言・場面のメモ。
+   * result が "不採用" 以外に切り替わると setResultAction が空文字にリセットする。
+   */
+  rejectNote?: string;
 }
 
 /** sessions/<id>/candidate.json — ② 面談者情報（要約テキスト） */
@@ -206,6 +235,11 @@ export interface QuestionCounts {
 
 /** data/settings.json */
 export interface Settings {
+  /**
+   * 保存フォーマットのスキーマ版番号。lib/storage.ts の SETTINGS_SCHEMA_VERSION と一致する。
+   * 未定義 = v2 以下（旧 shape）。migrateSettings がロード時に chain 適用して昇格させる。
+   */
+  schemaVersion?: number;
   dataRoot: string;
   /** どのプロバイダを既定にするか（②⑤⑧ で override されなければこれが使われる） */
   defaultProvider: ProviderId;

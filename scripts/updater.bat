@@ -1,4 +1,6 @@
 @echo off
+REM Force UTF-8 code page so Japanese/Chinese comments and log lines don't corrupt.
+chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
 REM ================================================================
@@ -155,7 +157,10 @@ REM  [3/3] Start new version + poll /api/version until responsive
 REM ================================================================
 call :log "[3/3] Starting new version..."
 
-REM Launch new start.bat in a separate window
+REM Launch new start.bat in a fresh visible cmd window (this is the server window
+REM the user will see and can close to stop the app).
+REM Note: We do NOT use windowsHide here — the new server window is intentionally
+REM visible so the user has an obvious way to stop the running app.
 start "" cmd /c "start.bat"
 
 REM curl polling: wait for new version response, max 20 minutes
@@ -164,7 +169,7 @@ set /a POLL_MAX=400
 set /a POLL_COUNT=0
 :poll_loop
 timeout /t 3 /nobreak >nul
-curl -s -o "%TEMP%\updater_ver.json" -w "%%{http_code}" http://127.0.0.1:3939/api/version >"%TEMP%\updater_code.txt" 2>nul
+curl -s -o "%TEMP%\updater_ver.json" -w "%%{http_code}" http://localhost:3939/api/version >"%TEMP%\updater_code.txt" 2>nul
 set /p HTTPCODE=<"%TEMP%\updater_code.txt"
 if "%HTTPCODE%"=="200" (
     findstr /C:"%NEW_VER%" "%TEMP%\updater_ver.json" >nul

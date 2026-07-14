@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ActionLink } from "@/ui/action-link";
 
 export type TransposedRow = {
   id: string;
@@ -355,13 +356,14 @@ function FragmentRow({
         onClick={onToggle}
       >
         <td className="px-3 py-2 sticky left-0 shadow-[2px_0_4px_rgba(0,0,0,0.05)] bg-card z-10">
-          <Link
-            href={`/sessions/${encodeURIComponent(row.id)}`}
-            className="font-medium text-foreground hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {row.name}
-          </Link>
+          <ActionLink asChild variant="name">
+            <Link
+              href={`/sessions/${encodeURIComponent(row.id)}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {row.name}
+            </Link>
+          </ActionLink>
           <div className="text-2xs text-muted-foreground opacity-70 tabular">{row.id}</div>
         </td>
         <td className="px-3 py-2">

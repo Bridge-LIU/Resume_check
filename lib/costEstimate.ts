@@ -86,7 +86,8 @@ export function loadCostRecords(limit = 5000): CostRecord[] {
     const cost = estimateCost(model, inCh, outCh);
     out.push({
       ts: e.ts,
-      yyyymm: e.ts.slice(0, 7),
+      // 月キーも Asia/Tokyo 基準。UTC で切ると月初/月末深夜の記録がズレる。
+      yyyymm: jstMonthKey(e.ts),
       stage,
       provider,
       model,
@@ -153,7 +154,7 @@ export function aggregateTotal(records: CostRecord[]): Aggregate {
 /* ───────────── 日次時系列（/cost の推移チャート用） ───────────── */
 
 export interface DailyPoint {
-  /** "YYYY-MM-DD"（ローカル時刻ではなく ts 先頭 10 文字。UTC ズレは吸収しない前提） */
+  /** "YYYY-MM-DD"（Asia/Tokyo の日付キー。UTC の午前 0 時ズレを吸収済み） */
   date: string;
   count: number;
   totalJpy: number;
@@ -161,13 +162,34 @@ export interface DailyPoint {
 }
 
 /**
+ * ISO 時刻文字列（"...Z" 想定）を Asia/Tokyo の "YYYY-MM-DD" に変換。
+ * `sv-SE` locale は ISO 形式（YYYY-MM-DD）で日付を返すため、split 不要で 1 発でキーが取れる。
+ * 用途: 日本国内での面談ツールの日次コスト集計。UTC 日で切ると朝 9 時前の記録が前日扱いになる。
+ */
+function jstDateKey(input: string | Date): string {
+  const d = typeof input === "string" ? new Date(input) : input;
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+/** Asia/Tokyo 基準の "YYYY-MM" 月キー。 */
+function jstMonthKey(input: string | Date): string {
+  return jstDateKey(input).slice(0, 7);
+}
+
+/**
  * 過去 `days` 日分の日次コスト系列を返す。データが 1 件も無い日は 0 埋め。
  * 出力は日付昇順（古い日 → 新しい日）。チャート描画にそのまま使える。
+ * 日付境界は Asia/Tokyo 基準。
  */
 export function aggregateByDay(records: CostRecord[], days = 30): DailyPoint[] {
   const map = new Map<string, { count: number; jpy: number; usd: number }>();
   for (const r of records) {
-    const d = r.ts.slice(0, 10);
+    const d = jstDateKey(r.ts);
     const cur = map.get(d) ?? { count: 0, jpy: 0, usd: 0 };
     map.set(d, {
       count: cur.count + 1,
@@ -176,13 +198,13 @@ export function aggregateByDay(records: CostRecord[], days = 30): DailyPoint[] {
     });
   }
   // 「今日」を基準に days 日分の空セルを用意して、実データをはめ込む。
-  // ts は toolchain 依存で UTC / ローカルどちらか揺れるが、日次サマリの粒度なら誤差 1 日以内で許容。
+  // 「今日」判定も Asia/Tokyo 基準にすることで、深夜 0-9 時に開いても当日が右端に来る。
   const today = new Date();
   const out: DailyPoint[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = jstDateKey(d);
     const v = map.get(key);
     out.push({
       date: key,

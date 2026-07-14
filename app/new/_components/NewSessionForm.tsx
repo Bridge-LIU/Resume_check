@@ -6,6 +6,7 @@ import { Lock } from "lucide-react";
 import type { Role } from "@/lib/types";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
+import { ActionLink } from "@/ui/action-link";
 import {
   Select,
   SelectContent,
@@ -46,9 +47,9 @@ export function NewSessionForm({ roles }: { roles: Role[] }) {
         {roles.length === 0 ? (
           <div className="border rounded px-3 py-2 text-sm bg-amber-50 text-amber-800">
             求人情報が未登録です。先に{" "}
-            <Link href="/master" className="underline">
-              /master
-            </Link>{" "}
+            <ActionLink asChild variant="inline">
+              <Link href="/master">/master</Link>
+            </ActionLink>{" "}
             で役割を作成してください。
           </div>
         ) : (

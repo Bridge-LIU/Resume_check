@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Lock, LockOpen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Lock, LockOpen, Trash2 } from "lucide-react";
 import type { ProviderId, ProviderSafeStatus } from "@/lib/types";
 import { PROVIDER_IDS_ACTIVE, PROVIDERS, TIER_ICON } from "@/lib/llm/registry";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
-import { Checkbox } from "@/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/ui/radio-group";
 import {
   Select,
@@ -101,6 +100,24 @@ function ProviderCard({
   // 未設定なら最初から編集可、設定済ならロック状態が既定
   const [editing, setEditing] = useState(!hasFileKey);
   const [selectedModel, setSelectedModel] = useState<string>(config.defaultModel);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // 削除ボタン: 確認後に hidden input `remove_{id}=on` を DOM に注入 → form 送信
+  const [removeQueued, setRemoveQueued] = useState(false);
+  useEffect(() => {
+    if (removeQueued) inputRef.current?.form?.requestSubmit();
+  }, [removeQueued]);
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: `${info.shortName} の API キーを削除しますか？`,
+      description:
+        "保存済のキーを完全に削除します。API モードを再度使うには新しいキーを設定してください。",
+      confirmLabel: "削除する",
+      destructive: true,
+    });
+    if (!ok) return;
+    setRemoveQueued(true);
+  }
   const status = hasEnvKey
     ? { label: "環境変数で設定済", cls: "text-emerald-700" }
     : hasFileKey
@@ -118,6 +135,11 @@ function ProviderCard({
       if (!ok) return;
     }
     setEditing(checked);
+    // 編集を許可した直後は入力欄にフォーカスして即入力できる状態にする。
+    // React の再レンダリング（disabled=false）を待つため rAF で 1 フレーム後に実行。
+    if (checked) {
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
   }
 
   // 表示制御：ロック中は disabled、保存済なら placeholder で「••••• 設定済」表示
@@ -160,6 +182,7 @@ function ProviderCard({
         <div className="flex gap-2 items-center">
           <Input
             id={`key_${id}`}
+            ref={inputRef}
             name={`provider_${id}_key`}
             type="password"
             defaultValue=""
@@ -190,6 +213,22 @@ function ProviderCard({
           >
             {editing ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
           </Button>
+          {hasFileKey && !hasEnvKey && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={handleDelete}
+              title="保存済キーを削除"
+              aria-label="保存済キーを削除"
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          {removeQueued && (
+            <input type="hidden" name={`remove_${id}`} value="on" />
+          )}
           <Select value={selectedModel} onValueChange={setSelectedModel}>
             <SelectTrigger
               className="h-9 text-xs w-auto whitespace-nowrap"
@@ -214,17 +253,6 @@ function ProviderCard({
         </div>
       </div>
 
-      {hasFileKey && !hasEnvKey && editing && (
-        <div className="pl-[108px]">
-          <Label
-            htmlFor={`remove_${id}`}
-            className="inline-flex items-center gap-2 text-xs text-muted-foreground font-normal cursor-pointer"
-          >
-            <Checkbox id={`remove_${id}`} name={`remove_${id}`} value="on" />
-            保存済キーを削除
-          </Label>
-        </div>
-      )}
     </div>
   );
 }

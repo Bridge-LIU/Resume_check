@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CategoryEvaluation, CategoryKey, Evaluation, Mode } from "@/lib/types";
 import { CATEGORY_KEYS } from "@/lib/types";
@@ -71,6 +71,12 @@ export function Section8Evaluation({
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("paste");
   const { ref: rootRef } = useStableSectionScroll(mode);
+  // JSON 貼り直しエリアの開閉。既定は「貼付モードなら開く / API モードなら閉じる」。
+  // モード切替時に自動で追従する（ユーザーが手動で切り替えたあとでも、モードを変えれば再同期される）。
+  const [jsonPasteOpen, setJsonPasteOpen] = useState<boolean>(mode === "paste");
+  useEffect(() => {
+    setJsonPasteOpen(mode === "paste");
+  }, [mode]);
   const [rawText, setRawText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [current, setCurrent] = useState<Evaluation | null>(initial);
@@ -214,8 +220,9 @@ export function Section8Evaluation({
 
       {current && <EvaluationView evaluation={current} />}
 
-      {/* 既に current があっても JSON 貼直し UI が畳まれると動線が消えるので常に open */}
-      <Collapsible defaultOpen className="mt-3">
+      {/* JSON 貼り直しエリアは貼付モードのときだけ既定で開く。API モードでは畳んで
+          動線を「AI で評価」ボタンに集中させる。ユーザーは手動でも開閉できる。 */}
+      <Collapsible open={jsonPasteOpen} onOpenChange={setJsonPasteOpen} className="mt-3">
         <CollapsibleTrigger className="group inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-90" />
           {current ? "貼り直す（JSON）" : "評価結果 JSON を貼り付ける"}

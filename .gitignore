@@ -53,6 +53,26 @@ yarn-error.log*
 /.preview/
 .preview*
 
+# auto-shutdown で lib/heartbeat.ts が書き出す終了理由（start.bat が読取・削除）
+# 診断モードではタイムスタンプ付きでリネームして残す (`.auto-shutdown.reason.YYYYMMDD_HHMMSS`)
+.auto-shutdown.reason
+.auto-shutdown.reason.*
+
+# 診断モード：app/api/heartbeat/route.ts が POST/GET 到達を追記する
+# module state と独立に到達数を計測して pingLog 0 の原因を切り分ける
+.heartbeat-arrivals.log
+.heartbeat-arrivals.log.*
+
+# 配布 ZIP 実験置き場（pkg-v*, app-v*.zip 等の展開済みビルド成果物、数百 MB）
+/test-release/
+
+# start.bat portable Node.js（初回起動時に自動展開）
+/node-portable/
+/node-portable.zip
+
+# 開発中の preview mockup（配布対象外、コミット前提としない）
+/app/preview-*/
+
 # vercel
 .vercel
 

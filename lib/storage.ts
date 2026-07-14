@@ -31,8 +31,56 @@ import {
 } from "./validation";
 import { PROVIDER_IDS_ACTIVE } from "./llm/registry";
 
-const PROJECT_ROOT = process.cwd();
+/**
+ * 実行時のプロジェクト根を求める。以下の順で決定:
+ *
+ * 1. `RESUME_CLAUDE_PROJECT_ROOT` 環境変数（start.bat で明示的に渡される）
+ * 2. Next.js standalone モード検知: `process.cwd()` の basename が "standalone"、
+ *    親が ".next" なら 2 階層上（= プロジェクト根）を返す。standalone 版 server.js は
+ *    起動時に cwd を `.next/standalone/` に変更するため、素の process.cwd() では
+ *    data/ や .backup/ の配置がずれる。
+ * 3. それ以外は素の process.cwd()（dev モード / npm run start）
+ */
+function computeProjectRoot(): string {
+  const envRoot = process.env.RESUME_CLAUDE_PROJECT_ROOT;
+  if (envRoot && envRoot.length > 0) {
+    try {
+      const resolved = path.resolve(envRoot);
+      if (fs.existsSync(resolved)) return resolved;
+    } catch {
+      // envRoot が不正 → fallback
+    }
+  }
+  const cwd = process.cwd();
+  const basename = path.basename(cwd);
+  const parentBasename = path.basename(path.dirname(cwd));
+  if (basename === "standalone" && parentBasename === ".next") {
+    return path.resolve(cwd, "..", "..");
+  }
+  return cwd;
+}
+
+const PROJECT_ROOT = computeProjectRoot();
 const SETTINGS_PATH = path.join(PROJECT_ROOT, "data", "settings.json");
+
+/**
+ * プロジェクト根の絶対パス。standalone モードでも正しい project root を返す（詳細は
+ * computeProjectRoot() のコメント参照）。updater.bat / restore.bat のパス解決、backup 位置、
+ * その他プロジェクト直下のリソース参照に使う。
+ */
+export function getProjectRoot(): string {
+  return PROJECT_ROOT;
+}
+
+/**
+ * settings.json のスキーマ版番号。
+ * shape を破壊的に変えたら +1 して、migrateSettings に新しい昇格ステップを足す。
+ * 履歴:
+ *   v1 以下: api.key 一本（`providers` 無し）
+ *   v2:      providers 導入
+ *   v3:      schemaVersion フィールド導入（既存 shape の変更は無し、記録のみ）
+ */
+const SETTINGS_SCHEMA_VERSION = 3;
 
 /* ───────────── settings ───────────── */
 
@@ -122,6 +170,7 @@ export function migrateSettings(raw: unknown): Settings {
     : "anthropic";
 
   return {
+    schemaVersion: SETTINGS_SCHEMA_VERSION,
     dataRoot: s.dataRoot ?? "./data",
     defaultProvider,
     providers,
@@ -144,6 +193,12 @@ export function migrateSettings(raw: unknown): Settings {
  * fs アクセスは1回。書き込み（saveSettings）と同一リクエスト内で再読しない前提。
  */
 export const loadSettings = cache((): Settings => {
+  // 初回起動時: settings.json がまだ存在しない → 全既定値で構築して返す。
+  // ENOENT で throw すると standalone 配布版でユーザ初回起動が即クラッシュするため、
+  // 空オブジェクトを migrateSettings に渡してデフォルトを埋める設計に変更（v0.1.0+）。
+  if (!fs.existsSync(SETTINGS_PATH)) {
+    return migrateSettings({});
+  }
   const raw = fs.readFileSync(SETTINGS_PATH, "utf-8");
   // 旧バージョンで作成された settings.json は 0o600 が付いていない可能性がある。
   // API キーの機密性を守るため、読み込むたびに chmod で締め直す（Windows では noop）。
@@ -152,7 +207,12 @@ export const loadSettings = cache((): Settings => {
   } catch {
     // Windows / 権限不足で失敗するのは想定内、握りつぶす。
   }
-  return migrateSettings(JSON.parse(raw));
+  try {
+    return migrateSettings(JSON.parse(raw));
+  } catch {
+    // JSON 破損時も既定値で復旧（起動不能を避ける）
+    return migrateSettings({});
+  }
 });
 
 /**
@@ -253,12 +313,14 @@ export function saveSettings(s: Settings): void {
   // 防御の最後の砦: 直接 saveSettings({...dataRoot:...}) が叩かれた場合も弾く。
   // UI 経由のフローでは事前にも検証されている前提だが、二重防御する。
   validateDataRoot(s.dataRoot);
+  // 書き込み時に schemaVersion を強制付与。旧 shape で来ても保存後は現行版になる。
+  const stamped: Settings = { ...s, schemaVersion: SETTINGS_SCHEMA_VERSION };
   fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true });
   // ⚠ settings.json には API キーが平文で書かれる。最低限本人のみ
   // 読めるようパーミッションを絞る。Windows では POSIX bit は無視されるが、
   // WSL / Linux / macOS では実効的に rw------- になる。
   // 真に安全にしたいなら環境変数 (ANTHROPIC_API_KEY 等) を使うこと。
-  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(s, null, 2), {
+  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(stamped, null, 2), {
     encoding: "utf-8",
     mode: 0o600,
   });
@@ -291,7 +353,34 @@ function ensureDir(p: string): void {
 
 function readJson<T>(filePath: string): T | null {
   if (!fs.existsSync(filePath)) return null;
-  return JSON.parse(fs.readFileSync(filePath, "utf-8")) as T;
+  const raw = fs.readFileSync(filePath, "utf-8");
+  try {
+    return JSON.parse(raw) as T;
+  } catch (e) {
+    // 破損 JSON の隔離: 該当ファイルを data/_quarantine/ に退避し null を返す。
+    // 上位はすでに null 分岐がある（getSessionMeta / getRole 等）ので画面が 500 する前に
+    // 「そのセッション/ロールだけ壊れている」状態に落ち着かせる。
+    // オペレータは _quarantine の中身を目で確認して修復するか諦めるか決める。
+    try {
+      const quarantineDir = path.join(getDataRoot(), "_quarantine");
+      ensureDir(quarantineDir);
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      const rel = path.relative(getDataRoot(), filePath).replace(/[\\/]/g, "__");
+      const dst = path.join(quarantineDir, `${ts}__${rel || path.basename(filePath)}`);
+      fs.renameSync(filePath, dst);
+      console.warn(
+        `[storage] JSON 解析失敗のため隔離: ${filePath}\n  → ${dst}\n  reason: ${(e as Error).message}`,
+      );
+    } catch (moveErr) {
+      // 隔離自体に失敗（権限 / 別ボリューム等）: せめてログだけ残して null を返す。
+      console.error(
+        `[storage] JSON 解析失敗＋隔離失敗: ${filePath}`,
+        e,
+        moveErr,
+      );
+    }
+    return null;
+  }
 }
 
 function writeJson(filePath: string, data: unknown): void {
@@ -593,7 +682,12 @@ export function generateSessionId(氏名: string, 役割: string, when = new Dat
   return `${date}_${time}_${氏名}_${役割}`;
 }
 
-export function listSessions(): SessionMeta[] {
+/**
+ * セッション一覧。同一リクエスト内では `react.cache` で memoize される。
+ * ホーム／一覧／集計／trash など複数の Server Component から呼ばれても fs スキャンは 1 回。
+ * 書き込み（saveSessionMeta 等）は毎リクエスト新インスタンスなので stale ヒットは起きない。
+ */
+export const listSessions = cache((): SessionMeta[] => {
   const dir = sessionsDir();
   if (!fs.existsSync(dir)) return [];
   // withFileTypes で N 回の statSync を避ける（旧実装: readdir → 各 statSync）
@@ -603,7 +697,7 @@ export function listSessions(): SessionMeta[] {
     .map((d) => getSessionMeta(d.name))
     .filter((m): m is SessionMeta => m !== null)
     .sort((a, b) => (a.作成日時 < b.作成日時 ? 1 : -1));
-}
+});
 
 export function getSessionMeta(id: string): SessionMeta | null {
   if (!isValidSessionId(id)) return null;

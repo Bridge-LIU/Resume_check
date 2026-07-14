@@ -1,4 +1,6 @@
 @echo off
+REM Force UTF-8 code page so Japanese file/dir names (運用マニュアル.HTML etc.) parse correctly.
+chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
 call :main
@@ -147,6 +149,9 @@ REM Standalone server.js uses HOSTNAME + PORT for bind target.
 REM Restrict to localhost to prevent LAN exposure (single-user local tool).
 set HOSTNAME=localhost
 set NODE_ENV=production
+REM Standalone server.js changes cwd to .next\standalone\. Pass the real project root
+REM through an env var so lib/storage.ts can resolve data/ and .backup/ correctly.
+set RESUME_CLAUDE_PROJECT_ROOT=%CD%
 
 REM public/ and .next/static/ must be placed next to standalone/server.js.
 REM release.yml should do this at ZIP-build time; start.bat compensates if missing.
@@ -158,6 +163,17 @@ if not exist ".next\standalone\public\" (
     if exist ".next\static" xcopy /e /q /y ".next\static" ".next\standalone\.next\static\" > nul
 )
 
+REM 運用マニュアル.HTML と マニュアル/ は outputFileTracingExcludes で明示除外されているため
+REM standalone bundle に含まれない。app/manual/[[...slug]]/route.ts は
+REM process.cwd() (server.js の process.chdir で .next\standalone\ に変わる) を起点に
+REM 解決するので、この 2 つを standalone 直下に置く必要がある。
+if not exist ".next\standalone\運用マニュアル.HTML" (
+    if exist "運用マニュアル.HTML" copy /y "運用マニュアル.HTML" ".next\standalone\運用マニュアル.HTML" > nul
+)
+if not exist ".next\standalone\マニュアル\" (
+    if exist "マニュアル" xcopy /e /q /y "マニュアル" ".next\standalone\マニュアル\" > nul
+)
+
 call node .next\standalone\server.js
 set SERVER_EXIT=!ERRORLEVEL!
 goto :after_server_exit
@@ -167,6 +183,16 @@ goto :after_server_exit
 REM ================================================
 REM  Shutdown / diagnostic handling (shared by both dev and standalone modes)
 REM ================================================
+
+REM If an update is in progress (updater.bat spawned by /api/update/apply),
+REM close this old cmd window quickly instead of showing the 30s "will close"
+REM prompt. updater.bat will launch a fresh start.bat when the new version is ready.
+if exist "data\.update\updater.lock" (
+    echo [UPDATE] Update in progress, closing this window quickly...
+    timeout /t 2 /nobreak > nul
+    exit /b 0
+)
+
 echo.
 if not "!SERVER_EXIT!"=="0" (
     echo [STOP] Server failed - code !SERVER_EXIT!

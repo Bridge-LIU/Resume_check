@@ -29,8 +29,8 @@ type DirRule = {
 
 const DIRS: DirRule[] = [
   // app/ 配下は「深さに関わらず preview* で始まるフォルダは全て除外」。
-  // これで app/preview*（顶层 mockup）だけでなく app/screening/preview/ のような
-  // ネストされた mockup も落ちる。
+  // 現状 preview 系フォルダは全撤去済だが、将来 mockup を追加した際に
+  // 配布に混入しないよう防衛ルールとして残す。
   { dir: "app", skip: (name) => /^preview/i.test(name) },
   { dir: "lib", skip: () => false },
   { dir: "マニュアル", skip: () => false },

@@ -663,7 +663,7 @@
       <kbd>⌘K</kbd>
     </button>
     <nav class="top">
-      <a href="http://127.0.0.1:3939" target="_blank">アプリを開く ↗</a>
+      <a href="http://localhost:3939" target="_blank">アプリを開く ↗</a>
       <a href="#" id="show-help" title="キーボードショートカット (?)">キー ?</a>
     </nav>
   </div>
@@ -717,6 +717,7 @@
       <li><a href="#settings" data-page="settings">設定</a></li>
       <li><a href="#backup" data-page="backup">バックアップ</a></li>
       <li><a href="#audit" data-page="audit">監査ログ</a></li>
+      <li><a href="#update" data-page="update">システムバージョン & 更新</a></li>
     </ul>
     <div class="group">困ったら</div>
     <ul>
@@ -767,7 +768,7 @@
       <li>プロジェクトフォルダを PC の好きな場所に置く</li>
       <li><code>start-app.bat</code> をダブルクリック</li>
       <li>初回だけ <code>npm install</code>（3〜5 分）と <code>next build</code>（1〜2 分）が走る</li>
-      <li>ブラウザが自動で開き <a href="http://127.0.0.1:3939" target="_blank">http://127.0.0.1:3939</a> が表示される</li>
+      <li>ブラウザが自動で開き <a href="http://localhost:3939" target="_blank">http://localhost:3939</a> が表示される</li>
     </ol>
 
     <h2 id="start-rerun">2 回目以降</h2>
@@ -807,7 +808,7 @@
         <tr><td>🏠</td><td>ホーム</td><td><code>/</code></td><td>ダッシュボード（今週の面談 / 合格率 / 平均スコア / 評価待ち / 最近の活動）</td><td><a href="#layout">画面構成</a></td></tr>
         <tr><td>📊</td><td>面談一覧</td><td><code>/list</code></td><td>セッション一覧、フィルタ、複数選択して比較</td><td><a href="#list">一覧画面</a></td></tr>
         <tr><td>🔀</td><td>比較</td><td><code>/compare</code></td><td>評価済セッションを並べて横断比較</td><td><a href="#compare">横断比較</a></td></tr>
-        <tr><td>📈</td><td>分析</td><td><code>/analytics</code></td><td>過去面談を匿名集計・軸別スコアの分布</td><td><a href="#analytics">分析画面</a></td></tr>
+        <tr><td>📈</td><td>分析</td><td><code>/analytics</code></td><td>ダッシュボード（KPI 前期比 / 自動インサイト / 月別・軸別・役割別 / 不採用理由 / 明細）</td><td><a href="#analytics">分析画面</a></td></tr>
         <tr><td>🗂️</td><td>求人情報</td><td><code>/master</code></td><td>求人情報（役割）・評価条件マスタの編集</td><td><a href="#master">求人情報管理</a></td></tr>
         <tr><td>🧾</td><td>API コスト</td><td><code>/cost</code></td><td>LLM API 使用状況・費用集計</td><td><a href="#cost">💴 コスト試算</a></td></tr>
         <tr><td>📁</td><td>フォルダ</td><td>ローカルの <code>data/sessions</code> を Explorer で開く（別ウィンドウ）</td><td>PII 実体ファイルへのショートカット。バックアップ・確認用</td><td>—</td></tr>
@@ -1302,8 +1303,8 @@ T5. 得意な言語と、その言語で気をつけていること
     <h2 id="cost-formula">概算のロジック</h2>
     <ul>
       <li>文字数 → token 換算：<strong>1 token ≈ 2.5 文字</strong>（日本語想定）</li>
-      <li>為替：<strong>USD $1 = ¥160</strong> 固定</li>
-      <li>単価表：2026-06 時点の公開単価（<code>lib/pricing.ts</code>）</li>
+      <li>為替：<strong>USD $1 = ¥162</strong> 固定</li>
+      <li>単価表：2026-07 時点の公開単価（<code>lib/pricing.ts</code>）</li>
       <li>キャッシュ割引・Batch 割引は<strong>未計算</strong>のため「上限見積り」として扱ってください</li>
     </ul>
 
@@ -1321,7 +1322,35 @@ T5. 得意な言語と、その言語で気をつけていること
     <div class="tip">
       <p>必須 3 工程（① 要約 + ③ 生成 + ⑤ 評価）のみで <strong>¥17〜33 / 面談</strong>、整形・面談内容要約を含めたフル構成でも <strong>¥22〜45 / 面談</strong>が目安です。月 100 面談で ¥2,500〜4,500 程度。</p>
     </div>
-    <p>モデルを Haiku 4.5（$1/$5）に落とすと約 1/3、Opus 4.7（$15/$75）に上げると約 5 倍になります。</p>
+
+    <h2 id="cost-haiku">Haiku 4.5 の目安（安く済ませたいとき）</h2>
+    <p>Haiku 4.5 は入出力とも Sonnet 4.6 の <strong>1/3 の単価</strong>（$1 / $5 per M tok）です。要約や質問生成のように「構造さえ整えばよい」工程は Haiku で十分こなせます。</p>
+    <table>
+      <thead><tr><th>工程</th><th>入力目安</th><th>出力目安</th><th>1 回の JPY</th></tr></thead>
+      <tbody>
+        <tr><td>① 要約</td><td>3〜15 K字</td><td>0.8〜1.5 K字</td><td>¥0.5〜1.5</td></tr>
+        <tr><td>③ 質問生成（15問）</td><td>2.5〜4.5 K字</td><td>10〜17 K字</td><td>¥3〜6</td></tr>
+        <tr><td>③ 質問整形（任意）</td><td>2〜4 K字</td><td>2〜5 K字</td><td>¥1〜2</td></tr>
+        <tr><td>④ 面談内容要約（任意）</td><td>5〜20 K字</td><td>≤1500 字</td><td>¥1〜2</td></tr>
+        <tr><td>⑤ 評価</td><td>5〜15 K字</td><td>5〜9 K字</td><td>¥2〜4</td></tr>
+      </tbody>
+    </table>
+    <div class="tip">
+      <p>必須 3 工程（① + ③ + ⑤）のみで <strong>¥6〜11 / 面談</strong>、整形・面談内容要約を含めたフル構成でも <strong>¥8〜15 / 面談</strong>が目安。月 100 面談で <strong>¥600〜1,500 程度</strong>（Sonnet 比 1/3）。</p>
+    </div>
+
+    <h2 id="cost-model-compare">モデル別 コスト比較（1 面談 · 必須 3 工程）</h2>
+    <table>
+      <thead><tr><th>モデル</th><th>単価（入/出 per M tok）</th><th>1 面談</th><th>月 100 面談</th><th>備考</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Haiku 4.5</strong></td><td>$1 / $5</td><td>¥6〜11</td><td>¥600〜1,500</td><td>速い・安い。構造化タスク向き</td></tr>
+        <tr><td><strong>Sonnet 4.6</strong>（既定）</td><td>$3 / $15</td><td>¥17〜33</td><td>¥1,700〜3,300</td><td>バランス型。精度と速度の中間</td></tr>
+        <tr><td><strong>Opus 4.7</strong></td><td>$5 / $25</td><td>¥28〜55</td><td>¥2,800〜5,500</td><td>約 1.7 倍。難しい評価判断や長文脈で強い</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <p>使い分けのヒント：構造化タスク（要約・整形）は Haiku で十分。判断品質が問われる ⑤ 評価だけ Sonnet や Opus に上げる、という運用が費用対効果が良い。<br><code>/settings</code> で選んだ既定モデルが全工程に適用されます（現状 UI では工程ごとの上書きは未対応、必要なら <code>data/settings.json</code> の <code>models</code> フィールドを手編集で可能）。</p>
+    </div>
 
     <h2 id="cost-source">記録される情報</h2>
     <p>各 API 呼び出しの <code>provider</code> / <code>model</code> / 入力文字数 / 出力文字数 が <code>data/logs/audit.log</code> に記録されます（PII なし）。<code>/cost</code> はこのログを走査して集計するため、audit.log を消すと集計もリセットされます。</p>
@@ -1566,9 +1595,303 @@ T5. 得意な言語と、その言語で気をつけていること
     </div>
   </article>
 
+  <article class="page" id="p-update">
+    <h1>システムバージョン & 更新</h1>
+    <p class="subtitle"><code>/settings</code> 画面下部の「システムバージョン」カードから、GitHub Releases 経由でワンクリックで最新版に更新できます。</p>
+
+    <h2 id="update-check">更新をチェックする</h2>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/version-card.png" alt="/settings のシステムバージョンカード（コンパクト表示）">
+      </div>
+      <figcaption>/settings 画面下部の「システムバージョン」カード（v1.2.0 / 最終確認日時 / 「再チェック」または「更新をチェック」ボタン）</figcaption>
+    </figure>
+    <ol>
+      <li><code>/settings</code> を開き、下部の「システムバージョン」カードを確認</li>
+      <li>「更新をチェック」ボタンを押す</li>
+      <li>数秒待つと以下のいずれかが表示されます:
+        <ul>
+          <li><strong>✓ 最新版を使用中</strong>：更新は不要</li>
+          <li><strong>🎉 新しいバージョンが利用可能</strong>：v○.○.○ → v○.○.○ + 更新内容が緑色の枠に表示</li>
+          <li><strong>チェックに失敗しました</strong>：ネットワーク不通 or Release が公開されていない</li>
+        </ul>
+      </li>
+    </ol>
+    <div class="note">
+      <p>チェックは GitHub Releases API を叩いて最新公開版と比較します。認証は不要ですが、GitHub のレート制限（1 時間 60 回）が適用されます。</p>
+    </div>
+
+    <h2 id="update-apply">更新を適用する</h2>
+    <p>新版がある状態で <strong>「🚀 今すぐ更新」</strong> ボタンを押すと、モーダルが開いて自動で以下 3 段階が実行されます:</p>
+    <figure class="shot">
+      <div class="frame">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 320" style="width:100%;height:auto;background:#fafafa;font-family:inherit">
+          <defs>
+            <marker id="a-upd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+            </marker>
+          </defs>
+          <!-- Modal frame -->
+          <rect x="30" y="20" width="720" height="270" rx="12" fill="#ffffff" stroke="#d4d4d8" stroke-width="1.5"/>
+          <rect x="30" y="20" width="720" height="34" rx="12" fill="#f4f4f5"/>
+          <text x="48" y="42" font-size="13" font-weight="600" fill="#1f2937">🚀 更新中 v1.2.0 → v1.3.0</text>
+          <circle cx="736" cy="37" r="6" fill="#e5e7eb"/><text x="734" y="41" font-size="10" fill="#6b7280">×</text>
+
+          <!-- Steps -->
+          <g font-family="inherit" font-size="12" fill="#1f2937">
+            <rect x="60" y="72" width="200" height="60" rx="8" fill="#dbeafe" stroke="#3b82f6"/>
+            <text x="160" y="94" text-anchor="middle" font-weight="600">[1/3] ダウンロード</text>
+            <text x="160" y="112" text-anchor="middle" font-size="11">ZIP 取得 ~50MB / 30秒</text>
+            <text x="160" y="126" text-anchor="middle" font-size="10" fill="#6b7280">data/.update/staging/</text>
+
+            <line x1="260" y1="102" x2="310" y2="102" stroke="#2563eb" stroke-width="2" marker-end="url(#a-upd)"/>
+
+            <rect x="310" y="72" width="200" height="60" rx="8" fill="#fef3c7" stroke="#d97706"/>
+            <text x="410" y="94" text-anchor="middle" font-weight="600">[2/3] バックアップ</text>
+            <text x="410" y="112" text-anchor="middle" font-size="11">現行版を move で退避</text>
+            <text x="410" y="126" text-anchor="middle" font-size="10" fill="#6b7280">.backup/v1.2.0/</text>
+
+            <line x1="510" y1="102" x2="560" y2="102" stroke="#2563eb" stroke-width="2" marker-end="url(#a-upd)"/>
+
+            <rect x="560" y="72" width="160" height="60" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+            <text x="640" y="94" text-anchor="middle" font-weight="600">[3/3] インストール</text>
+            <text x="640" y="112" text-anchor="middle" font-size="11">新版配置 + 再起動</text>
+          </g>
+
+          <!-- Log panel -->
+          <rect x="60" y="150" width="660" height="120" rx="6" fill="#0f172a"/>
+          <g font-family="Consolas, monospace" font-size="11" fill="#86efac">
+            <text x="72" y="170">[updater] downloading resume-claude-v1.3.0.zip …</text>
+            <text x="72" y="188" fill="#93c5fd">[updater] extracted 84 files (52MB)</text>
+            <text x="72" y="206">[updater] moving current -&gt; .backup/v1.2.0/</text>
+            <text x="72" y="224" fill="#93c5fd">[updater] backup complete (7 items)</text>
+            <text x="72" y="242">[updater] installing new files …</text>
+            <text x="72" y="260" fill="#fde047">[updater] verifying version: v1.3.0 ✓</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>更新モーダル：3 ステップの進捗表示と cmd ログのリアルタイム転送。black パネルは updater.bat の stdout をそのままストリーミング</figcaption>
+    </figure>
+    <ol>
+      <li><strong>[1/3] ダウンロード</strong>：新版の ZIP を <code>data/.update/staging/</code> に取得（50-80MB、~30秒）</li>
+      <li><strong>[2/3] バックアップ</strong>：現行版のファイルを <code>.backup/vX.Y.Z/</code> に瞬時 move（データは移動しません）</li>
+      <li><strong>[3/3] インストール & 再起動</strong>：新版ファイルを配置 → <code>start.bat</code> 経由で新版起動 → バージョン確認</li>
+    </ol>
+    <p>モーダル下部の cmd ログが黒背景でリアルタイム表示されるので、進捗を目視で確認できます。完了時に「✅ 更新完了 vX.Y.Z」トーストが出て、ブラウザが自動でリロードします。</p>
+
+    <div class="warn">
+      <p>更新中は cmd ウィンドウが新しく開き、既存のサーバーは一度停止します。<strong>更新中はブラウザ・cmd ウィンドウを閉じないでください</strong>。閉じても復旧できますが手動操作が必要になります。</p>
+    </div>
+
+    <h2 id="update-rollback">失敗時の自動 rollback</h2>
+    <figure class="shot">
+      <div class="frame">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 300" style="width:100%;height:auto;background:#fafafa;font-family:inherit">
+          <defs>
+            <marker id="a-rb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626"/>
+            </marker>
+          </defs>
+          <!-- Forward flow (interrupted) -->
+          <g font-family="inherit" font-size="12" fill="#1f2937">
+            <rect x="30" y="40" width="130" height="46" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
+            <text x="95" y="60" text-anchor="middle" font-weight="600">ダウンロード</text>
+            <text x="95" y="76" text-anchor="middle" font-size="11" fill="#16a34a">✓ 完了</text>
+
+            <line x1="160" y1="63" x2="195" y2="63" stroke="#3b82f6" stroke-width="2"/>
+
+            <rect x="195" y="40" width="130" height="46" rx="6" fill="#fef3c7" stroke="#d97706"/>
+            <text x="260" y="60" text-anchor="middle" font-weight="600">バックアップ</text>
+            <text x="260" y="76" text-anchor="middle" font-size="11" fill="#16a34a">✓ 完了</text>
+
+            <line x1="325" y1="63" x2="360" y2="63" stroke="#3b82f6" stroke-width="2"/>
+
+            <rect x="360" y="40" width="130" height="46" rx="6" fill="#fecaca" stroke="#dc2626" stroke-width="2"/>
+            <text x="425" y="60" text-anchor="middle" font-weight="600">インストール</text>
+            <text x="425" y="76" text-anchor="middle" font-size="11" fill="#dc2626">✗ 失敗</text>
+          </g>
+
+          <!-- Rollback arrow -->
+          <path d="M 425 90 Q 425 130 260 130 Q 95 130 95 100" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="6 3" marker-end="url(#a-rb)"/>
+          <text x="260" y="152" text-anchor="middle" font-size="12" font-weight="600" fill="#dc2626">🔄 自動 rollback</text>
+
+          <!-- Rollback steps -->
+          <g font-family="inherit" font-size="12" fill="#1f2937">
+            <rect x="30" y="170" width="180" height="50" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+            <text x="120" y="190" text-anchor="middle" font-weight="600" font-size="12">1. .backup/ を検出</text>
+            <text x="120" y="208" text-anchor="middle" font-size="10">1 世代のみ保持</text>
+
+            <line x1="210" y1="195" x2="240" y2="195" stroke="#dc2626" stroke-width="2" marker-end="url(#a-rb)"/>
+
+            <rect x="240" y="170" width="180" height="50" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+            <text x="330" y="190" text-anchor="middle" font-weight="600" font-size="12">2. move で復旧</text>
+            <text x="330" y="208" text-anchor="middle" font-size="10">.backup/ → 現行位置</text>
+
+            <line x1="420" y1="195" x2="450" y2="195" stroke="#dc2626" stroke-width="2" marker-end="url(#a-rb)"/>
+
+            <rect x="450" y="170" width="180" height="50" rx="6" fill="#fee2e2" stroke="#dc2626"/>
+            <text x="540" y="190" text-anchor="middle" font-weight="600" font-size="12">3. start.bat で再起動</text>
+            <text x="540" y="208" text-anchor="middle" font-size="10">旧版のプロセスへ戻す</text>
+
+            <line x1="630" y1="195" x2="660" y2="195" stroke="#16a34a" stroke-width="2" marker-end="url(#a-rb)"/>
+          </g>
+
+          <rect x="660" y="170" width="100" height="50" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+          <text x="710" y="190" text-anchor="middle" font-weight="700" font-size="13" fill="#16a34a">✓ 元通り</text>
+          <text x="710" y="208" text-anchor="middle" font-size="11">旧版で継続</text>
+
+          <text x="390" y="255" text-anchor="middle" font-size="12" fill="#6b7280">data/ フォルダには一切触れないので、面談セッション・マスタ・設定は完全に保持されます</text>
+        </svg>
+      </div>
+      <figcaption>updater.bat の rollback フロー：インストール段階で失敗すると、.backup/ から現行位置に move で戻し、旧版で自動再起動する</figcaption>
+    </figure>
+    <ol>
+      <li>モーダルが「⚠️ 更新失敗、v○.○.○ に回滾中」表示に切り替わる</li>
+      <li>updater.bat が <code>.backup/</code> から旧ファイルを move で戻す（数十秒）</li>
+      <li>旧版の <code>start.bat</code> が再起動</li>
+      <li>ブラウザが自動リロードして「回滾完了」表示 → 元通り使える</li>
+    </ol>
+    <p>Rollback 完了後、失敗の原因は cmd ログに残ります。ネットワーク不通なら時間をおいて再試行、それ以外の場合は開発者に連絡してください。</p>
+
+    <h2 id="update-manual-restore">手動復旧（restore.bat）</h2>
+    <p>PC の電源断・ブルースクリーン等で updater.bat 自体が異常終了した場合、以下の緊急復旧手段があります:</p>
+    <figure class="shot">
+      <div class="frame">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" style="width:100%;height:auto;background:#0c0c0c;font-family:'Consolas', monospace">
+          <!-- cmd window title bar -->
+          <rect x="0" y="0" width="720" height="26" fill="#3a3a3a"/>
+          <text x="14" y="18" font-size="12" fill="#ffffff">C:\Windows\System32\cmd.exe - restore.bat</text>
+          <circle cx="676" cy="13" r="6" fill="#e5e7eb"/>
+          <circle cx="694" cy="13" r="6" fill="#fbbf24"/>
+          <circle cx="712" cy="13" r="6" fill="#ef4444"/>
+
+          <!-- cmd content -->
+          <g font-size="12" fill="#c0c0c0">
+            <text x="14" y="50">====================================================</text>
+            <text x="14" y="68">   Interview AI Tool - Manual Restore</text>
+            <text x="14" y="86">====================================================</text>
+            <text x="14" y="112" fill="#ffffff">[INFO] Scanning .backup/ …</text>
+            <text x="14" y="130" fill="#93c5fd">  Found 1 backup(s):</text>
+            <text x="14" y="152" fill="#fde047">   [1] v1.2.0  (2026-07-14 09:12, 320MB)</text>
+            <text x="14" y="178" fill="#ffffff">Select backup to restore [1]: <tspan fill="#22c55e">1</tspan></text>
+            <text x="14" y="198" fill="#ffffff">Confirm restore v1.2.0? (y/N): <tspan fill="#22c55e">y</tspan></text>
+            <text x="14" y="220" fill="#93c5fd">[OK] Restored 7 items from .backup/v1.2.0/</text>
+            <text x="14" y="238" fill="#22c55e">[DONE] Run start.bat to launch v1.2.0.</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>scripts/restore.bat の対話画面：バックアップ一覧から選択して確認するだけの単純な cmd 対話</figcaption>
+    </figure>
+    <ol>
+      <li>プロジェクト直下の <code>scripts/restore.bat</code> をダブルクリック</li>
+      <li>「利用可能なバックアップ」一覧から復元したいバージョン（通常は直近の <code>v0.1.0</code>）を選択</li>
+      <li>確認後、backup から旧ファイルを戻して復旧</li>
+      <li><code>start.bat</code> で通常起動</li>
+    </ol>
+
+    <h2 id="update-backup-cleanup">バックアップの世代管理</h2>
+    <figure class="shot">
+      <div class="frame">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" style="width:100%;height:auto;background:#fafafa;font-family:inherit">
+          <defs>
+            <marker id="a-gen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+            </marker>
+          </defs>
+          <g font-family="inherit" font-size="12" fill="#1f2937">
+            <!-- Update 1 -->
+            <text x="20" y="30" font-weight="600">更新① v1.0 → v1.1</text>
+            <rect x="20" y="42" width="140" height="42" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+            <text x="90" y="60" text-anchor="middle" font-size="11">.backup/v1.0/</text>
+            <text x="90" y="76" text-anchor="middle" font-size="10" fill="#6b7280">世代 1 作成</text>
+
+            <line x1="160" y1="63" x2="200" y2="63" stroke="#2563eb" stroke-width="2" marker-end="url(#a-gen)"/>
+
+            <!-- Update 2 -->
+            <text x="220" y="30" font-weight="600">更新② v1.1 → v1.2</text>
+            <rect x="220" y="42" width="140" height="42" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-dasharray="4 3"/>
+            <text x="290" y="60" text-anchor="middle" font-size="11" fill="#dc2626">.backup/v1.0/</text>
+            <text x="290" y="76" text-anchor="middle" font-size="10" fill="#dc2626">自動削除</text>
+
+            <rect x="370" y="42" width="140" height="42" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+            <text x="440" y="60" text-anchor="middle" font-size="11">.backup/v1.1/</text>
+            <text x="440" y="76" text-anchor="middle" font-size="10" fill="#6b7280">新世代 作成</text>
+
+            <line x1="510" y1="63" x2="550" y2="63" stroke="#2563eb" stroke-width="2" marker-end="url(#a-gen)"/>
+
+            <!-- Update 3 -->
+            <text x="570" y="30" font-weight="600">更新③ v1.2 → v1.3</text>
+            <rect x="570" y="42" width="140" height="42" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+            <text x="640" y="60" text-anchor="middle" font-size="11">.backup/v1.2/</text>
+            <text x="640" y="76" text-anchor="middle" font-size="10" fill="#6b7280">最新のみ保持</text>
+
+            <!-- Explanation -->
+            <text x="20" y="130" font-weight="600" font-size="13" fill="#374151">保持ポリシー</text>
+            <rect x="20" y="140" width="680" height="80" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1"/>
+            <text x="34" y="162" font-size="12">・保持世代数：1（直近の旧版のみ）</text>
+            <text x="34" y="180" font-size="12">・次の更新開始時に古い世代を自動削除 → ディスク肥大化しない</text>
+            <text x="34" y="198" font-size="12">・1 世代あたり数百 MB（node_modules は含まない設計）</text>
+            <text x="34" y="216" font-size="12" fill="#dc2626">・手動で .backup/ を削除すると rollback / restore.bat が使えなくなる</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>バックアップの世代交代：常に「1 つ前」の版だけを保持。更新の連鎖でディスク使用量は増えない</figcaption>
+    </figure>
+    <p>更新のたびに <code>.backup/</code> 下に旧版のコピーが 1 世代残ります。次の更新開始時に古い世代は自動削除されるため、通常はディスク容量を意識する必要はありません。</p>
+    <ul>
+      <li>保持世代数：<strong>1（直近の旧版のみ）</strong></li>
+      <li>1 世代あたりのサイズ：数百 MB 程度（node_modules は含まない設計）</li>
+      <li>手動で <code>.backup/</code> を削除しても問題ありませんが、削除後は rollback / restore.bat が使えなくなります</li>
+    </ul>
+
+    <h2 id="update-what-preserved">更新で保持されるもの</h2>
+    <figure class="shot">
+      <div class="frame">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" style="width:100%;height:auto;background:#fafafa;font-family:inherit">
+          <g font-family="inherit" font-size="12" fill="#1f2937">
+            <!-- 保持される -->
+            <rect x="20" y="20" width="330" height="220" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+            <text x="185" y="42" text-anchor="middle" font-size="14" font-weight="700" fill="#166534">✓ 保持される（触れない）</text>
+            <text x="40" y="70" font-size="12" font-weight="600">📁 data/</text>
+            <text x="60" y="88" font-size="11" fill="#374151">├─ sessions/  （面談セッション全て）</text>
+            <text x="60" y="104" font-size="11" fill="#374151">├─ master/    （役割 + 評価条件マスタ）</text>
+            <text x="60" y="120" font-size="11" fill="#374151">├─ analytics/ （匿名分析データ）</text>
+            <text x="60" y="136" font-size="11" fill="#374151">├─ logs/      （監査ログ）</text>
+            <text x="60" y="152" font-size="11" fill="#374151">├─ _backups/  （AES バックアップ ZIP）</text>
+            <text x="60" y="168" font-size="11" fill="#374151">└─ settings.json  （API キー / 保存期間）</text>
+            <text x="40" y="196" font-size="12" font-weight="600">.backup/</text>
+            <text x="60" y="212" font-size="11" fill="#374151">├─ v1.2.0/  （前版のロールバック用）</text>
+            <text x="40" y="232" font-size="11" fill="#6b7280">※ dataRoot を変えていればそこも同様に保持</text>
+
+            <!-- 書き換わる -->
+            <rect x="370" y="20" width="330" height="220" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="2"/>
+            <text x="535" y="42" text-anchor="middle" font-size="14" font-weight="700" fill="#991b1b">✗ 書き換わる</text>
+            <text x="390" y="70" font-size="12" font-weight="600">📁 .next/</text>
+            <text x="410" y="88" font-size="11" fill="#374151">└─ standalone/、static/（ビルド成果物）</text>
+            <text x="390" y="112" font-size="12" font-weight="600">📁 public/</text>
+            <text x="410" y="130" font-size="11" fill="#374151">└─ 静的資源</text>
+            <text x="390" y="154" font-size="12" font-weight="600">📁 scripts/</text>
+            <text x="410" y="172" font-size="11" fill="#374151">└─ updater.bat / restore.bat 等</text>
+            <text x="390" y="196" font-size="12" font-weight="600">📄 package.json / start.bat</text>
+            <text x="390" y="216" font-size="12" font-weight="600">📄 運用マニュアル.HTML / マニュアル/</text>
+            <text x="390" y="232" font-size="11" fill="#6b7280">↑ すべて新版のファイルで丸ごと差し替え</text>
+          </g>
+        </svg>
+      </div>
+      <figcaption>左：更新で一切触れない領域（ユーザーデータ）　右：更新で丸ごと書き換わる領域（アプリ本体）</figcaption>
+    </figure>
+    <ul>
+      <li><strong><code>data/</code> フォルダ</strong>：面談セッション・マスタ・設定・分析データ — <strong>すべて保持</strong></li>
+      <li><code>settings.json</code> の API キー・保存期間設定など</li>
+      <li>バックアップ ZIP（<code>data/_backups/</code>）</li>
+    </ul>
+    <p><strong>更新で書き換えられるのは <code>.next/</code> <code>public/</code> <code>package.json</code> <code>start.bat</code> <code>scripts/</code> のみ</strong>。あなたのデータには一切触れません。</p>
+  </article>
+
   <article class="page" id="p-analytics">
     <h1>分析画面</h1>
-    <p class="subtitle"><code>/analytics</code> で過去面談を匿名集計します。</p>
+    <p class="subtitle"><code>/analytics</code> で過去面談を匿名集計。「次の面談で何を重点的に聞くか」を決めるためのダッシュボードです。</p>
 
     <h2 id="analytics-screenshot">画面</h2>
     <figure class="shot">
@@ -1576,21 +1899,89 @@ T5. 得意な言語と、その言語で気をつけていること
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
         <img src="マニュアル/assets/analytics.png" alt="分析画面">
       </div>
-      <figcaption>/analytics — KPI + 月別 + 役割別 + 軸別 + 明細</figcaption>
+      <figcaption>/analytics — 8 段構成のダッシュボード</figcaption>
     </figure>
+    <div class="note">
+      <p>スクリーンショットは旧レイアウトのものです。実際のダッシュボードは下記 8 段構成にリニューアル済み。</p>
+    </div>
 
-    <h2 id="analytics-content">表示内容</h2>
+    <h2 id="analytics-content">画面構成（上から順）</h2>
+    <table>
+      <thead><tr><th>#</th><th>セクション</th><th>答える問い</th><th>ポイント</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td><td><strong>Hero</strong></td>
+          <td>このページは何？</td>
+          <td>ページの目的説明 + 全期間合格率を大字で表示</td>
+        </tr>
+        <tr>
+          <td>2</td><td><strong>コア指標</strong>（KPI 4 枚）</td>
+          <td>今の全体像は？ 前月比でどうか？</td>
+          <td>合格率 / 平均総合スコア / 面談数 / 役割数 の 4 KPI。各カードに <strong>前期比 ▲▼</strong> と <strong>6 月分の sparkline</strong> を並記</td>
+        </tr>
+        <tr>
+          <td>3</td><td><strong>インサイト</strong>（自動生成）</td>
+          <td>データから何を読み取ればいい？</td>
+          <td>3 枚のカードが自動で洞察を提示：<br>①「合否を分ける最重要軸」（合格者 / 不合格者 平均差 Δ が最大の軸）<br>②「合格率トップ役割」<br>③「要注意」（合格率急落 or 最低役割）</td>
+        </tr>
+        <tr>
+          <td>4</td><td><strong>月別トレンド</strong></td>
+          <td>時間とともにどう変わっている？</td>
+          <td>コンパクト表：月 / 件数 / 合格率（色階） / 内訳分布（合格 · 普通 · 不合格 の内联 3 色バー、幅 = 最多月比）</td>
+        </tr>
+        <tr>
+          <td>5</td><td><strong>軸別分析</strong></td>
+          <td>どの評価軸が合否を左右している？</td>
+          <td>6 小軸を <strong>「人間性（amber）/ 技術力（indigo）」帯</strong>でグループ化。各軸で<strong>合格者 vs 不合格者 の平均を 2 本並列バー</strong>で対比、右端に差分 Δ を表示（Δ 大 = 決定要因）</td>
+        </tr>
+        <tr>
+          <td>6</td><td><strong>役割別</strong></td>
+          <td>どの役割の合格率が高い / 低い？</td>
+          <td>カード grid。合格率 % を大字（緑 / 黄 / 赤）+ 件数 + 平均 + 底部に pass/mid/fail 3 色分布条</td>
+        </tr>
+        <tr>
+          <td>7</td><td><strong>不採用理由の内訳</strong></td>
+          <td>なぜ落ちているか？</td>
+          <td>セッションの「不採用理由」チェック（<a href="#step8">⑤ 評価</a>で選択）を集計。未記入件数もバッジで明示。過去データで未記入のセッションは「未記入」バケットに入る</td>
+        </tr>
+        <tr>
+          <td>8</td><td><strong>明細</strong></td>
+          <td>個別のデータを深掘りしたい</td>
+          <td>匿名 1 件ずつ。列は <code>closedAt · 役割 · 6 小軸（大分類バンド付き）· 総合 · 合否 · 採否</code>。全列 sort、カテゴリ列は filter 可、数値列は sort のみ。行 hover で走光 ring 表示</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="analytics-axis-verdict">軸別分析の読み方</h2>
+    <p>各軸に <strong>合格者平均バー（緑）</strong>と <strong>不合格者平均バー（赤）</strong>が並びます。右端の <strong>Δ 値</strong>が大きいほど、その軸のスコア差が合否を左右していると解釈できます。</p>
+    <div class="tip">
+      <p>Δ &ge; 1.5 で primary 色ハイライト表示。「次の面談ではこの軸の質問を厚めに」の判断材料に使ってください。合格者 or 不合格者のどちらか 0 件の軸は Δ 計算不可のため「—」表示。</p>
+    </div>
+
+    <h2 id="analytics-monthly">月別トレンドの読み方</h2>
     <ul>
-      <li><strong>KPI カード</strong>：累計件数、合格率、平均総合スコア、役割数</li>
-      <li><strong>月別の合否分布</strong>：closedAt 基準で月ごとに合格 / 普通 / 不合格を積み上げ</li>
-      <li><strong>役割別の合格率</strong></li>
-      <li><strong>評価軸ごとの平均スコア</strong>（バーグラフ）</li>
-      <li><strong>明細</strong>：匿名 1 件ずつ（最新順、軸スコア横並び）</li>
+      <li><strong>合格率</strong>列：60% 以上 = 緑、40〜60% = 黄、40% 未満 = 赤で色階表示</li>
+      <li><strong>分布</strong>列：バーの幅は「最多件数月に対する相対値」で描画（絶対件数比較用）。3 色内訳は「合格 / 普通 / 不合格」の順で左詰め</li>
+      <li><code>closedAt</code> が入っていないセッションは「不明」月として表末に固まる</li>
     </ul>
+
+    <h2 id="analytics-detail">明細の使い方</h2>
+    <ul>
+      <li><strong>列ヘッダのラベル</strong>クリックで sort 切替（asc → desc → 解除）</li>
+      <li><strong>フィルタアイコン</strong>（<code>closedAt · 役割 · 合否 · 採否</code> の 4 列のみ表示）で値ごとに絞り込み</li>
+      <li>数値列（<code>総合 · 6 小軸</code>）は連続値のため filter アイコンなし、sort のみ</li>
+      <li>大分類バンドは <code>人間性（amber）</code> → <code>技術力（indigo）</code> → 分類なし の順に並ぶ（<a href="#master">マスタ</a>で軸を追加した場合も自動）</li>
+      <li>行 hover で走光 ring（primary 色）+ glow shadow が出て、視線を追いやすくする</li>
+      <li>数値の色階：<strong>総合スコア</strong>は ≥4 emerald / ≥3 通常 / &lt;3 rose。<strong>小軸</strong>は ≥4 淡 emerald / &lt;3 淡 rose で強弱点を強調</li>
+    </ul>
+
+    <h2 id="analytics-empty">データが 0 件のとき</h2>
+    <p>匿名サマリがまだ書き出されていない場合、ダッシュボードは表示されず「保存期間スイープで書き出されるまで待つ」旨のメッセージが出ます。ただし <strong>不採用理由の内訳</strong>は生の SessionMeta から即座に集計されるため、匿名サマリ 0 件でも表示されます。</p>
 
     <h2 id="analytics-privacy">プライバシー</h2>
     <div class="note">
-      <p>分析データは <strong>氏名・履歴書・面談内容を含まない</strong>匿名サマリです。元の面談を完全削除しても統計だけは長期保存できます。</p>
+      <p>ダッシュボードのデータソースは <strong>氏名・履歴書・面談内容を含まない</strong>匿名サマリ（<code>data/analytics/&lt;idHash&gt;.json</code>）です。元の面談を完全削除しても統計だけは長期保存できます。</p>
+      <p>不採用理由の内訳のみ、生の SessionMeta（<code>data/sessions/&lt;id&gt;/session.json</code>）から集計されます。こちらもセッションを完全削除すると消えます。</p>
     </div>
   </article>
 
@@ -1708,6 +2099,252 @@ T5. 得意な言語と、その言語で気をつけていること
     </details>
 
     <details class="faq">
+      <summary>⑤ 総合スコアはどうやって計算されている？（計算式・ベースの詳細）</summary>
+      <div class="a">
+        <p>総合スコアは <strong>6 小軸のスコア × 小軸重みの重み付き平均</strong>で算出されます。全ユーザーで<strong>同じ計算式・同じベース</strong>が使われるよう、以下の 3 レイヤ構造になっています。</p>
+
+        <h3 style="margin-top:0.6em">ベース構造（2 大分類 × 3 小軸 = 6 軸）</h3>
+        <table>
+          <thead><tr><th>大分類</th><th>小軸</th><th>既定重み</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="3">人間性</td><td>主体性</td><td>3</td></tr>
+            <tr><td>コミュニケーション力</td><td>3</td></tr>
+            <tr><td>学習意欲</td><td>3</td></tr>
+            <tr><td rowspan="3">技術力</td><td>専門知識</td><td>3</td></tr>
+            <tr><td>問題解決力</td><td>3</td></tr>
+            <tr><td>設計力</td><td>3</td></tr>
+          </tbody>
+        </table>
+        <p>スケールは <code>0〜5</code>、<code>0.5 刻み</code>、<code>11 段階</code>。ベースは <code>data/master/eval_criteria.json</code> に定義され、<code>/master</code> 画面から編集します。</p>
+
+        <h3>計算フロー</h3>
+        <figure class="shot">
+          <div class="frame">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" style="width:100%;height:auto;background:#fafafa;font-family:inherit">
+              <defs>
+                <marker id="arrow-eval" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+                </marker>
+              </defs>
+
+              <!-- Left column: 6 sub-axes -->
+              <g font-size="12" fill="#1f2937">
+                <text x="30" y="20" font-weight="600" fill="#4f46e5">人間性</text>
+                <rect x="20" y="28" width="200" height="30" rx="4" fill="#e0e7ff" stroke="#4f46e5"/>
+                <text x="30" y="48">主体性  スコア 4.5 × 重み 3 = 13.5</text>
+                <rect x="20" y="63" width="200" height="30" rx="4" fill="#e0e7ff" stroke="#4f46e5"/>
+                <text x="30" y="83">コミュ  スコア 4.0 × 重み 3 = 12.0</text>
+                <rect x="20" y="98" width="200" height="30" rx="4" fill="#e0e7ff" stroke="#4f46e5"/>
+                <text x="30" y="118">学習意欲  スコア 5.0 × 重み 4 = 20.0</text>
+
+                <text x="30" y="155" font-weight="600" fill="#d97706">技術力</text>
+                <rect x="20" y="163" width="200" height="30" rx="4" fill="#fef3c7" stroke="#d97706"/>
+                <text x="30" y="183">専門知識  スコア 4.0 × 重み 4 = 16.0</text>
+                <rect x="20" y="198" width="200" height="30" rx="4" fill="#fef3c7" stroke="#d97706"/>
+                <text x="30" y="218">問題解決  スコア 4.5 × 重み 5 = 22.5</text>
+                <rect x="20" y="233" width="200" height="30" rx="4" fill="#fef3c7" stroke="#d97706"/>
+                <text x="30" y="253">設計力    スコア 4.0 × 重み 4 = 16.0</text>
+              </g>
+
+              <!-- Arrow to sums -->
+              <line x1="225" y1="145" x2="280" y2="145" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-eval)"/>
+              <text x="255" y="135" text-anchor="middle" font-size="11" fill="#2563eb">合計</text>
+
+              <!-- Middle column: sums -->
+              <g font-size="12" fill="#1f2937">
+                <rect x="290" y="60" width="180" height="60" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+                <text x="380" y="82" text-anchor="middle" font-weight="600">加重値の合計</text>
+                <text x="380" y="102" text-anchor="middle" font-size="12">13.5+12.0+20.0+</text>
+                <text x="380" y="116" text-anchor="middle" font-size="12">16.0+22.5+16.0 = 100.0</text>
+
+                <rect x="290" y="170" width="180" height="60" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+                <text x="380" y="192" text-anchor="middle" font-weight="600">重みの合計</text>
+                <text x="380" y="212" text-anchor="middle" font-size="12">3+3+4 + 4+5+4 = 23</text>
+              </g>
+
+              <!-- Arrow to division -->
+              <line x1="470" y1="90" x2="530" y2="140" stroke="#2563eb" stroke-width="2"/>
+              <line x1="470" y1="200" x2="530" y2="160" stroke="#2563eb" stroke-width="2"/>
+              <line x1="530" y1="150" x2="580" y2="150" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-eval)"/>
+              <text x="555" y="140" text-anchor="middle" font-size="11" fill="#2563eb">÷</text>
+
+              <!-- Right: total score -->
+              <rect x="580" y="115" width="160" height="70" rx="8" fill="#c7d2fe" stroke="#4338ca"/>
+              <text x="660" y="145" text-anchor="middle" font-weight="600" font-size="14">総合スコア</text>
+              <text x="660" y="170" text-anchor="middle" font-size="18" font-weight="700" fill="#4338ca">4.35</text>
+
+              <!-- Verdict block -->
+              <line x1="660" y1="185" x2="660" y2="220" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow-eval)"/>
+              <text x="670" y="205" font-size="11" fill="#2563eb">合格ライン 4.0 と比較</text>
+
+              <rect x="580" y="220" width="160" height="50" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+              <text x="660" y="240" text-anchor="middle" font-weight="600" font-size="13">4.35 ≥ 4.0 → 合格</text>
+              <text x="660" y="258" text-anchor="middle" font-size="11">（3.5 未満: 不合格 / 3.5〜3.99: 普通）</text>
+
+              <!-- Formula caption -->
+              <text x="30" y="300" font-size="13" fill="#374151" font-weight="600">計算式</text>
+              <text x="30" y="320" font-size="12" fill="#374151">大分類スコア = Σ(小軸スコア × 小軸重み) ÷ Σ(小軸重み)  ← 3 小軸で集計</text>
+              <text x="30" y="338" font-size="12" fill="#374151">総合スコア = Σ(全 6 小軸のスコア × 各小軸重み) ÷ Σ(全 6 小軸の重み)  ← フラット</text>
+              <text x="30" y="358" font-size="12" fill="#6b7280">※ 大分類自身には重みを持たず、6 軸フラットの加重平均で決まる。小数第 2 位で丸め。</text>
+            </svg>
+          </div>
+          <figcaption>NW 役割で入力例（学習意欲 5.0 / 問題解決 4.5 など）→ 総合スコア 4.35 → 合格判定までのフロー</figcaption>
+        </figure>
+
+        <h3>役割別の重み上書き（<code>ロール別</code> セクション）</h3>
+        <p>役割ごとに「見たい観点」が違うので、小軸重みと合格/普通ラインを上書きできます。例：</p>
+        <table>
+          <thead><tr><th>役割</th><th>主体性</th><th>コミュ</th><th>学習</th><th>専門</th><th>問題解決</th><th>設計</th><th>合格ライン</th></tr></thead>
+          <tbody>
+            <tr><td>Dev</td><td>3</td><td>3</td><td>4</td><td>4</td><td>5</td><td>4</td><td>4.0</td></tr>
+            <tr><td>NW</td><td>4</td><td>3</td><td>3</td><td>5</td><td>5</td><td>4</td><td>4.0</td></tr>
+            <tr><td>ITSupport</td><td>3</td><td>5</td><td>3</td><td>2</td><td>3</td><td>1</td><td>3.5</td></tr>
+            <tr><td>PMO</td><td>5</td><td>5</td><td>2</td><td>2</td><td>4</td><td>4</td><td>4.5</td></tr>
+          </tbody>
+        </table>
+        <p>ITSupport は「コミュ重み 5・設計力 1」で人間性寄り、PMO は「主体性・コミュ 各 5・合格ライン 4.5」で高い水準を要求、という具合に <strong>役割ごとに評価軸のバランスと合否閾値が変わります</strong>。</p>
+
+        <h3>② 条件凍結による「スナップショット固定」</h3>
+        <p>②「求める人材条件」で <strong>「条件を凍結する」</strong> ボタンを押すと、その時点の役割マスタ＋評価条件（重みも合格ラインも全部）が <code>conditions_snapshot.json</code> に保存されます。以降その面談の総合スコアは、<strong>凍結時点のベース</strong>で計算されます。</p>
+        <p>これにより、面談 3 か月後にマスタを触っても<strong>過去の面談スコアはブレません</strong>。逆に、まだ凍結していない面談は現在マスタで計算されるため、マスタ変更時は要注意です。</p>
+
+        <h3>全ユーザーで同じスコアを出すには</h3>
+        <ul>
+          <li><strong>eval_criteria.json を統一する</strong>：<code>/master</code> の「エクスポート」で JSON を配布 → 各ユーザーが「インポート」で同じ内容に揃える</li>
+          <li><strong>役割マスタも統一する</strong>：役割別の重み上書きは <code>eval_criteria.json</code> の <code>ロール別</code> セクション。マスタ配布に含まれる</li>
+          <li><strong>凍結タイミングを合わせる</strong>：マスタ更新前に凍結された面談は旧マスタで計算される。新旧の混在を避けたい場合は、全面談を凍結してからマスタを更新</li>
+          <li><strong>小軸スコア（0〜5）の付与基準を BARS で明文化</strong>：計算式は同じでも、そもそもの点数付けが人によってズレるとスコアもズレる。BARS（Behaviorally Anchored Rating Scale）の水準表を <code>/master</code> の評価条件本文に書いて共通化</li>
+        </ul>
+        <div class="tip">
+          <p>計算式そのものはコード内の <code>weightedAverage()</code>（<code>app/sessions/[id]/actions.ts</code>）で固定されているため、ここは全ユーザー共通です。ブレる要因は「ベース（重み・ライン）」と「小軸スコアの付与基準」の 2 点だけ。</p>
+        </div>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>/cost の金額はどうやって計算されている？（計算式の詳細）</summary>
+      <div class="a">
+        <p><code>/cost</code> の金額は、各 API 呼び出しについて以下の <strong>4 ステップ</strong>で概算しています。実額は Console／請求書を正としますが、感覚を掴む用途には十分な精度です。</p>
+
+        <figure class="shot">
+          <div class="frame">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" style="width:100%;height:auto;background:#fafafa;font-family:inherit">
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+                </marker>
+              </defs>
+              <!-- Row 1: input flow -->
+              <g font-size="13" fill="#1f2937">
+                <rect x="20" y="30" width="140" height="70" rx="8" fill="#e0e7ff" stroke="#4f46e5"/>
+                <text x="90" y="58" text-anchor="middle" font-weight="600">① 入力文字数</text>
+                <text x="90" y="80" text-anchor="middle" font-size="12">例: 10,000 字</text>
+
+                <line x1="160" y1="65" x2="220" y2="65" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+                <text x="190" y="55" text-anchor="middle" font-size="11" fill="#2563eb">÷ 2.5</text>
+
+                <rect x="220" y="30" width="140" height="70" rx="8" fill="#fef3c7" stroke="#d97706"/>
+                <text x="290" y="58" text-anchor="middle" font-weight="600">② 入力 token</text>
+                <text x="290" y="80" text-anchor="middle" font-size="12">4,000 token</text>
+
+                <line x1="360" y1="65" x2="420" y2="65" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+                <text x="390" y="55" text-anchor="middle" font-size="11" fill="#2563eb">× $3/M</text>
+
+                <rect x="420" y="30" width="140" height="70" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+                <text x="490" y="58" text-anchor="middle" font-weight="600">③ 入力 USD</text>
+                <text x="490" y="80" text-anchor="middle" font-size="12">$0.012</text>
+              </g>
+
+              <!-- Row 2: output flow -->
+              <g font-size="13" fill="#1f2937">
+                <rect x="20" y="130" width="140" height="70" rx="8" fill="#e0e7ff" stroke="#4f46e5"/>
+                <text x="90" y="158" text-anchor="middle" font-weight="600">① 出力文字数</text>
+                <text x="90" y="180" text-anchor="middle" font-size="12">例: 6,000 字</text>
+
+                <line x1="160" y1="165" x2="220" y2="165" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+                <text x="190" y="155" text-anchor="middle" font-size="11" fill="#2563eb">÷ 2.5</text>
+
+                <rect x="220" y="130" width="140" height="70" rx="8" fill="#fef3c7" stroke="#d97706"/>
+                <text x="290" y="158" text-anchor="middle" font-weight="600">② 出力 token</text>
+                <text x="290" y="180" text-anchor="middle" font-size="12">2,400 token</text>
+
+                <line x1="360" y1="165" x2="420" y2="165" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+                <text x="390" y="155" text-anchor="middle" font-size="11" fill="#2563eb">× $15/M</text>
+
+                <rect x="420" y="130" width="140" height="70" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+                <text x="490" y="158" text-anchor="middle" font-weight="600">③ 出力 USD</text>
+                <text x="490" y="180" text-anchor="middle" font-size="12">$0.036</text>
+              </g>
+
+              <!-- Merge to total USD -->
+              <line x1="560" y1="65" x2="600" y2="105" stroke="#2563eb" stroke-width="2"/>
+              <line x1="560" y1="165" x2="600" y2="125" stroke="#2563eb" stroke-width="2"/>
+              <line x1="600" y1="115" x2="620" y2="115" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+
+              <rect x="600" y="80" width="100" height="70" rx="8" fill="#fee2e2" stroke="#dc2626"/>
+              <text x="650" y="108" text-anchor="middle" font-weight="600" font-size="13">④ 合計 USD</text>
+              <text x="650" y="130" text-anchor="middle" font-size="12">$0.048</text>
+
+              <!-- To JPY -->
+              <line x1="650" y1="150" x2="650" y2="230" stroke="#2563eb" stroke-width="2" marker-end="url(#arrow)"/>
+              <text x="680" y="195" font-size="11" fill="#2563eb">× ¥162/$</text>
+
+              <rect x="590" y="230" width="120" height="70" rx="8" fill="#c7d2fe" stroke="#4338ca"/>
+              <text x="650" y="258" text-anchor="middle" font-weight="600" font-size="13">⑤ 金額 (JPY)</text>
+              <text x="650" y="280" text-anchor="middle" font-size="13" font-weight="600">¥7.78</text>
+
+              <!-- Formula legend -->
+              <text x="30" y="255" font-size="12" fill="#6b7280">単価 $3/M · $15/M は Sonnet 4.6 の入力／出力。</text>
+              <text x="30" y="275" font-size="12" fill="#6b7280">Haiku 4.5 なら 1/3、Opus 4.7 なら 1.67 倍。</text>
+              <text x="30" y="295" font-size="12" fill="#6b7280">為替は USD $1 = ¥162 で固定。</text>
+              <text x="30" y="315" font-size="12" fill="#6b7280">Sonnet 4.6 × 10K字入力 / 6K字出力 = ¥7.78</text>
+            </svg>
+          </div>
+          <figcaption>コスト計算フロー（Sonnet 4.6 × 入力 10K字 / 出力 6K字 の例）</figcaption>
+        </figure>
+
+        <h3 style="margin-top:1em">ステップ 1 &nbsp;文字数 → token</h3>
+        <p><code>tokens = ceil(chars ÷ 2.5)</code>。日本語の「1 token ≈ 2.5 文字」を採用（英語は 4 文字前後、混在の妥協値）。実際の tokenizer と差が出るため <strong>上限見積り</strong>として扱ってください。</p>
+
+        <h3>ステップ 2 &nbsp;token × 単価 → USD</h3>
+        <p><code>USD = tokens ÷ 1,000,000 × 単価</code>。単価はモデル別・入出力別に設定。<code>lib/pricing.ts</code> の <code>MODEL_PRICING</code> テーブルが正本：</p>
+        <table>
+          <thead><tr><th>モデル</th><th>入力 (per 1M tok)</th><th>出力 (per 1M tok)</th></tr></thead>
+          <tbody>
+            <tr><td>Claude Haiku 4.5</td><td>$1.00</td><td>$5.00</td></tr>
+            <tr><td>Claude Sonnet 4.6（既定）</td><td>$3.00</td><td>$15.00</td></tr>
+            <tr><td>Claude Opus 4.7</td><td>$5.00</td><td>$25.00</td></tr>
+            <tr><td>GPT-5.4</td><td>$2.50</td><td>$15.00</td></tr>
+            <tr><td>Gemini 3.5 Flash</td><td>$1.50</td><td>$9.00</td></tr>
+          </tbody>
+        </table>
+
+        <h3>ステップ 3 &nbsp;入力 + 出力 → 合計 USD</h3>
+        <p><code>totalUsd = inputUsd + outputUsd</code>。上図では $0.012 + $0.036 = $0.048。</p>
+
+        <h3>ステップ 4 &nbsp;USD → JPY 換算</h3>
+        <p><code>JPY = totalUsd × 162</code>。為替は <strong>USD $1 = ¥162 で固定</strong>（<code>lib/pricing.ts</code> の <code>USD_TO_JPY</code>）。円安局面では実額より少なめに、円高局面では多めに出ます。</p>
+
+        <h3>実際の /cost 画面での見え方</h3>
+        <figure class="shot">
+          <div class="frame">
+            <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+            <img src="マニュアル/assets/cost.png" alt="/cost 画面：この計算結果が KPI カードや月別・モデル別の集計として集約される">
+          </div>
+          <figcaption>各呼び出しごとに上記 4 ステップで金額が算出され、月別・プロバイダ別・モデル別・工程別に集計表示される。</figcaption>
+        </figure>
+
+        <h3>算入されないもの（＝ 見積りが多めに出る要因）</h3>
+        <ul>
+          <li><strong>Prompt caching 割引</strong>：Anthropic prompt cache のヒット時は入力単価が 10 % / 25 % に下がるが、本ツールは未計算</li>
+          <li><strong>Batch API 割引</strong>：Batch モードは 50 % 割引だが、本ツールは同期呼び出し前提</li>
+          <li><strong>tokenizer 精度</strong>：実 tokenizer より粗い「文字数 ÷ 2.5」で概算</li>
+        </ul>
+        <p>そのため <code>/cost</code> の表示は「これ以下に収まる」<strong>上限見積り</strong>と読むのが安全です。</p>
+      </div>
+    </details>
+
+    <details class="faq">
       <summary>データは PC のどこに保存されている？</summary>
       <div class="a">既定では <code>data/</code> フォルダ配下（求人情報・面談セッション・監査ログ・バックアップ）。保存先を変えたい場合は <code>/settings</code> の <strong>「データ保存先」</strong> で任意フォルダを指定できます。OneDrive など同期フォルダに変えれば別 PC からも同じデータを開けます。</div>
     </details>
@@ -1733,7 +2370,7 @@ T5. 得意な言語と、その言語で気をつけていること
     <p class="subtitle">よくある問題と対処。</p>
 
     <h2 id="trouble-browser">ブラウザが自動で開かない</h2>
-    <p>手動で <a href="http://127.0.0.1:3939" target="_blank">http://127.0.0.1:3939</a> を開いてください。それでも繋がらない場合：</p>
+    <p>手動で <a href="http://localhost:3939" target="_blank">http://localhost:3939</a> を開いてください。それでも繋がらない場合：</p>
     <ul>
       <li>コマンドプロンプトに「<code>Ready</code>」と表示されたか確認</li>
       <li>ファイアウォール / セキュリティソフトが <code>node.exe</code> をブロックしていないか</li>

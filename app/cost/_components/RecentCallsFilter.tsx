@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { fmtJpy } from "@/lib/pricing";
 import { PROVIDERS } from "@/lib/llm/registry";
 import type { ProviderId } from "@/lib/types";
+import { ActionLink } from "@/ui/action-link";
 
 /**
  * 直近呼び出しをフィルタ・折り畳み表示するクライアントコンポーネント。
@@ -153,13 +154,12 @@ export function RecentCallsFilter({
           {!expanded && filtered.length > initialLimit && (
             <tr>
               <td colSpan={7} className="text-center py-2">
-                <button
-                  type="button"
+                <ActionLink
                   onClick={() => setExpanded(true)}
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs"
                 >
                   残り {filtered.length - initialLimit} 件を表示 →
-                </button>
+                </ActionLink>
               </td>
             </tr>
           )}

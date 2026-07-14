@@ -1,12 +1,13 @@
 @echo off
+REM Force UTF-8 code page so Japanese/Chinese log lines don't corrupt.
+chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
 REM ================================================================
-REM  restore.bat - v3.2 spec §12.8.6 準拠（Layer 2 手動救援）
+REM  restore.bat - v3.2 spec section 12.8.6 (Layer 2 manual recovery)
 REM
-REM  updater.bat が崩れた / 電源断 / ブルースクリーン等で
-REM  自動 rollback が回らなかった時にユーザーが手動で実行する。
-REM  .backup/vX.Y.Z/ から選択して復元。
+REM  When updater.bat crashes / power loss / BSOD prevents auto-rollback,
+REM  the user runs this to manually restore from .backup/vX.Y.Z/.
 REM ================================================================
 
 cd /d "%~dp0.."
@@ -35,7 +36,7 @@ echo Available backups:
 dir /b /o-d "%BACKUP_ROOT%" 2>nul | findstr /R "^v[0-9]"
 echo.
 
-REM 最新のバックアップをデフォルト提案
+REM Suggest the newest backup as default
 set "LATEST="
 for /f "delims=" %%a in ('dir /b /o-d "%BACKUP_ROOT%" 2^>nul ^| findstr /R "^v[0-9]"') do (
     if not defined LATEST set "LATEST=%%a"
@@ -67,7 +68,7 @@ if /i not "%CONFIRM%"=="Y" (
     exit /b 0
 )
 
-REM Port 3939 の実行中サーバを確認、あれば停止するようユーザーに促す
+REM Warn if server is still running on port 3939
 netstat -ano | findstr /C:"127.0.0.1:3939" /C:"[::1]:3939" | findstr "LISTENING" >nul
 if not errorlevel 1 (
     echo.
@@ -94,7 +95,7 @@ if exist "%BACKUP_DIR%\package.json" copy /y "%BACKUP_DIR%\package.json" "%PROJE
 if exist "%BACKUP_DIR%\package-lock.json" copy /y "%BACKUP_DIR%\package-lock.json" "%PROJECT_ROOT%\package-lock.json" >nul
 if exist "%BACKUP_DIR%\start.bat" copy /y "%BACKUP_DIR%\start.bat" "%PROJECT_ROOT%\start.bat" >nul
 
-REM state.json / lock を clean
+REM Clean state.json / lock
 if exist "%PROJECT_ROOT%\data\.update\state.json" (
     > "%PROJECT_ROOT%\data\.update\state.json" echo {"phase":"idle"}
 )

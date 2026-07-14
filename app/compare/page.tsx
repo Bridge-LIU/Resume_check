@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Tip } from "@/ui/tooltip";
+import { ActionLink } from "@/ui/action-link";
 import { PageHeader } from "@/app/_components/PageHeader";
 import {
   getConditionsSnapshot,
@@ -332,12 +333,11 @@ export default async function ComparePage({ searchParams }: { searchParams: SP }
                 {cols.map((c) => (
                   <th key={c.meta.id} className="text-left px-4 py-2 font-medium min-w-[180px]">
                     <div className="flex items-center gap-2">
-                      <Link
-                        href={`/sessions/${encodeURIComponent(c.meta.id)}`}
-                        className="font-semibold text-foreground hover:underline"
-                      >
-                        {c.meta.氏名}
-                      </Link>
+                      <ActionLink asChild variant="name" className="font-semibold">
+                        <Link href={`/sessions/${encodeURIComponent(c.meta.id)}`}>
+                          {c.meta.氏名}
+                        </Link>
+                      </ActionLink>
                       <span className={rolePillClass(c.meta.役割)}>{c.meta.役割}</span>
                     </div>
                     <div className="text-2xs text-muted-foreground opacity-70 tabular mt-0.5">

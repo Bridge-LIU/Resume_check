@@ -3,6 +3,7 @@ import { listSessions, listRoles, getEvalCriteria } from "@/lib/storage";
 import type { SessionMeta } from "@/lib/types";
 import { STATUS_CARD_BG, STATUS_DOT, STATUS_ICON } from "@/lib/uiClass";
 import { seedSampleMasterAction } from "./master/actions";
+import { ActionLink } from "@/app/_components/ui/action-link";
 
 // 常にリクエスト時に再計算する（fs から listSessions を読むためビルド固化を避ける）
 export const dynamic = "force-dynamic";
@@ -114,12 +115,9 @@ export default async function HomePage() {
             >
               🚀 サンプルマスタを 1 クリック投入
             </button>
-            <Link
-              href="/master"
-              className="text-sm text-blue-700 hover:underline"
-            >
-              自分で作る →
-            </Link>
+            <ActionLink asChild>
+              <Link href="/master">自分で作る →</Link>
+            </ActionLink>
           </form>
           <div className="text-xs text-blue-700/70">
             投入されるもの: 5 役割（NW / Server / Dev / PMO / ITSupport） + 評価条件（5 軸）
@@ -295,9 +293,9 @@ export default async function HomePage() {
           <div className="flex items-center mb-3">
             <div className="text-xs text-muted-foreground uppercase tracking-widest">最近の活動</div>
             <div className="flex-1" />
-            <Link className="text-xs text-primary hover:underline" href="/list">
-              すべて表示
-            </Link>
+            <ActionLink asChild className="text-xs">
+              <Link href="/list">すべて表示</Link>
+            </ActionLink>
           </div>
           <ul className="space-y-2 text-sm">
             {recent.map((s) => (
@@ -345,12 +343,9 @@ function ActivityItem({ session, now }: { session: SessionMeta; now: Date }) {
       <span className="text-sm leading-none shrink-0" aria-hidden="true">
         {STATUS_ICON[session.status]}
       </span>
-      <Link
-        href={`/sessions/${session.id}`}
-        className="font-medium text-foreground hover:underline truncate"
-      >
-        {session.氏名}
-      </Link>
+      <ActionLink asChild variant="name" className="truncate">
+        <Link href={`/sessions/${session.id}`}>{session.氏名}</Link>
+      </ActionLink>
       <span className="text-muted-foreground truncate">— {label}</span>
       <div className="flex-1" />
       <span className="text-2xs text-muted-foreground opacity-70 shrink-0 tabular">

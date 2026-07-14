@@ -103,6 +103,11 @@ export function VersionCheckCard({ currentVersion }: Props) {
       if (data.updateSuccessFlag.shown) {
         setSuccessVersion(data.updateSuccessFlag.version);
         setModalOpen(true);
+        // 5 秒後にページ全体を reload して底部の currentVersion も新版に反映
+        // (成功時のみ、失敗時は reload しない)
+        setTimeout(() => {
+          window.location.reload();
+        }, 5000);
       }
       // downloaded を検知したら 1 回だけ apply を叩く
       if (data.state.phase === "downloaded" && !applyingRef.current) {
@@ -204,107 +209,121 @@ export function VersionCheckCard({ currentVersion }: Props) {
     checkError !== null ||
     (state.phase === "error" && !modalOpen);
 
+  // コンパクトモード: 新版なし + エラーなし → 1 行だけ
+  const compact = !showUpdateAvailable && !showError;
+
   return (
     <>
       <div className="bg-card rounded-xl border shadow-sm" data-manual-shot="version">
-        <div className="p-6 space-y-4">
-          {/* 標題行 */}
-          <div className="flex items-center gap-3">
-            <h3 className="font-bold">システムバージョン</h3>
-            {lastCheckedAt && (
-              <span className="text-xs text-muted-foreground ml-auto">
-                最終確認 {formatDateTime(lastCheckedAt)}
+        {compact ? (
+          /* コンパクト表示 (1 行) */
+          <div className="px-6 py-3 flex items-center gap-3">
+            <span className="text-sm font-bold">システムバージョン</span>
+            <span className="text-sm tabular text-muted-foreground">v{currentVersion}</span>
+            {state.phase === "idle" && lastCheckedAt && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                ✓ 最新版
               </span>
             )}
+            <span className="text-2xs text-muted-foreground ml-auto">
+              {lastCheckedAt ? `最終確認 ${formatDateTime(lastCheckedAt)}` : "未確認"}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="text-xs h-7 px-2.5"
+              onClick={handleCheck}
+              disabled={checking}
+            >
+              {checking ? "確認中..." : lastCheckedAt ? "再チェック" : "更新をチェック"}
+            </Button>
           </div>
-
-          {/* 状態別の中身 */}
-          {showUpdateAvailable && (
-            <div className="rounded-lg border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-4">
-              <div className="flex items-baseline gap-3">
-                <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-                  🎉 新しいバージョンが利用可能
+        ) : (
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <h3 className="font-bold">システムバージョン</h3>
+              {lastCheckedAt && (
+                <span className="text-xs text-muted-foreground ml-auto">
+                  最終確認 {formatDateTime(lastCheckedAt)}
                 </span>
-                {state.latest.publishedAt && (
-                  <span className="text-2xs text-muted-foreground ml-auto">
-                    公開日 {formatDateTime(state.latest.publishedAt)}
+              )}
+            </div>
+
+            {showUpdateAvailable && (
+              <div className="rounded-lg border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-4">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                    🎉 新しいバージョンが利用可能
                   </span>
+                  {state.latest.publishedAt && (
+                    <span className="text-2xs text-muted-foreground ml-auto">
+                      公開日 {formatDateTime(state.latest.publishedAt)}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-xl tabular font-medium text-muted-foreground">
+                    v{currentVersion}
+                  </span>
+                  <span className="text-muted-foreground">→</span>
+                  <span className="text-xl tabular font-bold text-emerald-600 dark:text-emerald-400">
+                    v{state.latest.version}
+                  </span>
+                </div>
+                {state.latest.notes && (
+                  <div className="text-xs text-muted-foreground mt-3 whitespace-pre-wrap max-h-32 overflow-y-auto border-t border-emerald-200 dark:border-emerald-800 pt-2">
+                    {state.latest.notes}
+                  </div>
                 )}
               </div>
-              <div className="flex items-baseline gap-2 mt-2">
-                <span className="text-xl tabular font-medium text-muted-foreground">
-                  v{currentVersion}
-                </span>
-                <span className="text-muted-foreground">→</span>
-                <span className="text-xl tabular font-bold text-emerald-600 dark:text-emerald-400">
-                  v{state.latest.version}
-                </span>
-              </div>
-              {state.latest.notes && (
-                <div className="text-xs text-muted-foreground mt-3 whitespace-pre-wrap max-h-32 overflow-y-auto border-t border-emerald-200 dark:border-emerald-800 pt-2">
-                  {state.latest.notes}
-                </div>
-              )}
-            </div>
-          )}
-
-          {!showUpdateAvailable && !showError && (
-            <div className="flex items-baseline gap-3">
-              <span className="text-sm text-muted-foreground">現在のバージョン</span>
-              <span className="text-lg tabular font-medium">v{currentVersion}</span>
-              {state.phase === "idle" && lastCheckedAt && (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-auto">
-                  ✓ 最新版を使用中
-                </span>
-              )}
-            </div>
-          )}
-
-          {showError && (
-            <div
-              role="alert"
-              className="border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800 text-red-800 dark:text-red-200 text-sm rounded px-3 py-2"
-            >
-              <div>チェックに失敗しました:</div>
-              <div className="text-xs mt-1">
-                {checkError ??
-                  (state.phase === "error" ? state.message : "不明なエラー")}
-              </div>
-            </div>
-          )}
-
-          {/* ボタン */}
-          <div className="flex justify-end gap-2 pt-1">
-            <Button asChild variant="outline" size="sm" className="text-xs">
-              <a
-                href="https://github.com/Bridge-LIU/Resume_check/releases"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Releases を開く
-              </a>
-            </Button>
-            {showUpdateAvailable ? (
-              <Button
-                type="button"
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={handleUpdate}
-              >
-                🚀 今すぐ更新
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleCheck}
-                disabled={checking}
-              >
-                {checking ? "確認中..." : lastCheckedAt ? "再チェック" : "更新をチェック"}
-              </Button>
             )}
+
+            {showError && (
+              <div
+                role="alert"
+                className="border border-red-300 bg-red-50 dark:bg-red-950/30 dark:border-red-800 text-red-800 dark:text-red-200 text-sm rounded px-3 py-2"
+              >
+                <div>チェックに失敗しました:</div>
+                <div className="text-xs mt-1">
+                  {checkError ??
+                    (state.phase === "error" ? state.message : "不明なエラー")}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button asChild variant="outline" size="sm" className="text-xs">
+                <a
+                  href="https://github.com/Bridge-LIU/Resume_check/releases"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Releases を開く
+                </a>
+              </Button>
+              {showUpdateAvailable ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={handleUpdate}
+                >
+                  🚀 今すぐ更新
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCheck}
+                  disabled={checking}
+                >
+                  {checking ? "確認中..." : lastCheckedAt ? "再チェック" : "更新をチェック"}
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Modal: 進行中 or 成功直後 or 明示 error */}

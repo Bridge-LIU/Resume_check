@@ -22,6 +22,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { ApiError, apiErrorResponse, ensureLocalOrigin } from "@/lib/apiError";
+import { getProjectRoot } from "@/lib/storage";
 import { getCurrentVersion } from "@/lib/version";
 import {
   getStagingExtractedDir,
@@ -76,10 +77,19 @@ export async function POST(req: Request) {
     const from = getCurrentVersion();
     const to = latest.version;
     const startedAt = new Date().toISOString();
+    const projectRoot = getProjectRoot();
 
-    // updater.bat のパス（scripts/ 直下、配布 ZIP に同梱される想定）
-    const updaterBat = path.join(process.cwd(), "scripts", "updater.bat");
+    // updater.bat のパス（プロジェクト根の scripts/ 直下、配布 ZIP に同梱される）
+    // ⚠️ process.cwd() を使わない: standalone モードでは cwd = .next/standalone/ になる
+    const updaterBat = path.join(projectRoot, "scripts", "updater.bat");
     if (!fs.existsSync(updaterBat)) {
+      // 前段でエラーになるので state を error に落として modal がスタックしないようにする
+      writeState({
+        phase: "error",
+        message: "updater.bat が見つかりません。配布 ZIP が正しく展開されていません。",
+        phaseFailed: "applying",
+        at: new Date().toISOString(),
+      });
       throw new ApiError(
         "UPDATER_MISSING",
         "updater.bat が見つかりません。配布 ZIP が正しく展開されていません。",
@@ -98,17 +108,19 @@ export async function POST(req: Request) {
     const extractDir = getStagingExtractedDir();
     fs.mkdirSync(extractDir, { recursive: true });
 
-    // updater.bat を detached spawn。cmd 窓が新しく開き、Node プロセスとは独立に走る。
-    // stdio: "ignore" で親プロセス（Node）と切り離す → Node が process.exit しても bat は生き残る。
+    // updater.bat を detached + hidden spawn。
+    // windowsHide: true + `start` を省く → updater.bat の cmd 窓は表示されない。
+    // ログは data/.update/updater.log にファイル出力され、UI モーダルが tail 表示するので
+    // ユーザーは cmd 窓を見なくても進捗を確認できる（かつ Quick Edit で誤クリックする心配もない）。
     const child = spawn(
       "cmd",
-      ["/c", "start", "", "/wait", updaterBat, zipPath, extractDir, to, from],
+      ["/c", updaterBat, zipPath, extractDir, to, from],
       {
         detached: true,
         stdio: "ignore",
         shell: false,
-        windowsHide: false,
-        cwd: process.cwd(),
+        windowsHide: true,
+        cwd: projectRoot,
       },
     );
     child.unref();

@@ -39,10 +39,12 @@ import type {
   Minutes,
   Mode,
   Questions,
+  RejectReason,
   Role,
   SessionMeta,
   SubAxisEvaluation,
 } from "@/lib/types";
+import { REJECT_REASONS } from "@/lib/types";
 import { CATEGORY_KEYS } from "@/lib/types";
 import { writeAudit } from "@/lib/auditLog";
 import { flattenToItems, parseQuestions } from "@/lib/questionParser";
@@ -128,17 +130,52 @@ export async function toggleHoldAction(id: string, hold: boolean): Promise<void>
 export async function setResultAction(
   id: string,
   result: "採用" | "不採用" | "未確定",
+  rejectReasons?: RejectReason[],
+  rejectNote?: string,
 ): Promise<void> {
   const meta = getSessionMeta(id);
   if (!meta) throw new Error("セッションが見つかりません");
-  saveSessionMeta({ ...meta, result });
+
+  // 不採用時は理由を必須（少なくとも 1 つ）。UI 側で先に検証する前提だが、
+  // 別ルート（直接呼び出し等）から不正な状態が来ないよう Server 側でも弾く。
+  let reasons: RejectReason[] | undefined;
+  let note: string | undefined;
+  if (result === "不採用") {
+    const dedup = Array.from(new Set(rejectReasons ?? [])).filter(
+      (r): r is RejectReason => (REJECT_REASONS as readonly string[]).includes(r),
+    );
+    if (dedup.length === 0) {
+      throw new Error("不採用理由を 1 つ以上選択してください");
+    }
+    reasons = dedup;
+    const trimmed = (rejectNote ?? "").trim();
+    // 自由文は長すぎたら Server Action ペイロード制限に触れないよう先に切る
+    note = trimmed.length > 2000 ? trimmed.slice(0, 2000) : trimmed || undefined;
+  } else {
+    // 採用 / 未確定 に切り替わったら理由は消す（脏データ防止）
+    reasons = undefined;
+    note = undefined;
+  }
+
+  saveSessionMeta({
+    ...meta,
+    result,
+    rejectReasons: reasons,
+    rejectNote: note,
+  });
   writeAudit("session.saveEvaluation", {
     sessionId: id,
-    meta: { kind: "setResult", result },
+    meta: {
+      kind: "setResult",
+      result,
+      rejectReasons: reasons,
+      hasNote: !!note,
+    },
   });
   bumpSession(id);
   revalidatePath("/");
   revalidatePath("/list");
+  revalidatePath("/analytics");
 }
 
 /**

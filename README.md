@@ -6,7 +6,7 @@
 
 ```powershell
 npm install
-npm run dev    # http://127.0.0.1:3939 で開発サーバ
+npm run dev    # http://localhost:3939 で開発サーバ
 ```
 
 エンドユーザ向けの起動は `start.bat` をダブルクリック（初回のみ `npm install` + `next build`、以降はビルド済みで数秒起動）。操作マニュアルは `運用マニュアル.HTML` をダブルクリック、もしくはアプリ起動後に `/manual` からも同じ内容を配信。

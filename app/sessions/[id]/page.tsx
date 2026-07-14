@@ -150,6 +150,8 @@ export default async function SessionPage({
           sessionId={meta.id}
           initialHold={meta.hold}
           initialResult={meta.result}
+          initialRejectReasons={meta.rejectReasons}
+          initialRejectNote={meta.rejectNote}
           current氏名={meta.氏名}
           current役割={meta.役割}
           availableRoles={availableRoles}
@@ -161,7 +163,7 @@ export default async function SessionPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-6 min-h-[720px]">
         {/* Stepper (lg 未満では上に横積み) */}
-        <aside className="lg:col-span-1 border-b lg:border-b-0 lg:border-r p-3">
+        <aside className="lg:col-span-1 border-b lg:border-b-0 lg:border-r p-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           <div className="text-xs text-muted-foreground uppercase tracking-widest mb-3">
             進捗 {Object.values(done).filter(Boolean).length} / {STEPS.length}
           </div>

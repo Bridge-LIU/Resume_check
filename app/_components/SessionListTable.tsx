@@ -8,6 +8,7 @@ import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import { Tip } from "@/ui/tooltip";
 import { useConfirm } from "@/ui/use-confirm";
+import { ActionLink } from "@/ui/action-link";
 import {
   bulkSoftDeleteSessionsAction,
   softDeleteSessionAction,
@@ -178,7 +179,7 @@ export function SessionListTable({
               <span className="text-emerald-600 mt-0.5">✓</span>
               <span>
                 猶予期間内（既定 <strong className="text-foreground">14 日</strong>）は
-                <Link href="/trash" className="text-primary hover:underline mx-1">ゴミ箱</Link>
+                <ActionLink asChild variant="inline" className="mx-1"><Link href="/trash">ゴミ箱</Link></ActionLink>
                 から復元可能
               </span>
             </li>
