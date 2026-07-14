@@ -49,16 +49,79 @@ if not errorlevel 1 (
     exit /b 0
 )
 
-REM Node.js check
+REM ================================================
+REM  Node.js 検出（3 段階）
+REM    1. `node-portable\node.exe` が存在（配布 ZIP に事前バンドル済） → それを使う
+REM    2. システム Node が入っていて v20 以上 → それを使う（開発者向け）
+REM    3. どちらも無ければ → nodejs.org から DL して `node-portable/` に展開
+REM  詳細は運用マニュアル.HTML の「Node.js の同梱について」参照。
+REM ================================================
+call :ensure_node
+if errorlevel 1 exit /b 1
+goto :after_node_check
+
+:ensure_node
+REM 優先 1: 配布 ZIP にバンドル済みのポータブル Node
+if exist "node-portable\node.exe" (
+    set "PATH=%CD%\node-portable;%PATH%"
+    for /f "tokens=*" %%v in ('node --version 2^>nul') do set NODE_VERSION=%%v
+    echo [OK] Portable Node.js !NODE_VERSION! （同梱版）
+    exit /b 0
+)
+
+REM 優先 2: システム Node（v20 以上のみ許可）
 where node > nul 2>&1
+if not errorlevel 1 (
+    for /f "tokens=*" %%v in ('node --version 2^>nul') do set NODE_VERSION=%%v
+    REM v22.12.0 のような文字列から先頭の "v" を取り除いた後にメジャー番号を抽出
+    for /f "tokens=1 delims=." %%a in ("!NODE_VERSION:v=!") do set NODE_MAJOR=%%a
+    if !NODE_MAJOR! GEQ 20 (
+        echo [OK] System Node.js !NODE_VERSION!
+        exit /b 0
+    )
+    echo [INFO] システム Node.js !NODE_VERSION! はサポート外 v20 未満、ポータブル版を用意します
+)
+
+REM 優先 3: 自動 DL（初回のみ 1〜2 分）
+echo.
+echo ================================================
+echo   初回セットアップ：Node.js ポータブル版を取得
+echo   ~30MB, 通常 1〜2 分で完了します
+echo   Downloading from nodejs.org ...
+echo ================================================
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://nodejs.org/dist/v22.12.0/node-v22.12.0-win-x64.zip' -OutFile 'node-portable.zip' -UseBasicParsing } catch { Write-Error $_; exit 1 }"
 if errorlevel 1 (
-    echo [ERROR] Node.js not found.
-    echo Please install Node.js 20 or newer: https://nodejs.org/
+    echo.
+    echo [ERROR] ダウンロードに失敗しました。
+    echo   1. インターネット接続を確認してください
+    echo   2. あるいは https://nodejs.org/ から Node.js 20 以上を手動インストールしてください
     exit /b 1
 )
 
-for /f "tokens=*" %%v in ('node --version') do set NODE_VERSION=%%v
-echo [OK] Node.js !NODE_VERSION!
+echo [Setup] 展開中...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path 'node-portable.zip' -DestinationPath '.' -Force"
+if errorlevel 1 (
+    echo [ERROR] 展開に失敗しました。node-portable.zip を削除して再試行してください。
+    exit /b 1
+)
+del /q "node-portable.zip" > nul 2>&1
+
+REM 展開後は "node-vXX.YY.Z-win-x64\" ができるので "node-portable\" にリネーム
+for /d %%d in ("node-v*-win-x64") do (
+    ren "%%d" "node-portable" > nul 2>&1
+)
+
+if not exist "node-portable\node.exe" (
+    echo [ERROR] ポータブル Node の展開に失敗しました。
+    exit /b 1
+)
+
+set "PATH=%CD%\node-portable;%PATH%"
+for /f "tokens=*" %%v in ('node --version 2^>nul') do set NODE_VERSION=%%v
+echo [OK] Portable Node.js !NODE_VERSION! （新規セットアップ完了）
+exit /b 0
+
+:after_node_check
 
 REM ================================================
 REM  Standalone bundle detection (spec decision 1 revised -> standalone prepackage).

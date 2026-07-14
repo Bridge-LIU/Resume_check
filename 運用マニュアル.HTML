@@ -764,12 +764,14 @@
 
     <h2 id="start-initial">初回</h2>
     <ol>
-      <li><strong>Node.js 20 以上</strong> をインストール（<a href="https://nodejs.org/ja/" target="_blank">nodejs.org</a> から、インストーラの「Add to PATH」にチェック）</li>
-      <li>プロジェクトフォルダを PC の好きな場所に置く</li>
-      <li><code>start-app.bat</code> をダブルクリック</li>
-      <li>初回だけ <code>npm install</code>（3〜5 分）と <code>next build</code>（1〜2 分）が走る</li>
-      <li>ブラウザが自動で開き <a href="http://localhost:3939" target="_blank">http://localhost:3939</a> が表示される</li>
+      <li>配布 ZIP を解凍して、フォルダを PC の好きな場所に置く</li>
+      <li><code>start.bat</code> をダブルクリック</li>
+      <li>数秒でブラウザが自動で開き <a href="http://localhost:3939" target="_blank">http://localhost:3939</a> が表示される</li>
     </ol>
+    <div class="tip">
+      <p><strong>Node.js は同梱しています</strong>。フォルダ内の <code>node-portable/</code> にポータブル版が入っており、追加のインストール作業は不要です。システムに Node.js を入れる必要はなく、既存の Node 環境にも影響しません。</p>
+      <p>ネットワーク経由で ZIP を落とすタイプの配布（node-portable を含まない ZIP）でも、<code>start.bat</code> が初回起動時に nodejs.org から自動で ~30MB のポータブル版を DL し、フォルダ内の <code>node-portable/</code> に展開します。2 回目以降は再 DL しません。</p>
+    </div>
 
     <h2 id="start-rerun">2 回目以降</h2>
     <p><code>start-app.bat</code> ダブルクリック → 数秒でブラウザが開きます。</p>

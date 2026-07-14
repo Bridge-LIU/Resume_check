@@ -1,0 +1,11 @@
+# Windows batch scripts MUST have CRLF line endings, otherwise cmd.exe
+# tokenizes the file as one big line and every space becomes a "command not found".
+# This applies both to git checkout and to files edited by any tool.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# PowerShell scripts also expect CRLF on Windows for reliable execution
+*.ps1 text eol=crlf
+
+# All other text files can use native line endings (git decides)
+* text=auto
