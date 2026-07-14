@@ -82,7 +82,13 @@ const nextConfig: NextConfig = {
   },
   // サーバ専用かつ Node の native/動的読込に依存するパッケージは
   // バンドル対象から外して RSC のトレース誤検出と build 不安定を回避する。
-  serverExternalPackages: ["exceljs", "unpdf", "mammoth", "xlsx", "pdfkit", "docx"],
+  //
+  // ⚠️ 2026-07-14 unpdf を除外リストから外した:
+  //   Turbopack の standalone build で `[externals]_unpdf_*.js` chunk が
+  //   実行時に "Failed to load chunk ... from module 90911" で失敗する事象を確認。
+  //   external 経路を経由せず SSR bundle に含めることで chunk 解決を回避する。
+  //   bundle サイズは ~2MB 増える見込み。
+  serverExternalPackages: ["exceljs", "mammoth", "xlsx", "pdfkit", "docx"],
 };
 
 export default nextConfig;
