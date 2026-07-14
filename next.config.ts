@@ -1,6 +1,59 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 配布 ZIP は `.next/standalone/` 一括同梱で npm install / build を端末側で回さない。
+  // v3.2 更新機構（docs/superpowers/specs/2026-07-13-version-check-update-design.md §12.8）
+  // が前提とする、方案 3（Next.js standalone 預打包）用の出力モード。
+  //
+  // 出力先: `.next/standalone/server.js` （+ 最小 node_modules）
+  //         + `.next/static/`（別途 コピーが必要）
+  //         + `public/`（別途 コピーが必要）
+  //
+  // 端末側 start.bat は `.next/standalone/server.js` の存在を検知して
+  // `node .next/standalone/server.js` を呼ぶ分岐を持つ想定。
+  output: "standalone",
+
+  // ⚠️ Next.js の outputFileTracing は `lib/storage.ts` が `process.cwd() + /data`
+  // にアクセスしていることを見て `data/` フォルダ全体（== ユーザーの面接データ）を
+  // standalone bundle に取り込んでしまう。以下は明示的な排除リスト。
+  outputFileTracingExcludes: {
+    "*": [
+      "./data/**",              // PII 保護（sessions / master / settings.json / analytics 全部）
+      "./docs/**",              // 開発ドキュメント
+      "./.preview/**",          // ローカル画面ショット・mockup
+      "./.superpowers/**",      // Claude Code 一時
+      "./.claude/**",           // Claude Code 設定
+      "./.git/**",              // git 履歴
+      "./.next/cache/**",       // build cache（standalone runtime 不要）
+      "./scripts/dev/**",       // 開発者専用スクリプト
+      "./マニュアル/**",         // マニュアル資材
+      "./運用マニュアル.HTML",  // 統合マニュアル HTML
+      "./AGENTS.md",
+      "./CLAUDE.md",
+      "./README.md",
+      "./GET",                  // 由来不明の 0 byte ファイル
+      "./start.bat",            // 起動スクリプトは配布 ZIP の root 直下に別配置
+      "./.env.local",           // ローカル環境変数
+      "./.env.local.example",
+      "./tsconfig.tsbuildinfo",
+    ],
+  },
+
+  // native / worker ファイルは Next.js の自動 trace で拾いきれない可能性があるため明示。
+  // 参考: node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/output.md
+  outputFileTracingIncludes: {
+    "*": [
+      // unpdf は pdf.js worker を lazy import。standalone で worker が欠けると PDF 抽出が壊れる
+      "./node_modules/unpdf/**/*.mjs",
+      "./node_modules/unpdf/**/*.js",
+      // word-extractor は WordDocument や関連 XML テンプレートを実行時に読む
+      "./node_modules/word-extractor/**/*.xml",
+      "./node_modules/word-extractor/**/*.js",
+      // pdfkit のフォント（PDF 生成時にフォントを埋め込むために必要）
+      "./node_modules/pdfkit/js/data/**/*",
+    ],
+  },
+
   experimental: {
     serverActions: {
       // 履歴書 PDF/DOCX/XLSX を Server Action 経由でアップロードするため、

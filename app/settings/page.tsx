@@ -19,9 +19,12 @@ import { RetentionManager } from "./_components/RetentionManager";
 import { BackupManager } from "./_components/BackupManager";
 import { ProvidersField } from "./_components/ProvidersField";
 import { SaveSettingsButton } from "./_components/SaveSettingsButton";
+import { VersionCheckCard } from "./_components/VersionCheckCard";
+import { getCurrentVersion } from "@/lib/version";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Switch } from "@/ui/switch";
+import { Button } from "@/ui/button";
 import { PROVIDER_IDS_ACTIVE } from "@/lib/llm/registry";
 
 const STAGES: LlmStage[] = ["summary", "questions", "evaluation", "evaluationStrict"];
@@ -160,6 +163,8 @@ export default async function Page({
       defaultModel: s.providers[id].defaultModel,
     };
   }
+
+  const currentVersion = getCurrentVersion();
 
   return (
     <div className="space-y-4">
@@ -401,6 +406,9 @@ export default async function Page({
         </div>
       </div>
 
+      {/* システムバージョン + 更新チェック（監査ログの上） */}
+      <VersionCheckCard currentVersion={currentVersion} />
+
       {/* 監査ログリーダー */}
       <AuditLogViewer limit={50} />
 
@@ -424,16 +432,14 @@ export default async function Page({
               をダブルクリックすれば起動します（Node.js 20 以降が必要）。
             </div>
             <div>
-              <a
-                href="/api/settings/export-clean"
-                className="border hover:bg-zinc-50 text-sm px-3 py-1 rounded inline-block"
-              >
-                配布用 ZIP をダウンロード
-              </a>
+              <Button asChild variant="outline" size="sm">
+                <a href="/api/settings/export-clean">配布用 ZIP をダウンロード</a>
+              </Button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
