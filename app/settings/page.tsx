@@ -49,9 +49,16 @@ async function updateSettings(formData: FormData) {
       formData.get(`provider_${id}_defaultModel`) ?? current.providers[id].defaultModel,
     );
     const models: ProviderConfig["models"] = { ...current.providers[id].models };
+    // defaultModel が変わったら per-stage 上書きが無い stage は defaultModel に同期。
+    // ProvidersField には per-stage 入力が無いため、この経路が実質的な「全 stage デフォルト適用」になる。
+    const defaultChanged = defaultModel !== current.providers[id].defaultModel;
     for (const stage of STAGES) {
       const v = formData.get(`provider_${id}_model_${stage}`);
-      if (typeof v === "string" && v) models[stage] = v;
+      if (typeof v === "string" && v) {
+        models[stage] = v;
+      } else if (defaultChanged) {
+        models[stage] = defaultModel;
+      }
     }
     providers[id] = { key: nextKey, defaultModel, models };
   }

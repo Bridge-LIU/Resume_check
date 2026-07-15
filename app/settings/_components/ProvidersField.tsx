@@ -44,19 +44,34 @@ const PILL_BG: Record<ProviderId, string> = {
 export function ProvidersField({ defaultProvider, providers, envStatus }: Props) {
   const [selectedDefault, setSelectedDefault] = useState<ProviderId>(defaultProvider);
   const { confirm, ConfirmDialog } = useConfirm();
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // API キーブロック内のみ auto-save 化（他の設定は末尾の「保存」ボタンで確定）。
+  // setState は非同期 → setTimeout(0) で React 再レンダリング後に submit する
+  // ことで hidden input が新値を持ってからフォーム送信される。
+  const requestFormSubmit = () => {
+    setTimeout(() => {
+      const form = sectionRef.current?.closest("form") as HTMLFormElement | null;
+      form?.requestSubmit();
+    }, 0);
+  };
 
   return (
-    <section className="space-y-3">
+    <section ref={sectionRef} className="space-y-3">
       <div className="font-medium text-sm">AI プロバイダ設定</div>
       <div className="text-xs text-muted-foreground leading-relaxed">
         Anthropic Claude の API キーを入力すると ①③⑤ を API モードで実行できる。
         環境変数（<code className="bg-muted px-1 rounded">ANTHROPIC_API_KEY</code>）が設定されている場合はそちらが優先。
+        この節の変更は自動保存されます。
       </div>
 
       <RadioGroup
         name="defaultProvider"
         value={selectedDefault}
-        onValueChange={(v) => setSelectedDefault(v as ProviderId)}
+        onValueChange={(v) => {
+          setSelectedDefault(v as ProviderId);
+          requestFormSubmit();
+        }}
         className="space-y-3 gap-0"
       >
         {PROVIDER_IDS_ACTIVE.map((id) => {
@@ -71,6 +86,7 @@ export function ProvidersField({ defaultProvider, providers, envStatus }: Props)
               isDefault={selectedDefault === id}
               hasEnvKey={!!envStatus[id]}
               confirm={confirm}
+              onAutoSave={requestFormSubmit}
             />
           );
         })}
@@ -87,6 +103,7 @@ function ProviderCard({
   isDefault,
   hasEnvKey,
   confirm,
+  onAutoSave,
 }: {
   id: ProviderId;
   info: (typeof PROVIDERS)[ProviderId];
@@ -94,6 +111,7 @@ function ProviderCard({
   isDefault: boolean;
   hasEnvKey: boolean;
   confirm: ReturnType<typeof useConfirm>["confirm"];
+  onAutoSave: () => void;
 }) {
   const hasFileKey = config.hasFileKey;
   const isConfigured = hasFileKey || hasEnvKey;
@@ -229,7 +247,13 @@ function ProviderCard({
           {removeQueued && (
             <input type="hidden" name={`remove_${id}`} value="on" />
           )}
-          <Select value={selectedModel} onValueChange={setSelectedModel}>
+          <Select
+            value={selectedModel}
+            onValueChange={(v) => {
+              setSelectedModel(v);
+              onAutoSave();
+            }}
+          >
             <SelectTrigger
               className="h-9 text-xs w-auto whitespace-nowrap"
               title={`${info.shortName} の既定モデル`}
