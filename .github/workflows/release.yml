@@ -1,0 +1,216 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      # -------------------------------------------------------------------
+      # Step 1: Checkout + sync package.json version to tag
+      # -------------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync package.json version to tag
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+          $pkg.version = $version
+          $pkg | ConvertTo-Json -Depth 100 | Set-Content package.json -Encoding utf8
+          Write-Host "Version set to $version (from tag $tag)"
+
+      # -------------------------------------------------------------------
+      # Step 2: Setup Node 22.22.2 (exact — must match portable Node ABI)
+      # -------------------------------------------------------------------
+      - name: Setup Node.js 22.22.2
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: 'npm'
+
+      # -------------------------------------------------------------------
+      # Step 3: Install + build standalone
+      # -------------------------------------------------------------------
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build standalone
+        run: npm run build
+
+      # -------------------------------------------------------------------
+      # Step 4: Clean standalone pollution
+      #   next.config.ts の outputFileTracingExcludes で大部分を排除しているが、
+      #   Turbopack のトレースが取りこぼす場合の防衛層。
+      # -------------------------------------------------------------------
+      - name: Clean standalone bundle
+        shell: pwsh
+        run: |
+          $strayDirs = @(
+            'app', 'lib', 'data', 'docs', 'test-release', 'scripts',
+            '.preview', '.superpowers', '.claude', '.git',
+            'マニュアル', 'public'
+          )
+          foreach ($d in $strayDirs) {
+            $path = ".next/standalone/$d"
+            if (Test-Path $path) {
+              Remove-Item -Recurse -Force $path
+              Write-Host "Removed dir: $d"
+            }
+          }
+
+          $strayFiles = @(
+            'AGENTS.md', 'CLAUDE.md', 'README.md', 'GET',
+            'start.bat', '運用マニュアル.HTML',
+            'eslint.config.mjs', 'instrumentation.ts', 'next.config.ts',
+            'postcss.config.mjs', 'tsconfig.json', 'tsconfig.tsbuildinfo',
+            'next-env.d.ts',
+            '.env.local', '.env.local.example',
+            '.gitignore', '.gitattributes', '.heartbeat-arrivals.log',
+            '.nvmrc'
+          )
+          foreach ($f in $strayFiles) {
+            $path = ".next/standalone/$f"
+            if (Test-Path $path) {
+              Remove-Item -Force $path
+              Write-Host "Removed file: $f"
+            }
+          }
+
+          if (Test-Path ".next/standalone/node_modules/.cache") {
+            Remove-Item -Recurse -Force ".next/standalone/node_modules/.cache"
+            Write-Host "Removed node_modules/.cache"
+          }
+
+      - name: Verify standalone is clean
+        shell: pwsh
+        run: |
+          $allowedDirs = @('node_modules', '.next')
+          $stray = Get-ChildItem .next/standalone -Directory | Where-Object {
+            $_.Name -notin $allowedDirs
+          }
+          if ($stray) {
+            Write-Error "Standalone still has stray dirs: $($stray.Name -join ', ')"
+            exit 1
+          }
+          # server.js は Next.js が生成するエントリ。存在確認だけしておく。
+          if (-not (Test-Path ".next/standalone/server.js")) {
+            Write-Error "Missing .next/standalone/server.js"
+            exit 1
+          }
+          Write-Host "Standalone clean check passed"
+
+      # -------------------------------------------------------------------
+      # Step 5: Download portable Node 22.22.2 (bundled inside distribution)
+      # -------------------------------------------------------------------
+      - name: Download portable Node 22.22.2
+        shell: pwsh
+        run: |
+          $url = 'https://nodejs.org/dist/v22.22.2/node-v22.22.2-win-x64.zip'
+          Invoke-WebRequest -Uri $url -OutFile node-portable.zip -UseBasicParsing
+          Expand-Archive -Path node-portable.zip -DestinationPath node-portable-tmp -Force
+          Move-Item node-portable-tmp/node-v22.22.2-win-x64 node-portable
+          Remove-Item -Force node-portable.zip
+          Remove-Item -Recurse -Force node-portable-tmp
+          # 動作確認: 埋め込む node.exe のバージョンを表示する
+          & ./node-portable/node.exe --version
+
+      # -------------------------------------------------------------------
+      # Step 6: Assemble distribution pkg
+      # -------------------------------------------------------------------
+      - name: Assemble distribution pkg
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force pkg | Out-Null
+          New-Item -ItemType Directory -Force pkg/.next | Out-Null
+          New-Item -ItemType Directory -Force pkg/scripts | Out-Null
+          New-Item -ItemType Directory -Force pkg/data/master/roles | Out-Null
+
+          # standalone bundle (内蔵) + static
+          Move-Item .next/standalone pkg/.next/standalone
+          Copy-Item -Recurse .next/static pkg/.next/static
+
+          # public / start.bat / scripts
+          if (Test-Path public) {
+            Copy-Item -Recurse public pkg/public
+          }
+          Copy-Item start.bat pkg/start.bat
+          Copy-Item scripts/updater.bat pkg/scripts/updater.bat
+          Copy-Item scripts/restore.bat pkg/scripts/restore.bat
+
+          # portable Node
+          Move-Item node-portable pkg/node-portable
+
+          # マニュアル (エンドユーザ向け統合 HTML + 資材)
+          Copy-Item '運用マニュアル.HTML' 'pkg/運用マニュアル.HTML'
+          Copy-Item -Recurse 'マニュアル' 'pkg/マニュアル'
+
+          # 既定マスタ (5 役割 + 評価条件)
+          Copy-Item data/master/eval_criteria.json pkg/data/master/eval_criteria.json
+          foreach ($role in @('Dev', 'ITSupport', 'NW', 'PMO', 'Server')) {
+            Copy-Item "data/master/roles/$role.json" "pkg/data/master/roles/$role.json"
+          }
+
+          Write-Host "=== pkg tree (depth 2) ==="
+          Get-ChildItem pkg -Recurse -Depth 2 | Select-Object FullName
+
+      # -------------------------------------------------------------------
+      # Step 7: Safeguard — bat ファイルは ASCII のみ かつ chcp 65001 必須
+      # -------------------------------------------------------------------
+      - name: Verify bat ASCII-only + chcp safeguard
+        shell: pwsh
+        run: |
+          $bats = @(
+            'pkg/start.bat',
+            'pkg/scripts/updater.bat',
+            'pkg/scripts/restore.bat'
+          )
+          foreach ($f in $bats) {
+            $bytes = [System.IO.File]::ReadAllBytes($f)
+            $nonAscii = $bytes | Where-Object { $_ -gt 127 }
+            if ($nonAscii.Count -gt 0) {
+              Write-Error "$f contains non-ASCII bytes; violates ASCII-only rule"
+              exit 1
+            }
+            $content = Get-Content $f -Raw
+            if ($content -notmatch 'chcp 65001') {
+              Write-Error "$f missing 'chcp 65001'; add before any user-visible output"
+              exit 1
+            }
+          }
+          Write-Host "ASCII + chcp check passed"
+
+      # -------------------------------------------------------------------
+      # Step 8: Package into ZIP (pkg 内容が ZIP のルートに来るよう Push-Location)
+      # -------------------------------------------------------------------
+      - name: Compress pkg to app.zip
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $zipName = "app-$tag.zip"
+          Push-Location pkg
+          Compress-Archive -Path * -DestinationPath "../$zipName" -Force
+          Pop-Location
+          $size = [math]::Round((Get-Item $zipName).Length / 1MB, 2)
+          Write-Host "Created $zipName ($size MB)"
+          # $GITHUB_ENV に流し込んで後段 step で参照する
+          "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # -------------------------------------------------------------------
+      # Step 9: Create GitHub Release
+      # -------------------------------------------------------------------
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ZIP_NAME }}
+          draft: false
+          generate_release_notes: true
