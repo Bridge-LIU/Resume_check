@@ -29,8 +29,13 @@ jobs:
           $pkg | ConvertTo-Json -Depth 100 | Set-Content package.json -Encoding utf8
           Write-Host "Version set to $version (from tag $tag)"
 
+      # ===================================================================
+      # Section A: Build (steps 2-6)
+      # ===================================================================
+
       # -------------------------------------------------------------------
       # Step 2: Setup Node 22.22.2 (exact — must match portable Node ABI)
+      #   `cache: 'npm'` により package-lock.json 基準で node_modules を再利用。
       # -------------------------------------------------------------------
       - name: Setup Node.js 22.22.2
         uses: actions/setup-node@v4
@@ -39,7 +44,21 @@ jobs:
           cache: 'npm'
 
       # -------------------------------------------------------------------
-      # Step 3: Install + build standalone
+      # Step 3a: Cache .next/cache (Turbopack / SWC 中間成果物)
+      #   Next.js 公式推奨のビルド高速化。version bump のみのタグは
+      #   コード差分が小さいため命中率が高い。lock or 全ソースが変わると
+      #   自然に miss して再ビルド、脏 cache が残らない。
+      # -------------------------------------------------------------------
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**/*.ts', 'app/**/*.tsx', 'lib/**/*.ts', 'next.config.ts') }}
+          restore-keys: |
+            nextjs-${{ hashFiles('package-lock.json') }}-
+
+      # -------------------------------------------------------------------
+      # Step 3b: Install + build standalone
       # -------------------------------------------------------------------
       - name: Install dependencies
         run: npm ci
@@ -109,18 +128,37 @@ jobs:
           }
           Write-Host "Standalone clean check passed"
 
+      # ===================================================================
+      # Section B: Package (steps 5-8)
+      # ===================================================================
+
       # -------------------------------------------------------------------
-      # Step 5: Download portable Node 22.22.2 (bundled inside distribution)
+      # Step 5a: Cache portable Node ZIP (nodejs.org からの DL を省く)
+      #   Node バージョンを key にするので、上げた瞬間だけ miss、それ以外は常時 HIT。
+      # -------------------------------------------------------------------
+      - name: Cache portable Node ZIP
+        id: cache-portable-node
+        uses: actions/cache@v4
+        with:
+          path: node-portable.zip
+          key: portable-node-22.22.2-win-x64
+
+      # -------------------------------------------------------------------
+      # Step 5b: Download portable Node 22.22.2 (bundled inside distribution)
       # -------------------------------------------------------------------
       - name: Download portable Node 22.22.2
         shell: pwsh
         run: |
-          $url = 'https://nodejs.org/dist/v22.22.2/node-v22.22.2-win-x64.zip'
-          Invoke-WebRequest -Uri $url -OutFile node-portable.zip -UseBasicParsing
+          if (-not (Test-Path node-portable.zip)) {
+            $url = 'https://nodejs.org/dist/v22.22.2/node-v22.22.2-win-x64.zip'
+            Invoke-WebRequest -Uri $url -OutFile node-portable.zip -UseBasicParsing
+          } else {
+            Write-Host "portable Node ZIP restored from cache"
+          }
           Expand-Archive -Path node-portable.zip -DestinationPath node-portable-tmp -Force
           Move-Item node-portable-tmp/node-v22.22.2-win-x64 node-portable
-          Remove-Item -Force node-portable.zip
           Remove-Item -Recurse -Force node-portable-tmp
+          # ZIP 自体は cache に残すため削除しない
           # 動作確認: 埋め込む node.exe のバージョンを表示する
           & ./node-portable/node.exe --version
 
@@ -191,6 +229,9 @@ jobs:
 
       # -------------------------------------------------------------------
       # Step 8: Package into ZIP (pkg 内容が ZIP のルートに来るよう Push-Location)
+      #   Compress-Archive は単スレッドで node_modules 級の小ファイル群に非常に遅い。
+      #   Windows runner に予装される 7-Zip の `-tzip -mmt=on` は標準 ZIP 形式を
+      #   マルチスレッドで生成する。客户端の解凍互換性は同じ (ZIP 拡張子)。
       # -------------------------------------------------------------------
       - name: Compress pkg to app.zip
         shell: pwsh
@@ -198,12 +239,17 @@ jobs:
           $tag = "${{ github.ref_name }}"
           $zipName = "app-$tag.zip"
           Push-Location pkg
-          Compress-Archive -Path * -DestinationPath "../$zipName" -Force
+          # -tzip: ZIP 形式 / -mx=5: 標準圧縮 / -mmt=on: マルチスレッド
+          7z a -tzip -mx=5 -mmt=on "../$zipName" * | Out-Null
           Pop-Location
           $size = [math]::Round((Get-Item $zipName).Length / 1MB, 2)
           Write-Host "Created $zipName ($size MB)"
           # $GITHUB_ENV に流し込んで後段 step で参照する
           "ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      # ===================================================================
+      # Section C: Release (step 9)
+      # ===================================================================
 
       # -------------------------------------------------------------------
       # Step 9: Create GitHub Release
