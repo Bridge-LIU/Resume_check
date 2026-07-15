@@ -44,7 +44,7 @@ if errorlevel 1 (
 
 REM Prepare data\.update and log
 if not exist "%DATA_UPDATE_DIR%" mkdir "%DATA_UPDATE_DIR%"
-> "%LOG_FILE%" echo [%DATE% %TIME%] updater.bat started (v%OLD_VER% -^> v%NEW_VER%)
+> "%LOG_FILE%" echo [%DATE% %TIME%] updater.bat started (v%OLD_VER% to v%NEW_VER%)
 
 REM Lock (start.bat checks these to reject concurrent launch)
 > "%LOCK_FILE%" echo %DATE% %TIME% pid=%RANDOM%
@@ -53,7 +53,7 @@ if not exist "%PROJECT_ROOT%\.update" mkdir "%PROJECT_ROOT%\.update"
 
 call :log "================================================"
 call :log "  Interview AI Tool Updater v3.2 (standalone)"
-call :log "  v%OLD_VER% -^> v%NEW_VER%"
+call :log "  v%OLD_VER% to v%NEW_VER%"
 call :log "================================================"
 
 REM Give the previous server time to release file locks
@@ -153,50 +153,31 @@ REM ================================================================
 call :log "[2/3] Skipping npm install / build (standalone bundled)"
 
 REM ================================================================
-REM  [3/3] Start new version + poll /api/version until responsive
+REM  [3/3] Files ready. start.bat (the caller) will relaunch the server.
+REM  This bat does NOT spawn a new cmd -- control returns to start.bat's
+REM  :after_server_exit block, which loops back to :main and starts the
+REM  new server IN THE SAME cmd window (no flash, no popup).
+REM
+REM  Server readiness verification is handled by lib/updater.ts:selfHealOnBoot()
+REM  which runs at server startup. It compares getCurrentVersion() with
+REM  state.applying.to and transitions state.json to idle + success-flag when
+REM  the new server actually reports the expected version.
 REM ================================================================
-call :log "[3/3] Starting new version..."
-
-REM Launch new start.bat in a fresh visible cmd window (this is the server window
-REM the user will see and can close to stop the app).
-REM Note: We do NOT use windowsHide here — the new server window is intentionally
-REM visible so the user has an obvious way to stop the running app.
-start "" cmd /c "start.bat"
-
-REM curl polling: wait for new version response, max 20 minutes
-call :log "  Waiting for server to become ready..."
-set /a POLL_MAX=400
-set /a POLL_COUNT=0
-:poll_loop
-timeout /t 3 /nobreak >nul
-curl -s -o "%TEMP%\updater_ver.json" -w "%%{http_code}" http://localhost:3939/api/version >"%TEMP%\updater_code.txt" 2>nul
-set /p HTTPCODE=<"%TEMP%\updater_code.txt"
-if "%HTTPCODE%"=="200" (
-    findstr /C:"%NEW_VER%" "%TEMP%\updater_ver.json" >nul
-    if not errorlevel 1 (
-        call :log "  Server is up and reporting v%NEW_VER%"
-        goto :success
-    )
-)
-set /a POLL_COUNT+=1
-if %POLL_COUNT% GEQ %POLL_MAX% (
-    call :log "[ERROR] Server did not respond with v%NEW_VER% within 20 minutes"
-    goto :rollback
-)
-goto :poll_loop
+call :log "[3/3] Files installed. Returning to start.bat for server relaunch..."
+goto :success
 
 REM ================================================================
-REM  Success
+REM  Success -- files are in place, control returns to start.bat.
+REM  We do NOT write state=idle here. Instead, we leave state=applying so
+REM  UI keeps showing progress while the server restarts, and let
+REM  lib/updater.ts:selfHealOnBoot() write state=idle + success-flag once
+REM  the new server actually boots and confirms getCurrentVersion() == to.
 REM ================================================================
 :success
 call :log "================================================"
-call :log "  Update completed successfully: v%OLD_VER% -^> v%NEW_VER%"
+call :log "  Update files installed: v%OLD_VER% to v%NEW_VER%"
+call :log "  Returning to start.bat for server relaunch..."
 call :log "================================================"
-
-REM Reset state to idle
-> "%DATA_UPDATE_DIR%\state.json" echo {"phase":"idle"}
-REM Success flag for UI toast
-> "%DATA_UPDATE_DIR%\success-flag.txt" echo %NEW_VER%
 REM previous-version.txt
 > "%DATA_UPDATE_DIR%\previous-version.txt" echo %OLD_VER%
 
@@ -290,7 +271,7 @@ if not exist "%_src%" (
     call :log "  skip move (not exist): %~1"
     exit /b 0
 )
-call :log "  move %~1 -^> .backup\v%OLD_VER%\%~1"
+call :log "  move %~1 to .backup\v%OLD_VER%\%~1"
 move "%_src%" "%_dst%" >nul
 if errorlevel 1 (
     timeout /t 3 /nobreak >nul

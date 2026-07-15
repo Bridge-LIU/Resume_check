@@ -2,6 +2,9 @@
   "name": "resume-claude",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.22.2 <23"
+  },
   "scripts": {
     "dev": "node scripts/next-with-port.mjs dev",
     "build": "next build",

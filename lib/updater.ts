@@ -537,13 +537,42 @@ export async function downloadRelease(
 
   assertAllowedHost(release.downloadUrl, "ZIP DL");
 
-  const res = await fetch(release.downloadUrl, {
-    signal,
-    redirect: "follow",
-    headers: {
-      "User-Agent": `${GITHUB_OWNER}-${GITHUB_REPO}-updater`,
-    },
-  });
+  // GitHub CDN の初回接続がまれに fetch failed（DNS / TLS 瞬時遅延）で失敗するので
+  // 指数バックオフで最大 3 回リトライする。ユーザ体験を守るために必要。
+  let res: Response | null = null;
+  let lastError: unknown = null;
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (signal.aborted) throw new Error("キャンセルされました");
+    try {
+      res = await fetch(release.downloadUrl, {
+        signal,
+        redirect: "follow",
+        headers: {
+          "User-Agent": `${GITHUB_OWNER}-${GITHUB_REPO}-updater`,
+        },
+      });
+      break; // 成功
+    } catch (e) {
+      lastError = e;
+      const message = e instanceof Error ? e.message : String(e);
+      console.log(
+        `[update/download] fetch attempt ${attempt}/${MAX_ATTEMPTS} failed: ${message}`,
+      );
+      if (attempt === MAX_ATTEMPTS) {
+        throw new Error(
+          `ZIP DL 失敗: ネットワーク接続を確認してください (${message})`,
+        );
+      }
+      // 指数バックオフ: 1s, 3s
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+    }
+  }
+  if (!res) {
+    throw new Error(
+      `ZIP DL 失敗: fetch が予期せず失敗 (${lastError instanceof Error ? lastError.message : String(lastError)})`,
+    );
+  }
 
   // 302 追跡後の最終ホスト再検証（§4.2）
   assertAllowedHost(res.url || release.downloadUrl, "ZIP DL (final)");

@@ -1,5 +1,5 @@
 @echo off
-REM Force UTF-8 code page so Japanese file/dir names (運用マニュアル.HTML etc.) parse correctly.
+REM Force UTF-8 codepage for console output (not for bat file parsing).
 chcp 65001 >nul 2>&1
 setlocal enabledelayedexpansion
 
@@ -37,8 +37,8 @@ echo ================================================
 echo.
 
 REM If port is already in use, just open browser to existing server and exit.
-REM Node の listen("localhost") が IPv4 (127.0.0.1) と IPv6 ([::1]) の
-REM どちらにバインドされるかは Windows のリゾルバ次第なので、両方をチェックする。
+REM Node's listen("localhost") may bind IPv4 (127.0.0.1) or IPv6 ([::1]) depending
+REM on Windows resolver order, so we check both.
 netstat -ano | findstr /C:"127.0.0.1:%PORT%" /C:"[::1]:%PORT%" | findstr "LISTENING" > nul
 if not errorlevel 1 (
     echo [INFO] Port %PORT% is already in use.
@@ -50,75 +50,74 @@ if not errorlevel 1 (
 )
 
 REM ================================================
-REM  Node.js 検出（3 段階）
-REM    1. `node-portable\node.exe` が存在（配布 ZIP に事前バンドル済） → それを使う
-REM    2. システム Node が入っていて v20 以上 → それを使う（開発者向け）
-REM    3. どちらも無ければ → nodejs.org から DL して `node-portable/` に展開
-REM  詳細は運用マニュアル.HTML の「Node.js の同梱について」参照。
+REM  Node.js detection (3 tiers)
+REM    1. node-portable\node.exe exists (pre-bundled in distribution ZIP) -> use it
+REM    2. System Node v20+ installed -> use it (developer path)
+REM    3. Neither -> download portable Node from nodejs.org
 REM ================================================
 call :ensure_node
 if errorlevel 1 exit /b 1
 goto :after_node_check
 
 :ensure_node
-REM 優先 1: 配布 ZIP にバンドル済みのポータブル Node
+REM Tier 1: pre-bundled portable Node
 if exist "node-portable\node.exe" (
     set "PATH=%CD%\node-portable;%PATH%"
     for /f "tokens=*" %%v in ('node --version 2^>nul') do set NODE_VERSION=%%v
-    echo [OK] Portable Node.js !NODE_VERSION! （同梱版）
+    echo [OK] Portable Node.js !NODE_VERSION! (bundled)
     exit /b 0
 )
 
-REM 優先 2: システム Node（v20 以上のみ許可）
+REM Tier 2: system Node v20+
 where node > nul 2>&1
 if not errorlevel 1 (
     for /f "tokens=*" %%v in ('node --version 2^>nul') do set NODE_VERSION=%%v
-    REM v22.12.0 のような文字列から先頭の "v" を取り除いた後にメジャー番号を抽出
+    REM Strip leading "v" then take major version
     for /f "tokens=1 delims=." %%a in ("!NODE_VERSION:v=!") do set NODE_MAJOR=%%a
     if !NODE_MAJOR! GEQ 20 (
         echo [OK] System Node.js !NODE_VERSION!
         exit /b 0
     )
-    echo [INFO] システム Node.js !NODE_VERSION! はサポート外 v20 未満、ポータブル版を用意します
+    echo [INFO] System Node.js !NODE_VERSION! is unsupported (v20 required), fetching portable
 )
 
-REM 優先 3: 自動 DL（初回のみ 1〜2 分）
+REM Tier 3: auto-download (first-run only, 1-2 min)
 echo.
 echo ================================================
-echo   初回セットアップ：Node.js ポータブル版を取得
-echo   ~30MB, 通常 1〜2 分で完了します
+echo   First-time setup: fetching portable Node.js
+echo   ~30MB, usually 1-2 minutes
 echo   Downloading from nodejs.org ...
 echo ================================================
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://nodejs.org/dist/v22.12.0/node-v22.12.0-win-x64.zip' -OutFile 'node-portable.zip' -UseBasicParsing } catch { Write-Error $_; exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://nodejs.org/dist/v22.22.2/node-v22.22.2-win-x64.zip' -OutFile 'node-portable.zip' -UseBasicParsing } catch { Write-Error $_; exit 1 }"
 if errorlevel 1 (
     echo.
-    echo [ERROR] ダウンロードに失敗しました。
-    echo   1. インターネット接続を確認してください
-    echo   2. あるいは https://nodejs.org/ から Node.js 20 以上を手動インストールしてください
+    echo [ERROR] Download failed.
+    echo   1. Check your internet connection
+    echo   2. Or install Node.js 20+ manually from https://nodejs.org/
     exit /b 1
 )
 
-echo [Setup] 展開中...
+echo [Setup] Extracting...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path 'node-portable.zip' -DestinationPath '.' -Force"
 if errorlevel 1 (
-    echo [ERROR] 展開に失敗しました。node-portable.zip を削除して再試行してください。
+    echo [ERROR] Extraction failed. Delete node-portable.zip and retry.
     exit /b 1
 )
 del /q "node-portable.zip" > nul 2>&1
 
-REM 展開後は "node-vXX.YY.Z-win-x64\" ができるので "node-portable\" にリネーム
+REM Extracted as "node-vXX.YY.Z-win-x64\", rename to "node-portable\"
 for /d %%d in ("node-v*-win-x64") do (
     ren "%%d" "node-portable" > nul 2>&1
 )
 
 if not exist "node-portable\node.exe" (
-    echo [ERROR] ポータブル Node の展開に失敗しました。
+    echo [ERROR] Portable Node extraction failed.
     exit /b 1
 )
 
 set "PATH=%CD%\node-portable;%PATH%"
 for /f "tokens=*" %%v in ('node --version 2^>nul') do set NODE_VERSION=%%v
-echo [OK] Portable Node.js !NODE_VERSION! （新規セットアップ完了）
+echo [OK] Portable Node.js !NODE_VERSION! (freshly installed)
 exit /b 0
 
 :after_node_check
@@ -175,7 +174,11 @@ echo   Stop  : close this window or press Ctrl+C
 echo ================================================
 echo.
 
-start "" /b cmd /c "timeout /t 3 /nobreak > nul && start http://localhost:%PORT%"
+REM Skip browser-open on post-update restart (user's browser tab is still open,
+REM polling /api/update/progress). Only auto-open on first launch.
+if not defined UPDATE_RESTART (
+    start "" /b cmd /c "timeout /t 3 /nobreak > nul && start http://localhost:%PORT%"
+)
 
 REM Auto-shutdown when browser is closed (180s heartbeat timeout in server).
 REM Diagnostic mode: enabled to gather evidence about false shutdowns.
@@ -204,7 +207,10 @@ echo   Stop  : close this window or press Ctrl+C
 echo ================================================
 echo.
 
-start "" /b cmd /c "timeout /t 3 /nobreak > nul && start http://localhost:%PORT%"
+REM Skip browser-open on post-update restart (see note in :main branch above).
+if not defined UPDATE_RESTART (
+    start "" /b cmd /c "timeout /t 3 /nobreak > nul && start http://localhost:%PORT%"
+)
 
 REM AUTO_SHUTDOWN / heartbeat is bundled into instrumentation.ts (works in standalone too).
 set AUTO_SHUTDOWN=1
@@ -226,16 +232,10 @@ if not exist ".next\standalone\public\" (
     if exist ".next\static" xcopy /e /q /y ".next\static" ".next\standalone\.next\static\" > nul
 )
 
-REM 運用マニュアル.HTML と マニュアル/ は outputFileTracingExcludes で明示除外されているため
-REM standalone bundle に含まれない。app/manual/[[...slug]]/route.ts は
-REM process.cwd() (server.js の process.chdir で .next\standalone\ に変わる) を起点に
-REM 解決するので、この 2 つを standalone 直下に置く必要がある。
-if not exist ".next\standalone\運用マニュアル.HTML" (
-    if exist "運用マニュアル.HTML" copy /y "運用マニュアル.HTML" ".next\standalone\運用マニュアル.HTML" > nul
-)
-if not exist ".next\standalone\マニュアル\" (
-    if exist "マニュアル" xcopy /e /q /y "マニュアル" ".next\standalone\マニュアル\" > nul
-)
+REM Manual files (unicode-named user manual and its asset folder) are placed
+REM inside .next\standalone\ at pkg build time by the distribution script.
+REM No runtime copy needed (avoids CP932 vs UTF-8 filename parsing issues on
+REM Japanese Windows).
 
 call node .next\standalone\server.js
 set SERVER_EXIT=!ERRORLEVEL!
@@ -247,13 +247,37 @@ REM ================================================
 REM  Shutdown / diagnostic handling (shared by both dev and standalone modes)
 REM ================================================
 
-REM If an update is in progress (updater.bat spawned by /api/update/apply),
-REM close this old cmd window quickly instead of showing the 30s "will close"
-REM prompt. updater.bat will launch a fresh start.bat when the new version is ready.
-if exist "data\.update\updater.lock" (
-    echo [UPDATE] Update in progress, closing this window quickly...
-    timeout /t 2 /nobreak > nul
-    exit /b 0
+REM ================================================
+REM  In-place update: if apply route wrote pending.args, run updater.bat here
+REM  in the same cmd window, then goto :main to restart the server.
+REM  This avoids spawning a new cmd window (no flash, no popup).
+REM ================================================
+if exist "data\.update\pending.args" (
+    echo.
+    echo ================================================
+    echo   Update requested. Applying in this window...
+    echo ================================================
+    echo.
+    set "UPDATE_ARGS="
+    set /p UPDATE_ARGS=<"data\.update\pending.args"
+    call scripts\updater.bat !UPDATE_ARGS!
+    set UPDATER_EXIT=!ERRORLEVEL!
+    if exist "data\.update\pending.args" del /q "data\.update\pending.args"
+    if !UPDATER_EXIT! NEQ 0 (
+        echo.
+        echo [UPDATE] Updater exited with code !UPDATER_EXIT! ^(rollback likely triggered^)
+        echo [UPDATE] Restarting server anyway...
+        echo.
+    ) else (
+        echo.
+        echo [UPDATE] Update completed. Restarting server...
+        echo.
+    )
+    REM Mark this restart as post-update so :main / :standalone_start skips
+    REM the auto-browser-open (user's tab is still there polling).
+    set UPDATE_RESTART=1
+    REM Loop back to :main - server relaunch (either new or rolled-back version)
+    goto :main
 )
 
 echo.
@@ -273,15 +297,15 @@ if exist ".auto-shutdown.reason" (
     type ".auto-shutdown.reason"
     echo ------------------------------------------------
     REM Keep the files around for post-mortem; rename with timestamp so
-    REM successive runs don't overwrite each other.
-    for /f "tokens=1-3 delims=/: " %%a in ("%TIME%") do set T=%%a%%b%%c
-    for /f "tokens=1-3 delims=/- " %%a in ("%DATE%") do set D=%%a%%b%%c
-    ren ".auto-shutdown.reason" ".auto-shutdown.reason.!D!_!T!" > nul 2>&1
+    REM successive runs don't overwrite each other. Timestamp via PowerShell
+    REM (avoids CP932 fullwidth chars in %DATE%/%TIME% on Japanese Windows).
+    for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set TS=%%i
+    ren ".auto-shutdown.reason" ".auto-shutdown.reason.!TS!" > nul 2>&1
     if exist ".heartbeat-arrivals.log" (
-        ren ".heartbeat-arrivals.log" ".heartbeat-arrivals.log.!D!_!T!" > nul 2>&1
+        ren ".heartbeat-arrivals.log" ".heartbeat-arrivals.log.!TS!" > nul 2>&1
     )
 ) else (
-    echo   No .auto-shutdown.reason file — server exited without recording a reason.
+    echo   No .auto-shutdown.reason file - server exited without recording a reason.
     if exist ".heartbeat-arrivals.log" del ".heartbeat-arrivals.log" > nul 2>&1
 )
 echo.

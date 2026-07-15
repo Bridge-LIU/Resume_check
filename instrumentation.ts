@@ -32,4 +32,14 @@ export async function register(): Promise<void> {
   } catch (e) {
     console.error("[instrumentation] heartbeat watcher start failed:", e);
   }
+
+  // 更新機構の自己修復。state=applying / restoring で残ったまま新版 server が
+  // 起動した場合、version 一致を検出して state=idle + success-flag へ遷移する。
+  // spec §12.7 C1 で追加、v0.1.2+ で有効化。
+  try {
+    const mod = await import("@/lib/updater");
+    mod.selfHealOnBoot();
+  } catch (e) {
+    console.error("[instrumentation] updater selfHealOnBoot failed:", e);
+  }
 }

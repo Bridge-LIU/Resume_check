@@ -17,7 +17,6 @@
  *   %4 = 旧バージョン（例 "0.1.0"）
  */
 
-import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -108,31 +107,28 @@ export async function POST(req: Request) {
     const extractDir = getStagingExtractedDir();
     fs.mkdirSync(extractDir, { recursive: true });
 
-    // updater.bat を detached + hidden spawn。
-    // windowsHide: true + `start` を省く → updater.bat の cmd 窓は表示されない。
-    // ログは data/.update/updater.log にファイル出力され、UI モーダルが tail 表示するので
-    // ユーザーは cmd 窓を見なくても進捗を確認できる（かつ Quick Edit で誤クリックする心配もない）。
-    const child = spawn(
-      "cmd",
-      ["/c", updaterBat, zipPath, extractDir, to, from],
-      {
-        detached: true,
-        stdio: "ignore",
-        shell: false,
-        windowsHide: true,
-        cwd: projectRoot,
-      },
-    );
-    child.unref();
+    // updater.bat を spawn しない設計（新方式、v0.1.2+）:
+    //
+    // 従来: apply route が updater.bat を新しい cmd (or hidden cmd) で spawn
+    // → 更新中に cmd 窓が新規表示される（隠しでも Windows が一瞬 flash する）
+    //
+    // 新方式: apply route は `pending.args` ファイルを書くだけで process.exit(0)
+    // → start.bat 側の :after_server_exit ブロックがこのファイルを検知し、
+    //    「同じ cmd 窓の中で」updater.bat を call → :main に goto して新 server 起動
+    // → cmd 窓は元の 1 個だけ、flash も切替も無し
+    const argsFile = path.join(projectRoot, "data", ".update", "pending.args");
+    const argsContent = `"${zipPath}" "${extractDir}" "${to}" "${from}"`;
+    fs.mkdirSync(path.dirname(argsFile), { recursive: true });
+    fs.writeFileSync(argsFile, argsContent, "utf8");
     console.log(
-      `[update/apply] spawned updater.bat pid=${child.pid} zip=${zipPath} ${from}→${to}`,
+      `[update/apply] wrote pending.args (${from} -> ${to}), will exit for start.bat to take over`,
     );
 
     // §12.7 C4: Next.js 16 では res.on('finish') が使えない。
     // Response を return したあと queueMicrotask → setTimeout で shutdown。
     queueMicrotask(() => {
       setTimeout(() => {
-        console.log("[update/apply] shutting down for updater.bat takeover");
+        console.log("[update/apply] shutting down; start.bat will pick up pending.args");
         process.exit(0);
       }, SHUTDOWN_DELAY_MS);
     });
