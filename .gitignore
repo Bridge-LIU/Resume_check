@@ -73,6 +73,11 @@ yarn-error.log*
 # 開発中の preview mockup（配布対象外、コミット前提としない）
 /app/preview-*/
 
+# 社内資料
+**/*_設計書.md
+**/*_実装計画.md
+/docs/
+
 # vercel
 .vercel
 

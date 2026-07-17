@@ -21,7 +21,6 @@ npm run dev    # http://localhost:3939 で開発サーバ
 ## 開発者向け
 
 - 実装規約: [`AGENTS.md`](AGENTS.md)
-- 設計書: `.preview/files/面談AI評価ツール_設計書.md`（gitignore）
 - 主要コマンド:
 
   ```powershell

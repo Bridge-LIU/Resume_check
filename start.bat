@@ -50,6 +50,35 @@ if not errorlevel 1 (
 )
 
 REM ================================================
+REM  Catastrophic-recovery detection
+REM  If updater.bat was killed mid-update (BSOD / power loss / user force-close),
+REM  state.json stays at phase=applying|restoring and half-new files remain.
+REM  Auto-invoke restore.bat --auto to roll back to the latest backup before
+REM  we try to boot the server. See scripts/updater.bat spec section 12.8.6.
+REM
+REM  IMPORTANT: guard on UPDATE_RESTART.
+REM  updater.bat intentionally leaves state.json = "applying" on success;
+REM  instrumentation.ts:selfHealOnBoot() clears it after the new server boots.
+REM  If UPDATE_RESTART is set, we came here from :after_server_exit's goto :main
+REM  (same-cmd loop after updater completed) - trust selfHealOnBoot to handle it.
+REM  Only run detection on a fresh cmd session (real crash / user restart).
+REM ================================================
+if not defined UPDATE_RESTART (
+    if exist "data\.update\state.json" (
+        findstr /C:"\"applying\"" /C:"\"restoring\"" "data\.update\state.json" >nul 2>&1
+        if not errorlevel 1 (
+            echo.
+            echo ================================================
+            echo   [WARN] Previous update did not finish cleanly.
+            echo   [WARN] Auto-restoring from latest backup...
+            echo ================================================
+            echo.
+            call scripts\restore.bat --auto
+        )
+    )
+)
+
+REM ================================================
 REM  Node.js detection (3 tiers)
 REM    1. node-portable\node.exe exists (pre-bundled in distribution ZIP) -> use it
 REM    2. System Node v20+ installed -> use it (developer path)
@@ -128,7 +157,6 @@ REM  If .next\standalone\server.js exists, this is a production distribution:
 REM    - skip npm install (standalone bundles its own dependencies)
 REM    - skip .next cleanup (would destroy the standalone bundle)
 REM    - skip build (already built)
-REM  See docs/superpowers/specs/2026-07-13-version-check-update-design.md
 REM ================================================
 if exist ".next\standalone\server.js" goto :standalone_start
 

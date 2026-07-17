@@ -2,8 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // 配布 ZIP は `.next/standalone/` 一括同梱で npm install / build を端末側で回さない。
-  // v3.2 更新機構（docs/superpowers/specs/2026-07-13-version-check-update-design.md §12.8）
-  // が前提とする、方案 3（Next.js standalone 預打包）用の出力モード。
+  // Next.js standalone 預打包（更新機構が想定する）用の出力モード。
   //
   // 出力先: `.next/standalone/server.js` （+ 最小 node_modules）
   //         + `.next/static/`（別途 コピーが必要）
@@ -19,7 +18,6 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     "*": [
       "./data/**",              // PII 保護（sessions / master / settings.json / analytics 全部）
-      "./docs/**",              // 開発ドキュメント
       "./.preview/**",          // ローカル画面ショット・mockup
       "./.superpowers/**",      // Claude Code 一時
       "./.claude/**",           // Claude Code 設定

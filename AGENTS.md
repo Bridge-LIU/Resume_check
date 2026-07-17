@@ -32,7 +32,6 @@ export async function GET(_req: Request, ctx: RouteContext<'/api/sessions/[id]'>
 
 - 採用面談ツールのローカル版。各セクション（①面談者情報 / ③質問リスト / ⑤評価）で「貼付」「API」をユーザがトグル切替。
 - API モード（①要約 / ③質問 / ④面談内容 / ⑤評価）は `lib/llm/*` + `xxxApiAction` に実装。`/settings` で Provider (Anthropic / OpenAI / Google) を設定すれば利用可能。
-- 設計書: `.preview/files/面談AI評価ツール_設計書.md`
 - スタック: Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4 + npm / ポート 3939
 - UI 方針: 業務標準・表中心。**実装が正本**（過去の mockup HTML は削除済）。
 
@@ -65,8 +64,8 @@ Resume_Claude/
 │   │   └─ _components/
 │   ├─ analytics/           ← /analytics 匿名サマリ分析
 │   ├─ compare/             ← /compare 横断比較ビュー
-│   ├─ cost/                ← /cost API コスト集計（設計書 §8.5）
-│   ├─ trash/               ← /trash ゴミ箱（設計書 §7.5）
+│   ├─ cost/                ← /cost API コスト集計
+│   ├─ trash/               ← /trash ゴミ箱
 │   ├─ manual/              ← /manual 静的マニュアル配信
 │   └─ api/                 ← Route Handlers（backup/master 系）
 ├─ lib/
@@ -104,20 +103,22 @@ Resume_Claude/
 ├─ マニュアル/               ← マニュアル用資材
 │   └─ assets/               ← 画面ショット等
 ├─ scripts/                 ← 運用・ビルド補助（配布に含む）
+│   ├─ updater.bat          ← 更新実行スクリプト（GitHub Release ZIP 展開 → robocopy 適用）
+│   ├─ restore.bat          ← 復旧スクリプト（backup ZIP から巻き戻し）
 │   ├─ next-with-port.mjs   ← npm run dev/start が呼ぶ起動ラッパー
 │   ├─ decrypt-backup.mjs   ← バックアップ復号ツール
 │   ├─ verify-backup.mjs    ← バックアップ整合性検証
 │   ├─ trigger-mirror.mjs   ← Excel ミラー手動再生成
 │   ├─ preview-xlsx-cells.mjs ← xlsx セル値ダンプ（デバッグ）
 │   └─ dev/                 ← 🚫 開発者専用（配布に含めない・gitignore）
+│       ├─ _cache/                                 ← portable Node 等の再利用資源（build-pkg.ps1 が参照）
+│       ├─ build-pkg.ps1                           ← 本地 pkg + ZIP 生成（release.yml のローカル版）
 │       ├─ seed-sessions.bat / seed-sessions.mjs   ← モック面談データ生成
 │       ├─ gen-resume-samples.mjs                  ← 履歴書サンプル生成
 │       ├─ manual-screenshot.mjs                   ← マニュアル画面ショット撮影
 │       ├─ update-app.bat                          ← git pull → npm install → build（git clone 環境向け）
 │       └─ claude-{2,3,4}split.bat                 ← Claude Code 個人ワークフロー
 └─ public/                  ← 静的資源
-
-（設計書・サンプル面談データ・履歴書チェックなどのローカル資料は `.preview/files/` に配置、gitignore）
 ```
 
 ### 根直下のフォルダ / ファイル一覧
@@ -129,10 +130,11 @@ Resume_Claude/
 | `運用マニュアル.HTML` | エンドユーザ向け統合マニュアル（ルート直下） | ✅ |
 | `マニュアル/` | 上記 HTML の資材（画像等） | ✅ |
 | `scripts/` | 運用・ビルド補助（配布に含む） | ✅ |
-| `scripts/dev/` | 開発者専用スクリプト（配布に含めない） | 🚫 gitignore |
+| `scripts/dev/` | 開発者専用スクリプト（配布に含めない、`_cache/` に portable Node 等の再利用資源） | 🚫 gitignore |
 | `public/` | 静的資源 | ✅ |
 | `data/` | 設定 + ユーザーデータ（PII） | 🚫 gitignore |
-| `.preview/` | ローカル画面ショット・mockup + 設計書 (`.preview/files/`) | 🚫 gitignore |
+| `.github/` | GitHub Actions workflow（`release.yml` 等） | ✅ |
+| `test-release/` | ローカル更新テスト用の pkg + ZIP 出力先（`build-pkg.ps1` の産物） | 🚫 gitignore |
 | `.superpowers/` | Claude Code 一時 | 🚫 gitignore |
 | `start.bat` | 起動スクリプト（本番モード・ダブルクリック起動） | ✅ |
 | `.env.local.example` | 環境変数テンプレ | ✅ |
@@ -152,8 +154,23 @@ Resume_Claude/
 9. **Server Action の入力サイズは `lib/validation.ts:assertTextWithinLimit` / `assertResumeUpload` で必ず検証**。Client 側ガードは Server Action ad-hoc 呼び出しでは無効。
 10. **番号系は 2 系統併存**：
     - **UI 表示・ユーザー可視な文字列**（画面ラベル / エラーメッセージ / コピー用プロンプトの見出し / 監査ログのラベル / `/cost` の工程ラベル / ダイアログ本文）は**必ず 5 段の連番 `①②③④⑤`** を使う。
-    - **内部識別子**（コンポーネント名 `Section2/4/5/6/8`、URL パラメータ `s2/s4/s5/s6/s8`、監査イベント名、`Stage` 型のリテラル以外の JSDoc コメント）は**設計書と揃えた 8 段番号のまま温存**する（URL 互換／履歴データ互換のため）。
-    - **対応表**は `.preview/files/面談AI評価ツール_設計書.md` 冒頭の「番号対応表」を単一の正本とする。設計書の ②④⑤⑥⑧ を UI 文言にコピペするときは必ず ①②③④⑤ に読み替えること。
+    - **内部識別子**（コンポーネント名 `Section2/4/5/6/8`、URL パラメータ `s2/s4/s5/s6/s8`、監査イベント名、`Stage` 型のリテラル以外の JSDoc コメント）は**8 段番号のまま温存**する（URL 互換／履歴データ互換のため）。
+    - **番号対応表**（以下を単一の正本とする）:
+
+      | UI (可視) | 内部 (component / URL) | 内部番号 |
+      |---|---|---|
+      | ① | Section2 / s2 | § ② |
+      | ② | Section4 / s4 | § ④ |
+      | ③ | Section5 / s5 | § ⑤ |
+      | ④ | Section6 / s6 | § ⑥ |
+      | ⑤ | Section8 / s8 | § ⑧ |
+
+11. **ディレクトリ規約（新規追加前に根直下表を必ず確認）**：
+    - **新規トップレベルディレクトリを作る前に、上の「根直下のフォルダ / ファイル一覧」表に**追記する。表に無い名前で root に directory を生やさない（規約ドリフト防止）
+    - **`test-release/` は build 産物専用**。依存源（portable Node など）を絶対に置かない。産物は `build-pkg.ps1` が上書きするため、依存を置くと再生成時に喪失する
+    - **開発者専用の再利用資源は `scripts/dev/_cache/` に置く**（gitignore 継承）。例: `scripts/dev/_cache/node-portable/` は build-pkg.ps1 の Node ソース
+    - **portable Node は必ず 22.22.2**（`.github/workflows/release.yml` で CI が使う版本と ABI 一致必要。不一致は runtime error）
+    - **配布パッケージに含むべきものは `scripts/` 直下**、開発だけで使うものは `scripts/dev/` 配下（`scripts/dev/` は release.yml で除外される）
 
 ## UI 規約
 
@@ -221,5 +238,4 @@ npm run lint    # ESLint
 
 ## 参考リンク
 
-- 設計書: `.preview/files/面談AI評価ツール_設計書.md`（§4〜§9 が機能仕様、§7.5 が保存期間、§8.5 がコスト集計）
 - Next.js 16 ドキュメント: `node_modules/next/dist/docs/`
