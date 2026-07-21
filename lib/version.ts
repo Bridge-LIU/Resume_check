@@ -11,7 +11,6 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { getProjectRoot } from "@/lib/storage";
 
 /** GitHub Release を取得する repository の owner/name。 */
 export const GITHUB_OWNER = "Bridge-LIU";
@@ -20,10 +19,18 @@ export const GITHUB_REPO = "Resume_check";
 /**
  * 現在バージョンを runtime で読む。fs 読みが失敗した場合は "0.0.0" を返す
  * （バージョン取得失敗で API が 500 するのは避け、UI 側で「不明」表示させる）。
+ *
+ * ⚠️ process.cwd() を意図的に使う（getProjectRoot() ではない）。理由:
+ * standalone モードでは cwd = .next/standalone/ で、Next.js standalone build が
+ * ここに package.json を自動同梱する（"version" フィールド含む）。dev モードでも
+ * cwd = プロジェクト根 = package.json 位置なので両モードで動く。
+ * getProjectRoot() は pkg 根を返すが、pkg 根に package.json は copy されないため
+ * "0.0.0" fallback に落ち、選 update の完了検知が壊れる。
  */
 export function getCurrentVersion(): string {
   try {
-    const pkgPath = path.join(getProjectRoot(), "package.json");
+    // eslint-disable-next-line no-restricted-syntax
+    const pkgPath = path.join(process.cwd(), "package.json");
     const raw = fs.readFileSync(pkgPath, "utf8");
     const pkg = JSON.parse(raw) as { version?: unknown };
     if (typeof pkg.version === "string" && pkg.version.length > 0) {
