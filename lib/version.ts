@@ -11,6 +11,7 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
+import { getProjectRoot } from "@/lib/storage";
 
 /** GitHub Release を取得する repository の owner/name。 */
 export const GITHUB_OWNER = "Bridge-LIU";
@@ -22,7 +23,7 @@ export const GITHUB_REPO = "Resume_check";
  */
 export function getCurrentVersion(): string {
   try {
-    const pkgPath = path.join(process.cwd(), "package.json");
+    const pkgPath = path.join(getProjectRoot(), "package.json");
     const raw = fs.readFileSync(pkgPath, "utf8");
     const pkg = JSON.parse(raw) as { version?: unknown };
     if (typeof pkg.version === "string" && pkg.version.length > 0) {

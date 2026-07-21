@@ -18,6 +18,7 @@
 import "server-only";
 import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { getProjectRoot } from "@/lib/storage";
 
 const IDLE_TIMEOUT_MS = 180_000;
 const CHECK_INTERVAL_MS = 20_000;
@@ -66,14 +67,14 @@ function getState(): HeartbeatState {
  * 終了理由（idle timeout / signal / etc）を伝えるにはファイル経由で受け渡す。
  * .gitignore 対象。start.bat 側が読み取り後に削除する。
  */
-const REASON_FILE = path.join(process.cwd(), ".auto-shutdown.reason");
+const REASON_FILE = path.join(getProjectRoot(), ".auto-shutdown.reason");
 
 /**
  * app/api/heartbeat/route.ts が POST/GET 到達を追記する。ここで読んで診断に含める。
  * pingLog=0 かつ arrivals=0 なら POST 自体届いていない（layout / SSR / network 問題）。
  * pingLog=0 かつ arrivals>0 なら route まで届いてグローバル状態同期が失敗している。
  */
-const ARRIVAL_LOG = path.join(process.cwd(), ".heartbeat-arrivals.log");
+const ARRIVAL_LOG = path.join(getProjectRoot(), ".heartbeat-arrivals.log");
 
 function writeExitReason(reason: string): void {
   try {

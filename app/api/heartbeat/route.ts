@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { appendFileSync } from "node:fs";
 import path from "node:path";
 import { markPing } from "@/lib/heartbeat";
+import { getProjectRoot } from "@/lib/storage";
 
 // キャッシュ対象外
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
  *                          更新できていない（webpack chunk 分離仮説がまだ生きている）
  * を切り分ける。gitignore 対象。start.bat が終了時に rename して残す。
  */
-const ARRIVAL_LOG = path.join(process.cwd(), ".heartbeat-arrivals.log");
+const ARRIVAL_LOG = path.join(getProjectRoot(), ".heartbeat-arrivals.log");
 
 function recordArrival(method: "GET" | "POST") {
   const line = `${method} ${new Date().toISOString()}\n`;

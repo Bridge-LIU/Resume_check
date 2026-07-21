@@ -3,7 +3,7 @@ import { Archiver, ZipArchive } from "archiver";
 import fs from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { migrateSettings } from "@/lib/storage";
+import { getProjectRoot, migrateSettings } from "@/lib/storage";
 import { ApiError, apiErrorResponse, ensureLocalOrigin } from "@/lib/apiError";
 
 const DISTRIBUTION_ROLES = ["Dev", "ITSupport", "NW", "PMO", "Server"];
@@ -81,7 +81,7 @@ export async function GET(req: Request) {
     throw e;
   }
 
-  const projectRoot = process.cwd();
+  const projectRoot = getProjectRoot();
   // 現行 settings.json ではなく、素の既定値（migrateSettings({})）を埋め込む。
   // 現行値を流すと開発者個人の retention 期間・モデル選択がそのまま配布される。
   const cleanSettings = migrateSettings({});

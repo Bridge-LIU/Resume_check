@@ -36,7 +36,7 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
-import { getDataRoot } from "@/lib/storage";
+import { getDataRoot, getProjectRoot } from "@/lib/storage";
 import {
   GITHUB_OWNER,
   GITHUB_REPO,
@@ -111,7 +111,7 @@ export function getStagingExtractedDir(): string {
  * **`getDataRoot()` を経由しない**（move の同盘保証のため project 根に固定）。
  */
 export function getBackupDir(): string {
-  return path.join(process.cwd(), ".backup");
+  return path.join(getProjectRoot(), ".backup");
 }
 
 /** `<project>/.backup/v0.1.0/` — 特定バージョンのバックアップ。 */
@@ -164,7 +164,7 @@ export function getUpdaterLogPath(): string {
  * 確実に到達できるプロジェクト直下にもミラーする (§12.7 C2 妥協点)。
  */
 export function getProjectMirrorLockPath(): string {
-  return path.join(process.cwd(), ".update", "updater.lock");
+  return path.join(getProjectRoot(), ".update", "updater.lock");
 }
 
 /** `data/.update/updater.lock` — Node 側の実 lock 位置。 */
