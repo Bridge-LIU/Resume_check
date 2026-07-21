@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>面談AI評価ツール — 操作マニュアル v2</title>
+
 <style>
   :root {
     --c-bg: #ffffff;
@@ -128,23 +129,44 @@
 
   /* ─── left nav ─── */
   aside.left {
-    padding:36px 0 40px 32px;
+    padding:16px 0 24px 20px;
     position:sticky; top:60px;
     height:calc(100vh - 60px); overflow-y:auto;
     border-right:1px solid var(--c-divider-lite);
+    text-align:left;
   }
   aside.left ul { list-style:none; margin:0; padding:0; }
   aside.left .group {
-    font-size:11px; font-weight:700; color:var(--c-text-mute);
-    letter-spacing:0.08em; text-transform:uppercase;
-    padding:16px 0 6px; margin-top:6px;
+    font-size:13px; font-weight:700; color:var(--c-text);
+    letter-spacing:0.01em;
+    padding:8px 6px 8px 4px; margin-top:4px;
+    text-align:left;
+    display:flex; align-items:center; gap:4px;
+    cursor:pointer; user-select:none;
+    border-radius:5px; margin-right:8px;
+    transition:background .12s;
   }
+  aside.left .group:hover { background:var(--c-bg-soft); }
+  aside.left .group .caret {
+    display:inline-block; width:14px; text-align:center;
+    font-size:10px; color:var(--c-text-mute);
+    transition:transform .15s;
+  }
+  aside.left .group .emoji {
+    display:inline-block; width:20px; text-align:center;
+    font-size:14px; line-height:1;
+  }
+  aside.left .group.collapsed .caret { transform:rotate(-90deg); }
+  aside.left .group + ul { transition:max-height .2s ease, opacity .15s; overflow:hidden; }
+  aside.left .group.collapsed + ul { max-height:0 !important; opacity:0; padding-bottom:0; margin:0; }
   aside.left li a {
-    display:flex; align-items:center; gap:8px;
-    padding:6px 14px 6px 12px;
-    color:var(--c-text-soft); font-size:14px;
-    border-radius:6px; margin-right:8px;
+    display:flex; align-items:center; gap:6px;
+    padding:3px 12px 3px 10px;
+    color:var(--c-text-soft); font-size:13px;
+    border-radius:5px; margin-right:8px;
+    line-height:1.35;
     transition:color .12s, background .12s;
+    text-align:left;
   }
   aside.left li a:hover {
     color:var(--c-brand); text-decoration:none;
@@ -155,12 +177,6 @@
     background:var(--c-brand);
   }
   aside.left li a.active:hover { background:var(--c-brand-dark); }
-  aside.left li a.sub {
-    padding-left:24px; font-size:13px; color:var(--c-text-soft);
-  }
-  aside.left li a.sub:hover {
-    color:var(--c-brand); background:var(--c-brand-soft);
-  }
 
   /* ─── center content ─── */
   main.content {
@@ -661,7 +677,7 @@
     </div>
     <span class="brand">
       面談AI評価マニュアル
-      <span class="ver">v1.0</span>
+      <span class="ver">v0.1.0</span>
     </span>
     <button class="search-btn" id="search-open" title="検索 (Ctrl+K)">
       <span class="icon">🔍</span>
@@ -679,57 +695,53 @@
 
 <div class="layout">
 
-  <!-- ─── LEFT NAV (アプリの左サイドバー準拠) ─── -->
+  <!-- ─── LEFT NAV · JTBD 6 分類版 (v6 プレビュー) ─── -->
   <aside class="left" id="left-nav">
-    <div class="group">🏠 ホーム</div>
+    <div class="group"><span class="caret">▼</span><span class="emoji">🚀</span>始める</div>
     <ul>
-      <li><a href="#intro" data-page="intro">はじめに</a></li>
-      <li><a href="#start" data-page="start">起動方法</a></li>
-      <li><a href="#layout" data-page="layout">画面構成</a></li>
+      <li><a href="#intro" data-page="intro">このツールについて</a></li>
+      <li><a href="#start" data-page="start">起動する</a></li>
+      <li><a href="#layout" data-page="layout">画面を把握する</a></li>
+      <li><a href="#mode" data-page="mode">モードを選ぶ（貼付 vs API）</a></li>
     </ul>
-    <div class="group">📊 一覧 / 面談</div>
+    <div class="group"><span class="caret">▼</span><span class="emoji">📝</span>面談を進める</div>
     <ul>
-      <li><a href="#list" data-page="list">一覧画面</a></li>
       <li><a href="#flow" data-page="flow">面談フロー全体像</a></li>
       <li><a href="#step1" data-page="step1">新規面談を作る</a></li>
-      <li><a href="#step2" data-page="step2">① 候補者情報を貼る</a></li>
-      <li><a href="#step4" data-page="step4">② 条件を凍結する</a></li>
-      <li><a href="#step5" data-page="step5">③ 質問を貼る</a></li>
-      <li><a href="#step6" data-page="step6">④ 面談内容を貼る</a></li>
-      <li><a href="#step8" data-page="step8">⑤ 評価を貼る</a></li>
-      <li><a href="#status" data-page="status">ステータスの流れ</a></li>
-      <li><a href="#duplicate" data-page="duplicate">複製と役割変更</a></li>
-      <li><a href="#export" data-page="export">Excel エクスポート</a></li>
+      <li><a href="#step2" data-page="step2">① 面談者情報</a></li>
+      <li><a href="#step4" data-page="step4">② 条件凍結</a></li>
+      <li><a href="#step5" data-page="step5">③ 質問</a></li>
+      <li><a href="#step6" data-page="step6">④ 面談内容</a></li>
+      <li><a href="#step8" data-page="step8">⑤ 評価</a></li>
     </ul>
-    <div class="group">📉 分析</div>
+    <div class="group"><span class="caret">▼</span><span class="emoji">📊</span>過去の面談を扱う</div>
     <ul>
-      <li><a href="#analytics" data-page="analytics">分析画面</a></li>
-      <li><a href="#compare" data-page="compare">横断比較</a></li>
+      <li><a href="#list" data-page="list">一覧で探す</a></li>
+      <li><a href="#compare" data-page="compare">候補者を比べる</a></li>
+      <li><a href="#analytics" data-page="analytics">傾向を分析する</a></li>
+      <li><a href="#export" data-page="export">Excel に出す</a></li>
+      <li><a href="#duplicate" data-page="duplicate">複製・役割変更</a></li>
     </ul>
-    <div class="group">🗂️ マスタ</div>
+    <div class="group"><span class="caret">▼</span><span class="emoji">🗂️</span>求人を管理する</div>
     <ul>
-      <li><a href="#master" data-page="master">求人情報管理</a></li>
-      <li><a href="#master--master-calc" data-page="master-calc-sub" class="sub">└ 総合スコアの計算式</a></li>
+      <li><a href="#master-roles" data-page="master-roles">役割マスタを追加</a></li>
+      <li><a href="#master-eval" data-page="master-eval">評価条件を編集</a></li>
+      <li><a href="#master-calc" data-page="master-calc">総合スコア計算式</a></li>
+      <li><a href="#cost" data-page="cost">コストを試算</a></li>
     </ul>
-    <div class="group">💴 コスト</div>
+    <div class="group"><span class="caret">▼</span><span class="emoji">⚙️</span>システムを維持する</div>
     <ul>
-      <li><a href="#cost" data-page="cost">コスト試算</a></li>
+      <li><a href="#settings" data-page="settings">保存場所と保存期間</a></li>
+      <li><a href="#api-key" data-page="api-key">API キー設定</a></li>
+      <li><a href="#backup" data-page="backup">バックアップを取る</a></li>
+      <li><a href="#trash" data-page="trash">削除したデータを戻す</a></li>
+      <li><a href="#audit" data-page="audit">監査ログを見る</a></li>
+      <li><a href="#update" data-page="update">アプリを更新する</a></li>
     </ul>
-    <div class="group">🗑️ ゴミ箱</div>
-    <ul>
-      <li><a href="#trash" data-page="trash">ゴミ箱と復元</a></li>
-    </ul>
-    <div class="group">⚙️ 設定</div>
-    <ul>
-      <li><a href="#settings" data-page="settings">設定</a></li>
-      <li><a href="#backup" data-page="backup">バックアップ</a></li>
-      <li><a href="#audit" data-page="audit">監査ログ</a></li>
-      <li><a href="#update" data-page="update">システムバージョン & 更新</a></li>
-    </ul>
-    <div class="group">困ったら</div>
+    <div class="group"><span class="caret">▼</span><span class="emoji">❓</span>助けを求める</div>
     <ul>
       <li><a href="#faq" data-page="faq">FAQ</a></li>
-      <li><a href="#trouble" data-page="trouble">トラブル時</a></li>
+      <li><a href="#trouble" data-page="trouble">トラブル対処</a></li>
     </ul>
   </aside>
 
@@ -739,6 +751,14 @@
   <article class="page" id="p-intro">
     <h1>面談AI評価ツール</h1>
     <p class="subtitle">採用面談 1 件あたりの「候補者要約 → 条件凍結 → 質問づくり → 面談内容 → 評価」をローカル PC で完結させるツールです。</p>
+
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/home.png" alt="ホーム画面">
+      </div>
+      <figcaption>起動直後のホーム画面（<code>http://localhost:3939</code>）— 直近セッション・面談件数・API 使用状況をまとめて表示</figcaption>
+    </figure>
 
     <h2 id="intro-about">このマニュアルについて</h2>
     <p>左側のメニューで章を切り替えます。各章は <strong>独立したページ</strong> として表示され、右側の「このページ内」は<strong>その章の小節</strong>だけを案内します。右上の 🔍 または <kbd>Ctrl</kbd>+<kbd>K</kbd> で全ページから横断検索できます。</p>
@@ -754,14 +774,48 @@
       <li>暗号化バックアップを世代管理</li>
     </ul>
 
-    <h2 id="intro-mode">動作モード</h2>
+  </article>
+
+  <article class="page" id="p-mode">
+    <h1>モードを選ぶ（貼付 vs API）</h1>
+    <p class="subtitle">① 面談者情報 / ③ 質問 / ④ 面談内容 / ⑤ 評価 の各セクションは、貼付モードと API モードのどちらでも操作できます。</p>
+
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-1-api.png" alt="セクション ① の API モード">
+      </div>
+      <figcaption>各セクションの右上に「貼付 / API」トグルボタン — セッション単位に保存され、次回開いても同じモードが選択された状態で表示</figcaption>
+    </figure>
+
+    <h2 id="mode-overview">2 つのモードの違い</h2>
+    <table>
+      <thead>
+        <tr><th>観点</th><th>貼付モード（既定）</th><th>API モード</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>AI の呼び出し場所</td><td>ブラウザの AI チャット（Claude / ChatGPT / Gemini 等）</td><td>このツールが Provider を直接呼び出し</td></tr>
+        <tr><td>API キー</td><td>不要</td><td>必要（<a href="#api-key">API キー設定</a>）</td></tr>
+        <tr><td>操作数</td><td>プロンプトコピー → チャットに貼付 → 結果を戻す（往復あり）</td><td>ボタン 1 回で完了</td></tr>
+        <tr><td>コスト</td><td>ゼロ（既存の AI 利用枠を流用）</td><td>Provider 従量課金（<a href="#cost">コスト試算</a>で集計）</td></tr>
+        <tr><td>ネットワーク</td><td>不要（プロンプトだけ手動転送）</td><td>Provider API へ HTTPS 送信</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="mode-switch">切替方法</h2>
+    <p>各セクションのヘッダ右上にある <strong>「貼付 / API」トグル</strong>で切り替えます。切替はセッション単位に保存され、次回開いた時も同じモードが選択された状態で表示されます。</p>
+    <div class="tip">
+      <p>1 つのセッション内でセクションごとにモードを混在させても構いません。例：<strong>①</strong> は API モードで自動要約、<strong>③</strong> は貼付モードで手動整形、<strong>⑤</strong> は API モードで自動評価、というような組み合わせも可能です。</p>
+    </div>
+
+    <h2 id="mode-recommend">使い分けの目安</h2>
+    <ul>
+      <li><strong>貼付モード</strong>：既に Claude / ChatGPT の有料プランを持っていて API 従量課金を増やしたくない場合、または PC を社内 LAN から出せず外部 API 通信ができない場合</li>
+      <li><strong>API モード</strong>：面談件数が多く手動コピペのコストが積み上がる場合、監査ログ（<a href="#audit">監査ログを見る</a>）に <code>provider</code> / <code>model</code> / トークン数を残したい場合</li>
+    </ul>
+
     <div class="note">
-      <p>各セクション（① 面談者情報 / ③ 質問 / ④ 面談内容 / ⑤ 評価）は <strong>貼付モード</strong> と <strong>API モード</strong> をボタンで切り替えて使えます。</p>
-      <ul>
-        <li><strong>貼付モード</strong>（既定）: AI 要約・質問生成・評価を Claude / ChatGPT 等の AI チャット側で行い、結果をコピー → このツールに貼付</li>
-        <li><strong>API モード</strong>: <code>/settings</code> で登録した Provider（Anthropic / OpenAI / Google）を直接呼び出し、要約・生成・評価を自動化。使用状況は <code>/cost</code> で集計</li>
-      </ul>
-      <p>API キー未登録の状態でも貼付モードだけで業務が完結します。API モードを有効にするには <a href="#settings">設定</a> 参照。</p>
+      <p>API キー未登録の状態でも貼付モードだけで業務は完結します。API モードを有効にするには <a href="#api-key">API キー設定</a> で Provider ごとにキーを登録してください。</p>
     </div>
   </article>
 
@@ -818,7 +872,7 @@
         <tr><td>📊</td><td>面談一覧</td><td><code>/list</code></td><td>セッション一覧、フィルタ、複数選択して比較</td><td><a href="#list">一覧画面</a></td></tr>
         <tr><td>🔀</td><td>比較</td><td><code>/compare</code></td><td>評価済セッションを並べて横断比較</td><td><a href="#compare">横断比較</a></td></tr>
         <tr><td>📈</td><td>分析</td><td><code>/analytics</code></td><td>ダッシュボード（KPI 前期比 / 自動インサイト / 月別・軸別・役割別 / 不採用理由 / 明細）</td><td><a href="#analytics">分析画面</a></td></tr>
-        <tr><td>🗂️</td><td>求人情報</td><td><code>/master</code></td><td>求人情報（役割）・評価条件マスタの編集</td><td><a href="#master">求人情報管理</a></td></tr>
+        <tr><td>🗂️</td><td>求人情報</td><td><code>/master</code></td><td>求人情報（役割）・評価条件マスタの編集</td><td><a href="#master-roles">役割マスタ</a> / <a href="#master-eval">評価条件</a></td></tr>
         <tr><td>🧾</td><td>API コスト</td><td><code>/cost</code></td><td>LLM API 使用状況・費用集計</td><td><a href="#cost">💴 コスト試算</a></td></tr>
         <tr><td>📁</td><td>フォルダ</td><td>ローカルの <code>data/sessions</code> を Explorer で開く（別ウィンドウ）</td><td>PII 実体ファイルへのショートカット。バックアップ・確認用</td><td>—</td></tr>
         <tr><td>🗑️</td><td>ゴミ箱</td><td><code>/trash</code></td><td>ソフト削除セッションの復元・完全削除</td><td><a href="#trash">ゴミ箱と復元</a></td></tr>
@@ -1258,6 +1312,14 @@ T5. 得意な言語と、その言語で気をつけていること
     <h1>複製と役割変更</h1>
     <p class="subtitle">同じ候補者を別の役割で評価し直したい、役割を間違えたときに使います。</p>
 
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/new.png" alt="複製ダイアログ">
+      </div>
+      <figcaption>複製ダイアログ — 氏名・役割を変更できる（新規面談作成の画面と同じ形式）</figcaption>
+    </figure>
+
     <h2 id="dup-howto">手順</h2>
     <ol>
       <li>複製元のセッション詳細画面を開く（一覧の「詳細」から）</li>
@@ -1365,26 +1427,62 @@ T5. 得意な言語と、その言語で気をつけていること
     <p>各 API 呼び出しの <code>provider</code> / <code>model</code> / 入力文字数 / 出力文字数 が <code>data/logs/audit.log</code> に記録されます（PII なし）。<code>/cost</code> はこのログを走査して集計するため、audit.log を消すと集計もリセットされます。</p>
   </article>
 
-  <article class="page" id="p-master">
-    <h1>求人情報管理</h1>
-    <p class="subtitle"><code>/master</code> で 求人情報 と 評価条件 を編集します。</p>
+  <article class="page" id="p-master-roles">
+    <h1>役割マスタを追加</h1>
+    <p class="subtitle"><code>/master</code> ページの上半分。求人（役割）の追加・編集・削除を行います。</p>
 
-    <h2 id="master-screenshot">画面</h2>
+    <h2 id="master-roles-screenshot">画面</h2>
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
         <img src="マニュアル/assets/master.png" alt="求人情報管理">
       </div>
-      <figcaption>/master — 上：求人情報、下：評価条件（BARS）</figcaption>
+      <figcaption>/master — 上：求人情報（本ページ）、下：<a href="#master-eval">評価条件</a></figcaption>
     </figure>
 
-    <h2 id="master-roles">求人情報</h2>
+    <h2 id="master-roles-fields">求人情報の項目</h2>
     <ul>
       <li>役割の <strong>追加 / 編集 / 削除</strong></li>
-      <li>各役割の「<strong>求める人材条件</strong>」（基本人物像 + 未経験者必須）</li>
+      <li>各役割の「<strong>求める人材条件</strong>」(基本人物像 + 未経験者必須)</li>
       <li>経験要件・未経験可フラグ</li>
     </ul>
     <p>役割 ID は <code>NW</code> <code>Server</code> <code>Dev</code> 等の英数字（半角英数 + ハイフン / アンダーバーのみ）。</p>
+
+    <h2 id="master-uneditable">編集不可 フラグ</h2>
+    <p>役割単位で <strong>「編集不可」チェックボックス</strong>を ON にすると、その役割で作成された新規面談は以下のように動作します。</p>
+    <ul>
+      <li>新規セッション作成時に <strong>④ 求める人材条件が自動で凍結</strong>される（<code>conditions_snapshot.json</code> を即時生成）</li>
+      <li>セッション画面の <strong>「修正」ボタンが無効化</strong>され、条件を書き換えできない</li>
+      <li>ホバーで「マスタで編集不可に設定されているため修正できません」と理由が表示される</li>
+    </ul>
+    <p>用途: 契約先が決めた評価条件を面談官が勝手に変えないよう固定したい場合、監査観点で凍結条件の一貫性を保証したい場合など。</p>
+    <div class="tip">
+      <p>編集不可の役割は 🔒 アイコンが表示されます（一覧表・新規面談の役割選択・セッションの ② ヘッダ）。</p>
+    </div>
+
+    <h2 id="master-roles-export">エクスポート</h2>
+    <p>役割マスタを JSON / Excel ファイルとして書き出しできます。編集前のスナップショット保存や、他 PC への引き継ぎ元として利用してください。</p>
+    <ul>
+      <li>求人情報セクション右上の <strong>「エクスポート」</strong> ボタン — 求人情報のみ JSON</li>
+      <li>ページ末尾の <strong>「マスタ一括 export」</strong>：<strong>「📥 JSON」</strong> — 役割 + 評価条件をまとめて JSON</li>
+      <li>同じく <strong>「📊 Excel」</strong> — テンプレ準拠の .xlsx（人事担当への配布用）</li>
+    </ul>
+    <div class="note">
+      <p>読み込み（インポート）は現状 UI 未提供です。API 経由（<code>POST /api/master/import</code>）または JSON ファイル直置きで反映してください。</p>
+    </div>
+  </article>
+
+  <article class="page" id="p-master-eval">
+    <h1>評価条件を編集</h1>
+    <p class="subtitle"><code>/master</code> ページの下半分。BARS 6 小軸と役割別の重み・合格ラインを編集します。</p>
+
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/master.png" alt="評価条件エディタ">
+      </div>
+      <figcaption>/master 画面の下半分に評価条件セクション — 6 小軸の重み・合格ライン・普通ラインを編集</figcaption>
+    </figure>
 
     <h2 id="master-criteria">評価条件（BARS）— 2 大分類 × 3 小軸</h2>
     <p>既定は <strong>人間性・技術力の 2 大分類 × 各 3 小軸 = 全 6 小軸</strong>。総合スコアはこの 6 小軸のフラットな重み付き平均で自動計算されます。</p>
@@ -1434,18 +1532,22 @@ T5. 得意な言語と、その言語で気をつけていること
     <div class="note">
       <p>役割別に上書きされた重みは ②凍結時にセッションに <strong>スナップショット</strong>として固定されます。あとからマスタの重みを変えても過去の面談スコアの意味は変わりません。</p>
     </div>
+  </article>
 
-    <h2 id="master-calc">総合スコアの計算式</h2>
+  <article class="page" id="p-master-calc">
+    <h1>総合スコアの計算式</h1>
+    <p class="subtitle">全ユーザー共通で使用される、面談 ⑤ 評価の総合スコア算出ロジック。</p>
+
     <p><strong>全ユーザーで同一の計算式を使用します</strong>。ロジックはコードに固定されており改変不可。監査で問われた際はこの手順で説明できます。</p>
 
-    <h3>3 ステップで算出</h3>
+    <h2 id="calc-3step">3 ステップで算出</h2>
     <ol>
       <li><strong>各小軸のスコア入力</strong>（AI or 面談官）: 0〜5、0.5 刻み、全 11 段階</li>
       <li><strong>総合スコア = 6 小軸のフラット重み付き平均</strong>（大分類 2 段重みは無し）</li>
       <li><strong>合否判定</strong>: しきい値と比較</li>
     </ol>
 
-    <h3>数式</h3>
+    <h2 id="calc-formula">数式</h2>
     <div class="note" style="font-size:1.05em; text-align:center; padding:1.2em;">
       <p style="margin:0 0 0.5em 0;">
         <strong>総合スコア</strong> =
@@ -1463,7 +1565,7 @@ T5. 得意な言語と、その言語で気をつけていること
       </p>
     </div>
 
-    <h3>合否判定</h3>
+    <h2 id="calc-verdict">合否判定</h2>
     <table>
       <thead><tr><th>総合スコアの範囲</th><th>判定</th></tr></thead>
       <tbody>
@@ -1472,9 +1574,9 @@ T5. 得意な言語と、その言語で気をつけていること
         <tr><td>総合スコア &lt; 普通ライン</td><td><span class="pill pill-fail">不合格</span></td></tr>
       </tbody>
     </table>
-    <p>合格ライン / 普通ラインは役割別に上書き可能（<a href="#master-override">上表参照</a>）。</p>
+    <p>合格ライン / 普通ラインは役割別に上書き可能（<a href="#master-eval" data-page="master-eval">評価条件</a> で設定）。</p>
 
-    <h3>計算例（Dev 役割の場合）</h3>
+    <h2 id="calc-example">計算例（Dev 役割の場合）</h2>
     <p>面談官 or AI が以下のスコアを入力したとします。</p>
     <table>
       <thead><tr><th>大分類</th><th>小軸</th><th>スコア</th><th>重み（Dev）</th><th>スコア × 重み</th></tr></thead>
@@ -1493,10 +1595,10 @@ T5. 得意な言語と、その言語で気をつけていること
       <p style="margin:0.5em 0 0 0;">Dev の合格ライン = 4.0 → 4.13 ≥ 4.0 → <span class="pill pill-pass">合格</span></p>
     </div>
 
-    <h3>自己解決レベルは別枠</h3>
+    <h2 id="calc-self">自己解決レベルは別枠</h2>
     <p>AI or 面談官が別途 <strong>0〜5</strong> の 6 段階で評価しますが、<strong>総合スコアの計算には入りません</strong>。参考指標として単独表示されます。「マニュアル・手順書のある業務でどこまで自走できるか」の判断に利用します。</p>
 
-    <h3>設定 → 結果の流れ</h3>
+    <h2 id="calc-flow">設定 → 結果の流れ</h2>
     <figure class="shot">
       <div class="frame">
         <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
@@ -1514,34 +1616,11 @@ T5. 得意な言語と、その言語で気をつけていること
     <div class="note">
       <p>② 条件凍結時（<code>conditions_snapshot.json</code> 生成）に、その時点の重み・合格ライン・普通ラインがセッションに固定されます。あとから <code>/master</code> を変更しても、既存セッションの計算式・しきい値は変わりません。</p>
     </div>
-
-    <h2 id="master-uneditable">編集不可 フラグ</h2>
-    <p>役割単位で <strong>「編集不可」チェックボックス</strong>を ON にすると、その役割で作成された新規面談は以下のように動作します。</p>
-    <ul>
-      <li>新規セッション作成時に <strong>④ 求める人材条件が自動で凍結</strong>される（<code>conditions_snapshot.json</code> を即時生成）</li>
-      <li>セッション画面の <strong>「修正」ボタンが無効化</strong>され、条件を書き換えできない</li>
-      <li>ホバーで「マスタで編集不可に設定されているため修正できません」と理由が表示される</li>
-    </ul>
-    <p>用途: 契約先が決めた評価条件を面談官が勝手に変えないよう固定したい場合、監査観点で凍結条件の一貫性を保証したい場合など。</p>
-    <div class="tip">
-      <p>編集不可の役割は 🔒 アイコンが表示されます（一覧表・新規面談の役割選択・セッションの ② ヘッダ）。</p>
-    </div>
-
-    <h2 id="master-import">エクスポート</h2>
-    <p>マスタ全体（役割 + 評価条件）を JSON / Excel ファイルとして書き出しできます。編集前のスナップショット保存や、他 PC への引き継ぎ元として利用してください。</p>
-    <ul>
-      <li>求人情報セクション右上の <strong>「エクスポート」</strong> ボタン — 求人情報のみ JSON</li>
-      <li>ページ末尾の <strong>「マスタ一括 export」</strong>：<strong>「📥 JSON」</strong> — 役割 + 評価条件をまとめて JSON</li>
-      <li>同じく <strong>「📊 Excel」</strong> — テンプレ準拠の .xlsx（人事担当への配布用）</li>
-    </ul>
-    <div class="note">
-      <p>読み込み（インポート）は現状 UI 未提供です。API 経由（<code>POST /api/master/import</code>）または JSON ファイル直置きで反映してください。</p>
-    </div>
   </article>
 
   <article class="page" id="p-settings">
-    <h1>設定</h1>
-    <p class="subtitle"><code>/settings</code> で全体設定を管理します。</p>
+    <h1>保存場所と保存期間</h1>
+    <p class="subtitle"><code>/settings</code> でデータ保存先・自動削除ルール・バックアップ世代を管理します。</p>
 
     <h2 id="settings-screenshot">画面</h2>
     <figure class="shot">
@@ -1582,6 +1661,66 @@ T5. 得意な言語と、その言語で気をつけていること
 
     <h2 id="settings-audit">監査ログビューア</h2>
     <p>ページ末尾に直近 50 件の操作ログが表示されます（詳細は <a href="#audit">監査ログ</a>）。</p>
+  </article>
+
+  <article class="page" id="p-api-key">
+    <h1>API キー設定</h1>
+    <p class="subtitle"><code>/settings</code> の「AI プロバイダ設定」節。①③⑤ を API モードで動かすために Provider ごとにキーを登録します。この節の変更は<strong>自動保存</strong>されます。</p>
+
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/settings.png" alt="設定画面 (AI プロバイダ設定節)">
+      </div>
+      <figcaption>/settings 画面の「AI プロバイダ設定」節 — Provider ごとにキー入力・既定モデル選択・削除ボタン</figcaption>
+    </figure>
+
+    <div class="note">
+      <p>API モードを使わず貼付モードだけで運用する場合、この設定は不要です。<a href="#mode">モードを選ぶ</a> も併せて参照してください。</p>
+    </div>
+
+    <h2 id="api-key-providers">対応プロバイダ</h2>
+    <table>
+      <thead><tr><th>プロバイダ</th><th>取得先（公式コンソール）</th><th>環境変数フォールバック</th></tr></thead>
+      <tbody>
+        <tr><td>🟠 <strong>Anthropic Claude</strong></td><td><code>console.anthropic.com/settings/keys</code></td><td><code>ANTHROPIC_API_KEY</code></td></tr>
+        <tr><td>🟢 <strong>OpenAI ChatGPT</strong></td><td><code>platform.openai.com/api-keys</code></td><td><code>OPENAI_API_KEY</code></td></tr>
+        <tr><td>🔵 <strong>Google Gemini</strong></td><td><code>aistudio.google.com/app/apikey</code></td><td><code>GOOGLE_API_KEY</code></td></tr>
+      </tbody>
+    </table>
+    <p>環境変数が設定されている場合はそちらが優先され、UI 入力は不要（画面に <strong>「env 使用中」</strong> と表示されます）。</p>
+
+    <h2 id="api-key-register">キー登録の手順</h2>
+    <ol>
+      <li>右上のプロバイダアイコンから「新規登録」を選択（すでにキーが登録済なら 🔒 が表示 → 編集アイコンで再入力）</li>
+      <li>入力欄に取得したキーを貼付（<code>sk-ant-...</code> / <code>sk-...</code> / <code>AIza...</code> 等）</li>
+      <li>入力欄からフォーカスを外すと<strong>自動保存</strong>。成功すると「✓ 設定済」バッジが 4 秒表示</li>
+      <li>「既定プロバイダ」ラジオで通常使うプロバイダを選択（各セクションの初期選択に反映）</li>
+    </ol>
+    <div class="tip">
+      <p>キーは <code>data/settings.json</code> にプレーンテキストで保存されます。PC 自体のログインアカウントに紐づくため、共有 PC で使う場合は <code>dataRoot</code> をユーザー個別のフォルダに変更してください（<a href="#settings">保存場所と保存期間</a> 参照）。</p>
+    </div>
+
+    <h2 id="api-key-models">モデル選択</h2>
+    <p>プロバイダごとに「既定モデル」を 1 つ選びます。既定モデルは全工程（① 要約 / ③ 質問 / ⑤ 評価）に適用されます。</p>
+    <table>
+      <thead><tr><th>プロバイダ</th><th>⚡ 速い・安い</th><th>⚖ 標準</th><th>🎯 高精度</th></tr></thead>
+      <tbody>
+        <tr><td>🟠 Anthropic</td><td>Haiku 4.5</td><td>Sonnet 4.6</td><td>Opus 4.7</td></tr>
+        <tr><td>🟢 OpenAI</td><td>GPT-4o mini</td><td>GPT-4o / o1-mini</td><td>o1</td></tr>
+        <tr><td>🔵 Google</td><td>Gemini 2.0 Flash</td><td>Gemini 2.0 Pro</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p>使い分けの目安：構造化タスク（要約・質問整形）は「速い・安い」で十分。<strong>⑤ 評価の判断品質</strong>だけを「標準」以上に上げるのが費用対効果が良い運用です。</p>
+    <div class="note">
+      <p>現状 UI では工程ごとの上書きは未対応。工程別に別モデルを使いたい場合は <code>data/settings.json</code> の <code>providers.&lt;id&gt;.models</code> フィールド（<code>summary</code> / <code>questions</code> / <code>evaluation</code> / <code>evaluationStrict</code>）を手編集してください。</p>
+    </div>
+
+    <h2 id="api-key-cost">コストへの影響</h2>
+    <p>API 呼び出しごとに <code>provider</code> / <code>model</code> / 入力・出力トークン数が <code>data/logs/audit.log</code> に記録されます。<a href="#cost">コスト試算</a> ページでプロバイダ別・モデル別・工程別に集計を確認できます。</p>
+
+    <h2 id="api-key-delete">キーの削除</h2>
+    <p>登録済のプロバイダ行にある 🗑️ アイコンでキーを削除します（確認ダイアログあり）。削除後はそのプロバイダで API モードを使えなくなり、該当セクションは自動的に貼付モードにフォールバックします。</p>
   </article>
 
   <article class="page" id="p-trash">
@@ -1857,9 +1996,8 @@ T5. 得意な言語と、その言語で気をつけていること
     </ol>
     <p>Rollback 完了後、失敗の原因は cmd ログに残ります。ネットワーク不通なら時間をおいて再試行、それ以外の場合は開発者に連絡してください。</p>
 
-    <h2 id="update-manual-restore">手動復旧（通常は不要）</h2>
-    <p>PC の電源断・ブルースクリーン等で updater.bat 自体が異常終了した場合、<strong>次回 <code>start.bat</code> を起動した時点で自動的に直近バックアップから復旧します</strong>。ユーザー側で追加操作は要りません（<code>data\.update\state.json</code> の phase が <code>applying</code> / <code>restoring</code> のまま残っていることを起動時に検知し、<code>scripts/restore.bat --auto</code> を裏で呼びます）。</p>
-    <p>自動復旧が期待通りに動かない・バックアップ以外の世代へ戻したい等、深刻な破損時のみ以下の手動手順が使えます:</p>
+    <h2 id="update-manual-restore">手動復旧（restore.bat）</h2>
+    <p>PC の電源断・ブルースクリーン等で updater.bat 自体が異常終了した場合、以下の緊急復旧手段があります:</p>
     <figure class="shot">
       <div class="frame">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" style="width:100%;height:auto;background:#0c0c0c;font-family:'Consolas', monospace">
@@ -1873,7 +2011,7 @@ T5. 得意な言語と、その言語で気をつけていること
           <!-- cmd content -->
           <g font-size="12" fill="#c0c0c0">
             <text x="14" y="50">====================================================</text>
-            <text x="14" y="68">   Interview AI Tool - Emergency Restore</text>
+            <text x="14" y="68">   Interview AI Tool - Manual Restore</text>
             <text x="14" y="86">====================================================</text>
             <text x="14" y="112" fill="#ffffff">[INFO] Scanning .backup/ …</text>
             <text x="14" y="130" fill="#93c5fd">  Found 1 backup(s):</text>
@@ -1885,7 +2023,7 @@ T5. 得意な言語と、その言語で気をつけていること
           </g>
         </svg>
       </div>
-      <figcaption>scripts/restore.bat 手動起動時の対話画面：バックアップ一覧から選択して確認するだけの単純な cmd 対話（<code>--auto</code> 付きで start.bat から呼ばれた場合はこの対話をスキップして最新 backup を無言で戻す）</figcaption>
+      <figcaption>scripts/restore.bat の対話画面：バックアップ一覧から選択して確認するだけの単純な cmd 対話</figcaption>
     </figure>
     <ol>
       <li>プロジェクト直下の <code>scripts/restore.bat</code> をダブルクリック</li>
@@ -2074,7 +2212,7 @@ T5. 得意な言語と、その言語で気をつけていること
       <li><strong>列ヘッダのラベル</strong>クリックで sort 切替（asc → desc → 解除）</li>
       <li><strong>フィルタアイコン</strong>（<code>closedAt · 役割 · 合否 · 採否</code> の 4 列のみ表示）で値ごとに絞り込み</li>
       <li>数値列（<code>総合 · 6 小軸</code>）は連続値のため filter アイコンなし、sort のみ</li>
-      <li>大分類バンドは <code>人間性（amber）</code> → <code>技術力（indigo）</code> → 分類なし の順に並ぶ（<a href="#master">マスタ</a>で軸を追加した場合も自動）</li>
+      <li>大分類バンドは <code>人間性（amber）</code> → <code>技術力（indigo）</code> → 分類なし の順に並ぶ（<a href="#master-eval">評価条件</a>で軸を追加した場合も自動）</li>
       <li>行 hover で走光 ring（primary 色）+ glow shadow が出て、視線を追いやすくする</li>
       <li>数値の色階：<strong>総合スコア</strong>は ≥4 emerald / ≥3 通常 / &lt;3 rose。<strong>小軸</strong>は ≥4 淡 emerald / &lt;3 淡 rose で強弱点を強調</li>
     </ul>
@@ -2125,6 +2263,14 @@ T5. 得意な言語と、その言語で気をつけていること
   <article class="page" id="p-export">
     <h1>Excel エクスポート</h1>
     <p class="subtitle">マスタ・候補者一覧を Excel ファイルとして自動的に生成します。</p>
+
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/list.png" alt="一覧画面 (Excel リンク)">
+      </div>
+      <figcaption>一覧画面下部の「Excel を開く」リンク — <code>data/exports/</code> のマスタ・面談者一覧を直接開ける</figcaption>
+    </figure>
 
     <h2 id="export-files">自動更新ファイル</h2>
     <ul>
@@ -2565,6 +2711,25 @@ T5. 得意な言語と、その言語で気をつけていること
 
 <script>
 "use strict";
+
+// ─── sidebar group collapse ────────────────────────────────
+const GROUP_LS_KEY = "manual_v2_collapsed_groups";
+const collapsedGroups = new Set(JSON.parse(localStorage.getItem(GROUP_LS_KEY) || "[]"));
+document.querySelectorAll("aside.left .group").forEach((g, idx) => {
+  const key = "g" + idx;
+  const ul = g.nextElementSibling;
+  if (collapsedGroups.has(key)) g.classList.add("collapsed");
+  // Set max-height dynamically for smooth transition
+  const setMax = () => { if (ul && ul.tagName === "UL") ul.style.maxHeight = g.classList.contains("collapsed") ? "0" : ul.scrollHeight + "px"; };
+  setMax();
+  g.addEventListener("click", () => {
+    g.classList.toggle("collapsed");
+    if (g.classList.contains("collapsed")) collapsedGroups.add(key);
+    else collapsedGroups.delete(key);
+    localStorage.setItem(GROUP_LS_KEY, JSON.stringify([...collapsedGroups]));
+    setMax();
+  });
+});
 
 // ─── page routing ─────────────────────────────────────────
 const pages = Array.from(document.querySelectorAll("article.page"));

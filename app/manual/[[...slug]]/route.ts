@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { getProjectRoot } from "@/lib/storage";
 
 // /manual と /manual/assets/xxx.png を配信する。
 // HTML はプロジェクトルート直下の `運用マニュアル.HTML`（ダブルクリック起動も可）、
@@ -11,7 +12,11 @@ import path from "node:path";
 // - GET /manual/assets/list.png       → マニュアル/assets/list.png
 // - それ以外の拡張子は 404
 
-const PROJECT_ROOT = process.cwd();
+// standalone 版は server.js が cwd を `.next/standalone/` に変更するため、
+// 素の process.cwd() だと HTML が見つからない。lib/storage の
+// getProjectRoot() が RESUME_CLAUDE_PROJECT_ROOT 環境変数を含む正しい解決順で
+// プロジェクト根を返す。
+const PROJECT_ROOT = getProjectRoot();
 const HTML_PATH = path.resolve(PROJECT_ROOT, "運用マニュアル.HTML");
 const ASSETS_ROOT = path.resolve(PROJECT_ROOT, "マニュアル");
 
