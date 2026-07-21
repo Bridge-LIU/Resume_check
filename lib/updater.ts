@@ -34,6 +34,7 @@
  */
 
 import "server-only";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { getDataRoot, getProjectRoot } from "@/lib/storage";
@@ -525,7 +526,8 @@ export function cleanStaging(): void {
  * - 進捗コールバック（bytes DL 済 / total）
  *
  * 完了で writeState(downloaded) を呼び、失敗で throw する（呼び出し側で writeState(error)）。
- * ZIP 展開はここでは行わない — updater.bat 側で robocopy 前に行う想定に変更予定。
+ * ZIP 展開は download route が続けて extractStagedZip() を呼ぶ設計に変更（v0.1.1+）。
+ * サーバ稼働中に展開まで済ませることで updater.bat の停止時間を 7 秒短縮する。
  */
 export async function downloadRelease(
   release: ReleaseInfo,
@@ -634,6 +636,46 @@ export async function downloadRelease(
   }
 
   return zipPath;
+}
+
+/**
+ * DL 済 ZIP を staging/extracted/ に展開する。サーバ稼働中に呼ばれる想定
+ * （updater.bat の停止時間を減らすため）。Windows 10 1803+ 同梱の tar を使う
+ * ので追加依存なし。失敗時は throw して呼び出し側で state=error にする。
+ *
+ * 完了マーカ: extracted/ に何かファイル/ディレクトリがあれば「展開済」と扱う
+ * （updater.bat 側もこの条件で skip 判断する）。中断時は次回 DL 時に staging を
+ * 掃除してやり直す（cleanStaging()）。
+ */
+export async function extractStagedZip(zipPath: string): Promise<void> {
+  const extractDir = getStagingExtractedDir();
+  if (fs.existsSync(extractDir)) {
+    fs.rmSync(extractDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(extractDir, { recursive: true });
+
+  await new Promise<void>((resolve, reject) => {
+    const proc = spawn("tar", ["-xf", zipPath, "-C", extractDir], {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    proc.on("error", (e) => {
+      reject(new Error(`ZIP 展開に失敗: tar 起動不能 (${e.message})`));
+    });
+    proc.on("exit", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`ZIP 展開に失敗: tar exit code ${code}`));
+      }
+    });
+  });
+
+  // 展開結果に何も無ければ失敗扱い
+  const entries = fs.readdirSync(extractDir);
+  if (entries.length === 0) {
+    throw new Error("ZIP 展開に失敗: 展開結果が空");
+  }
 }
 
 /* ───────────── updater.bat log tail ───────────── */

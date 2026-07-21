@@ -56,23 +56,34 @@ call :log "  Interview AI Tool Updater v3.2 (standalone)"
 call :log "  v%OLD_VER% to v%NEW_VER%"
 call :log "================================================"
 
-REM Give the previous server time to release file locks
-call :log "Waiting 5s for previous server to release file locks..."
-timeout /t 5 /nobreak >nul
+REM Give the previous server time to release file locks.
+REM Even after the Node process exits, Windows takes a moment to release the
+REM open handles on .next/standalone/**. If robocopy hits a still-locked file
+REM it retries (R:2 W:2 = ~4s per file) which is a fallback, not the primary
+REM wait. 6s covers realistic cases; robocopy retry handles the edge tail.
+call :log "Waiting 6s for previous server to release file locks..."
+timeout /t 6 /nobreak >nul
 
 REM ================================================================
-REM  [Pre] Extract ZIP
+REM  [Pre] Extract ZIP (skipped if download route already did it)
 REM ================================================================
-call :log "[Pre] Extracting %ZIP_PATH% to %EXTRACT_DIR%..."
-if not exist "%EXTRACT_DIR%" mkdir "%EXTRACT_DIR%"
-
-REM Windows 10 1803+ built-in tar can extract ZIP
-tar -xf "%ZIP_PATH%" -C "%EXTRACT_DIR%"
-if errorlevel 1 (
-    call :log "[ERROR] ZIP extraction failed"
-    goto :rollback_no_backup
+REM v0.1.1+: download route's extractStagedZip() pre-extracts to the same
+REM dir while the server is still running. Skip here if already populated
+REM (non-empty). Saves about 7 seconds of downtime.
+dir /b "%EXTRACT_DIR%" 2>nul | findstr /r /c:"." >nul
+if not errorlevel 1 (
+    call :log "[Pre] Extract skipped (pre-extracted by download route)"
+) else (
+    call :log "[Pre] Extracting %ZIP_PATH% to %EXTRACT_DIR%..."
+    if not exist "%EXTRACT_DIR%" mkdir "%EXTRACT_DIR%"
+    REM Windows 10 1803+ built-in tar can extract ZIP
+    tar -xf "%ZIP_PATH%" -C "%EXTRACT_DIR%"
+    if errorlevel 1 (
+        call :log "[ERROR] ZIP extraction failed"
+        goto :rollback_no_backup
+    )
+    call :log "[Pre] Extraction complete"
 )
-call :log "[Pre] Extraction complete"
 
 REM ================================================================
 REM  [0/3] Backup old files (move-first, near-instant)

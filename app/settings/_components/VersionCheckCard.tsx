@@ -193,14 +193,16 @@ export function VersionCheckCard({ currentVersion }: Props) {
   }
 
   function handleModalClose() {
+    // 成功後: /settings のバージョンカード（サーバ側で render）は client cache
+    // 上の値を握ったままで、閉じても "現バージョン: v旧" 表示になる。
+    // フルリロードで新版バージョンを反映させる。onbeforeunload 抑止のため直接 reload。
+    if (successVersion) {
+      window.location.reload();
+      return;
+    }
     setModalOpen(false);
     setSuccessVersion(undefined);
     applyingRef.current = false;
-    // 成功後は idle 表示、次回チェックまで待機
-    if (successVersion) {
-      setState({ phase: "idle" });
-      setLastCheckedAt(new Date().toISOString());
-    }
   }
 
   // 描画分岐

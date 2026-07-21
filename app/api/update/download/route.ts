@@ -19,6 +19,7 @@ import { NextResponse } from "next/server";
 import { apiErrorResponse, ApiError, ensureLocalOrigin } from "@/lib/apiError";
 import {
   downloadRelease,
+  extractStagedZip,
   fetchLatestRelease,
   readState,
   writeState,
@@ -86,23 +87,41 @@ export async function POST(req: Request) {
       try {
         let lastWriteAt = Date.now();
         let lastProgressPct = 0;
-        await downloadRelease(latest, controller.signal, (loaded, total) => {
-          const now = Date.now();
-          const pct = total > 0 ? Math.floor((loaded / total) * 100) : 0;
-          if (
-            now - lastWriteAt >= PROGRESS_WRITE_INTERVAL_MS ||
-            pct - lastProgressPct >= PROGRESS_WRITE_DELTA
-          ) {
-            lastWriteAt = now;
-            lastProgressPct = pct;
-            writeState({
-              phase: "downloading",
-              latest,
-              progress: pct,
-              startedAt,
-            });
-          }
+        const zipPath = await downloadRelease(
+          latest,
+          controller.signal,
+          (loaded, total) => {
+            const now = Date.now();
+            const pct = total > 0 ? Math.floor((loaded / total) * 100) : 0;
+            if (
+              now - lastWriteAt >= PROGRESS_WRITE_INTERVAL_MS ||
+              pct - lastProgressPct >= PROGRESS_WRITE_DELTA
+            ) {
+              lastWriteAt = now;
+              lastProgressPct = pct;
+              writeState({
+                phase: "downloading",
+                latest,
+                progress: pct,
+                startedAt,
+              });
+            }
+          },
+        );
+
+        // ZIP を staging/extracted/ に展開してから downloaded 遷移する。
+        // サーバ稼働中に済ませることで updater.bat の停止時間を約 7 秒短縮する
+        // （もともと updater.bat の [Pre] Extract 段で行っていた作業）。
+        // UI からは progress=100 のまま数秒経ってから phase 遷移して見える。
+        writeState({
+          phase: "downloading",
+          latest,
+          progress: 100,
+          startedAt,
         });
+        console.log(`[update/download] DL done, extracting v${latest.version}`);
+        await extractStagedZip(zipPath);
+
         writeState({
           phase: "downloaded",
           latest,
