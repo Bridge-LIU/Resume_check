@@ -96,6 +96,51 @@ function computeLabel(state: UpdateState, successVersion?: string): string {
   }
 }
 
+/**
+ * updater.bat / start.bat の log tail から現在のサブステップを抽出。
+ * 直近ログを新→旧に走査し、最初に match したパターンの日本語ラベルを返す。
+ *
+ * bat 側は既に `[Pre]` / `[0/3]` / `[1/3]` / `[3/3]` / `[ROLLBACK]` / `[UPDATE]`
+ * のマーカ付きで出力しているので、これを 6 段のユーザ向け文言にマップするだけで、
+ * バックエンド側の変更は不要。
+ */
+function computeSubStep(state: UpdateState, logTail: string[]): string | null {
+  if (state.phase !== "applying" && state.phase !== "restoring") return null;
+
+  // 新しいログから順に見る
+  for (let i = logTail.length - 1; i >= 0; i--) {
+    const line = logTail[i];
+    if (!line) continue;
+
+    if (line.includes("[ROLLBACK]") || line.includes("Restoring from backup")) {
+      return "⏪ 前バージョンに復元中...";
+    }
+    if (
+      line.includes("[UPDATE] Update completed") ||
+      line.includes("[3/3] Files installed") ||
+      line.includes("Update files installed") ||
+      line.includes("Returning to start.bat")
+    ) {
+      return "🔄 サーバー再起動中... (5〜10 秒)";
+    }
+    if (line.includes("[1/3]")) {
+      return "📥 新バージョンをインストール中...";
+    }
+    if (line.includes("[0/3]")) {
+      return "💾 現バージョンをバックアップ中...";
+    }
+    if (line.includes("[Pre] Extracting") || line.includes("[Pre] Extraction")) {
+      return "📦 ZIP を展開中...";
+    }
+    if (line.includes("Waiting") && line.includes("file locks")) {
+      return "⏳ ファイルロック解放待ち...";
+    }
+  }
+
+  // logTail に該当行が無ければ準備中扱い
+  return "⏳ 準備中...";
+}
+
 function computeTitle(state: UpdateState, successVersion?: string): string {
   switch (state.phase) {
     case "downloading":
@@ -134,6 +179,35 @@ export function UpdateProgressDialog({
   const progress = successVersion && state.phase === "idle" ? 100 : computeProgress(state);
   const title = computeTitle(state, successVersion);
   const label = computeLabel(state, successVersion);
+  const subStep = computeSubStep(state, logTail);
+
+  /**
+   * downloading フェーズは lib/updater.ts が state.progress を更新するだけで
+   * updater.log には書かないため、黒枠が空になる。UI 側で state から
+   * 合成ログを生成して視覚的に「動いている感」を出す。
+   */
+  const synthesizedLog = ((): string[] => {
+    if (state.phase === "downloading") {
+      const sizeMb = state.latest.sizeBytes
+        ? (state.latest.sizeBytes / 1024 / 1024).toFixed(1)
+        : "?";
+      const doneMb = state.latest.sizeBytes
+        ? ((state.latest.sizeBytes * state.progress) / 100 / 1024 / 1024).toFixed(1)
+        : "?";
+      return [
+        `$ [DL] fetching v${state.latest.version} from GitHub...`,
+        `$ [DL] size: ${sizeMb} MB`,
+        `$ [DL] progress: ${state.progress}% (${doneMb} MB / ${sizeMb} MB)`,
+      ];
+    }
+    if (state.phase === "downloaded") {
+      return [`$ [DL] complete, waiting for apply...`];
+    }
+    return [];
+  })();
+
+  // logTail 空でも合成ログがあればそちらを優先表示
+  const displayLog = logTail.length > 0 ? logTail : synthesizedLog;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -175,6 +249,11 @@ export function UpdateProgressDialog({
                 style={{ width: `${progress}%` }}
               />
             </div>
+            {subStep && (
+              <div className="text-2xs text-muted-foreground pl-0.5 pt-0.5">
+                {subStep}
+              </div>
+            )}
           </div>
 
           {/* CMD log box */}
@@ -182,12 +261,12 @@ export function UpdateProgressDialog({
             ref={logRef}
             className="bg-zinc-950 text-zinc-100 font-mono text-2xs rounded-md p-3 h-32 overflow-y-auto whitespace-pre-wrap"
           >
-            {logTail.length === 0 ? (
+            {displayLog.length === 0 ? (
               <span className="text-zinc-500">
                 $ waiting for updater.bat output...
               </span>
             ) : (
-              logTail.map((line, i) => (
+              displayLog.map((line, i) => (
                 <div
                   key={i}
                   className={
@@ -210,15 +289,6 @@ export function UpdateProgressDialog({
           {state.phase === "error" && (
             <div className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded px-3 py-2">
               {state.message}
-              {state.rollbackZipPath && (
-                <div className="text-2xs mt-1 opacity-70">
-                  復旧が必要な場合は{" "}
-                  <code className="px-1 rounded bg-amber-100 dark:bg-amber-900">
-                    scripts\restore.bat
-                  </code>{" "}
-                  を実行してください。
-                </div>
-              )}
             </div>
           )}
 

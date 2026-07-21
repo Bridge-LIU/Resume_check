@@ -155,6 +155,12 @@
     background:var(--c-brand);
   }
   aside.left li a.active:hover { background:var(--c-brand-dark); }
+  aside.left li a.sub {
+    padding-left:24px; font-size:13px; color:var(--c-text-soft);
+  }
+  aside.left li a.sub:hover {
+    color:var(--c-brand); background:var(--c-brand-soft);
+  }
 
   /* ─── center content ─── */
   main.content {
@@ -703,6 +709,7 @@
     <div class="group">🗂️ マスタ</div>
     <ul>
       <li><a href="#master" data-page="master">求人情報管理</a></li>
+      <li><a href="#master--master-calc" data-page="master-calc-sub" class="sub">└ 総合スコアの計算式</a></li>
     </ul>
     <div class="group">💴 コスト</div>
     <ul>
@@ -1379,39 +1386,133 @@ T5. 得意な言語と、その言語で気をつけていること
     </ul>
     <p>役割 ID は <code>NW</code> <code>Server</code> <code>Dev</code> 等の英数字（半角英数 + ハイフン / アンダーバーのみ）。</p>
 
-    <h2 id="master-criteria">評価条件（BARS）— 5 軸バランス型</h2>
-    <p>既定は以下の <strong>5 軸</strong>。総合スコアはこれらの重み付き平均で自動計算されます。</p>
+    <h2 id="master-criteria">評価条件（BARS）— 2 大分類 × 3 小軸</h2>
+    <p>既定は <strong>人間性・技術力の 2 大分類 × 各 3 小軸 = 全 6 小軸</strong>。総合スコアはこの 6 小軸のフラットな重み付き平均で自動計算されます。</p>
     <table>
-      <thead><tr><th>軸</th><th>意味</th><th>既定重み</th><th>質問例</th></tr></thead>
+      <thead><tr><th>大分類</th><th>小軸</th><th>意味</th><th>既定重み</th></tr></thead>
       <tbody>
-        <tr><td><strong>技術力</strong></td><td>職種スキル・専門知識・実装力</td><td>3〜4</td><td>「得意な言語で気をつけていること」</td></tr>
-        <tr><td><strong>問題解決力</strong></td><td>分析・課題設定・打ち手選定</td><td>3〜4</td><td>「困難だった場面と乗り越え方」</td></tr>
-        <tr><td><strong>主体性 / 意欲</strong></td><td>自走・提案・オーナーシップ</td><td>3</td><td>「自分から提案して改善した事例」</td></tr>
-        <tr><td><strong>コミュニケーション力</strong></td><td>説明力・傾聴・調整</td><td>3</td><td>「対人でこじれた場面の解決」</td></tr>
-        <tr><td><strong>学習意欲 / 成長性</strong></td><td>キャッチアップ速度、学び方</td><td>3</td><td>「新技術を独学で身につけた経験」</td></tr>
+        <tr><td rowspan="3"><strong>人間性</strong></td><td>主体性</td><td>自走・提案・オーナーシップ</td><td>3</td></tr>
+        <tr><td>コミュニケーション力</td><td>説明力・傾聴・調整</td><td>3</td></tr>
+        <tr><td>学習意欲</td><td>キャッチアップ速度、学び方</td><td>3</td></tr>
+        <tr><td rowspan="3"><strong>技術力</strong></td><td>専門知識</td><td>職種スキル・基礎理解</td><td>3</td></tr>
+        <tr><td>問題解決力</td><td>分析・課題設定・打ち手選定</td><td>3</td></tr>
+        <tr><td>設計力</td><td>構造化・保守性・全体最適</td><td>3</td></tr>
       </tbody>
     </table>
     <ul>
-      <li><strong>重みレンジ</strong>：1〜5（既定 3〜4）</li>
-      <li><strong>合格ライン / 普通ライン</strong>：総合スコアのしきい値（既定 合格 4.2 / 普通 3.5）</li>
-      <li><strong>スケール</strong>：0.3〜5.0、0.5 刻み、全 10 段階</li>
+      <li><strong>重みレンジ</strong>: 1〜5（既定 3）</li>
+      <li><strong>合格ライン / 普通ライン</strong>: 総合スコアのしきい値（既定 合格 4.0 / 普通 3.5）</li>
+      <li><strong>スケール</strong>: 0.0〜5.0、0.5 刻み、全 11 段階（0, 0.5, 1.0, …, 5.0）</li>
+      <li><strong>自己解決レベル</strong>: 別枠の 0〜5 評価（総合スコアには入らない、参考指標）</li>
       <li>軸の追加・削除・改名は <code>/master</code> の評価条件エディタから可能</li>
     </ul>
 
     <h2 id="master-override">役割別の重み上書き（既定セット）</h2>
-    <p>役割ごとに重み・合格ラインを差し替えできます。既定は以下の通り。</p>
+    <p>役割ごとに小軸の重みと合格ライン・普通ラインを差し替えできます。既定は以下の通り（6 小軸別）。</p>
     <table>
-      <thead><tr><th>役割</th><th>技術力</th><th>問題解決</th><th>主体性</th><th>コミュ</th><th>学習</th><th>合格ライン</th></tr></thead>
+      <thead>
+        <tr>
+          <th rowspan="2">役割</th>
+          <th colspan="3">人間性</th>
+          <th colspan="3">技術力</th>
+          <th rowspan="2">合格<br>ライン</th>
+          <th rowspan="2">普通<br>ライン</th>
+        </tr>
+        <tr>
+          <th>主体</th><th>コミュ</th><th>学習</th>
+          <th>知識</th><th>問題</th><th>設計</th>
+        </tr>
+      </thead>
       <tbody>
-        <tr><td><strong>NW</strong></td><td>4</td><td>4</td><td>3</td><td>2</td><td>3</td><td>4.2</td></tr>
-        <tr><td><strong>Server</strong></td><td>4</td><td>4</td><td>3</td><td>2</td><td>3</td><td>4.0</td></tr>
-        <tr><td><strong>Dev</strong></td><td>5</td><td>4</td><td>3</td><td>3</td><td>3</td><td>4.2</td></tr>
-        <tr><td><strong>PMO</strong></td><td>2</td><td>3</td><td>4</td><td>4</td><td>3</td><td>3.8</td></tr>
-        <tr><td><strong>ITSupport</strong></td><td>3</td><td>3</td><td>3</td><td>4</td><td>3</td><td>3.6</td></tr>
+        <tr><td><strong>Dev</strong></td>       <td>3</td><td>3</td><td>4</td><td>4</td><td>5</td><td>4</td><td>4.0</td><td>3.5</td></tr>
+        <tr><td><strong>Server</strong></td>    <td>4</td><td>3</td><td>4</td><td>4</td><td>5</td><td>4</td><td>4.0</td><td>3.5</td></tr>
+        <tr><td><strong>NW</strong></td>        <td>4</td><td>3</td><td>3</td><td>5</td><td>5</td><td>4</td><td>4.0</td><td>3.5</td></tr>
+        <tr><td><strong>PMO</strong></td>       <td>5</td><td>5</td><td>2</td><td>2</td><td>4</td><td>4</td><td>4.5</td><td>4.0</td></tr>
+        <tr><td><strong>ITSupport</strong></td> <td>3</td><td>5</td><td>3</td><td>2</td><td>3</td><td>1</td><td>3.5</td><td>3.0</td></tr>
       </tbody>
     </table>
     <div class="note">
-      <p>役割別に上書きされた重みは ④凍結時にセッションに <strong>スナップショット</strong>として固定されます。あとからマスタの重みを変えても過去の面談スコアの意味は変わりません。</p>
+      <p>役割別に上書きされた重みは ②凍結時にセッションに <strong>スナップショット</strong>として固定されます。あとからマスタの重みを変えても過去の面談スコアの意味は変わりません。</p>
+    </div>
+
+    <h2 id="master-calc">総合スコアの計算式</h2>
+    <p><strong>全ユーザーで同一の計算式を使用します</strong>。ロジックはコードに固定されており改変不可。監査で問われた際はこの手順で説明できます。</p>
+
+    <h3>3 ステップで算出</h3>
+    <ol>
+      <li><strong>各小軸のスコア入力</strong>（AI or 面談官）: 0〜5、0.5 刻み、全 11 段階</li>
+      <li><strong>総合スコア = 6 小軸のフラット重み付き平均</strong>（大分類 2 段重みは無し）</li>
+      <li><strong>合否判定</strong>: しきい値と比較</li>
+    </ol>
+
+    <h3>数式</h3>
+    <div class="note" style="font-size:1.05em; text-align:center; padding:1.2em;">
+      <p style="margin:0 0 0.5em 0;">
+        <strong>総合スコア</strong> =
+        <span style="display:inline-block; vertical-align:middle;">
+          <span style="border-bottom:1px solid; padding:0 0.5em; display:block;">
+            Σ<sub>i=1..6</sub> ( スコア<sub>i</sub> × 重み<sub>i</sub> )
+          </span>
+          <span style="padding:0 0.5em; display:block;">
+            Σ<sub>i=1..6</sub> 重み<sub>i</sub>
+          </span>
+        </span>
+      </p>
+      <p style="margin:0.5em 0 0 0; font-size:0.9em; color:#666;">
+        小数第 2 位で四捨五入（<code>Math.round(x * 100) / 100</code>）
+      </p>
+    </div>
+
+    <h3>合否判定</h3>
+    <table>
+      <thead><tr><th>総合スコアの範囲</th><th>判定</th></tr></thead>
+      <tbody>
+        <tr><td>総合スコア ≥ 合格ライン</td><td><span class="pill pill-pass">合格</span></td></tr>
+        <tr><td>普通ライン ≤ 総合スコア &lt; 合格ライン</td><td>普通</td></tr>
+        <tr><td>総合スコア &lt; 普通ライン</td><td><span class="pill pill-fail">不合格</span></td></tr>
+      </tbody>
+    </table>
+    <p>合格ライン / 普通ラインは役割別に上書き可能（<a href="#master-override">上表参照</a>）。</p>
+
+    <h3>計算例（Dev 役割の場合）</h3>
+    <p>面談官 or AI が以下のスコアを入力したとします。</p>
+    <table>
+      <thead><tr><th>大分類</th><th>小軸</th><th>スコア</th><th>重み（Dev）</th><th>スコア × 重み</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="3">人間性</td><td>主体性</td><td>4.0</td><td>3</td><td>12.0</td></tr>
+        <tr><td>コミュニケーション力</td><td>3.5</td><td>3</td><td>10.5</td></tr>
+        <tr><td>学習意欲</td><td>4.5</td><td>4</td><td>18.0</td></tr>
+        <tr><td rowspan="3">技術力</td><td>専門知識</td><td>4.0</td><td>4</td><td>16.0</td></tr>
+        <tr><td>問題解決力</td><td>4.5</td><td>5</td><td>22.5</td></tr>
+        <tr><td>設計力</td><td>4.0</td><td>4</td><td>16.0</td></tr>
+        <tr style="background:#f9f9f9;"><td colspan="3" style="text-align:right;"><strong>合計</strong></td><td><strong>23</strong></td><td><strong>95.0</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="note" style="text-align:center;">
+      <p style="margin:0;">総合スコア = 95.0 ÷ 23 = <strong style="font-size:1.2em;">4.13</strong>（小数第 2 位で丸め）</p>
+      <p style="margin:0.5em 0 0 0;">Dev の合格ライン = 4.0 → 4.13 ≥ 4.0 → <span class="pill pill-pass">合格</span></p>
+    </div>
+
+    <h3>自己解決レベルは別枠</h3>
+    <p>AI or 面談官が別途 <strong>0〜5</strong> の 6 段階で評価しますが、<strong>総合スコアの計算には入りません</strong>。参考指標として単独表示されます。「マニュアル・手順書のある業務でどこまで自走できるか」の判断に利用します。</p>
+
+    <h3>設定 → 結果の流れ</h3>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/master.png" alt="/master で重みを設定">
+      </div>
+      <figcaption>① <code>/master</code> で 6 小軸の重み・合格ライン・普通ラインを設定する</figcaption>
+    </figure>
+    <figure class="shot">
+      <div class="frame">
+        <div class="dots"><span class="d1"></span><span class="d2"></span><span class="d3"></span></div>
+        <img src="マニュアル/assets/session-5.png" alt="⑤ 評価で総合スコアが表示">
+      </div>
+      <figcaption>② ⑤ 評価で上記の計算式に従い 総合スコア と 合否 が自動表示される</figcaption>
+    </figure>
+    <div class="note">
+      <p>② 条件凍結時（<code>conditions_snapshot.json</code> 生成）に、その時点の重み・合格ライン・普通ラインがセッションに固定されます。あとから <code>/master</code> を変更しても、既存セッションの計算式・しきい値は変わりません。</p>
     </div>
 
     <h2 id="master-uneditable">編集不可 フラグ</h2>
@@ -1756,8 +1857,9 @@ T5. 得意な言語と、その言語で気をつけていること
     </ol>
     <p>Rollback 完了後、失敗の原因は cmd ログに残ります。ネットワーク不通なら時間をおいて再試行、それ以外の場合は開発者に連絡してください。</p>
 
-    <h2 id="update-manual-restore">手動復旧（restore.bat）</h2>
-    <p>PC の電源断・ブルースクリーン等で updater.bat 自体が異常終了した場合、以下の緊急復旧手段があります:</p>
+    <h2 id="update-manual-restore">手動復旧（通常は不要）</h2>
+    <p>PC の電源断・ブルースクリーン等で updater.bat 自体が異常終了した場合、<strong>次回 <code>start.bat</code> を起動した時点で自動的に直近バックアップから復旧します</strong>。ユーザー側で追加操作は要りません（<code>data\.update\state.json</code> の phase が <code>applying</code> / <code>restoring</code> のまま残っていることを起動時に検知し、<code>scripts/restore.bat --auto</code> を裏で呼びます）。</p>
+    <p>自動復旧が期待通りに動かない・バックアップ以外の世代へ戻したい等、深刻な破損時のみ以下の手動手順が使えます:</p>
     <figure class="shot">
       <div class="frame">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" style="width:100%;height:auto;background:#0c0c0c;font-family:'Consolas', monospace">
@@ -1771,7 +1873,7 @@ T5. 得意な言語と、その言語で気をつけていること
           <!-- cmd content -->
           <g font-size="12" fill="#c0c0c0">
             <text x="14" y="50">====================================================</text>
-            <text x="14" y="68">   Interview AI Tool - Manual Restore</text>
+            <text x="14" y="68">   Interview AI Tool - Emergency Restore</text>
             <text x="14" y="86">====================================================</text>
             <text x="14" y="112" fill="#ffffff">[INFO] Scanning .backup/ …</text>
             <text x="14" y="130" fill="#93c5fd">  Found 1 backup(s):</text>
@@ -1783,7 +1885,7 @@ T5. 得意な言語と、その言語で気をつけていること
           </g>
         </svg>
       </div>
-      <figcaption>scripts/restore.bat の対話画面：バックアップ一覧から選択して確認するだけの単純な cmd 対話</figcaption>
+      <figcaption>scripts/restore.bat 手動起動時の対話画面：バックアップ一覧から選択して確認するだけの単純な cmd 対話（<code>--auto</code> 付きで start.bat から呼ばれた場合はこの対話をスキップして最新 backup を無言で戻す）</figcaption>
     </figure>
     <ol>
       <li>プロジェクト直下の <code>scripts/restore.bat</code> をダブルクリック</li>
