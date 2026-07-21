@@ -77,6 +77,8 @@ yarn-error.log*
 **/*_設計書.md
 **/*_実装計画.md
 /docs/
+/AGENTS.md
+/CLAUDE.md
 
 # vercel
 .vercel
