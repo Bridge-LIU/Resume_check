@@ -18,17 +18,6 @@ npm run dev    # http://localhost:3939 で開発サーバ
 - **貼付モード** — ChatGPT / Claude 側で処理してテキストを貼り付ける。API キー不要。
 - **API モード** — `/settings` で設定した Provider (Anthropic / OpenAI / Google) を直接呼ぶ。使用状況は `/cost` で集計。
 
-## 開発者向け
 
-- 実装規約: [`AGENTS.md`](AGENTS.md)
-- 設計書: `.preview/files/面談AI評価ツール_設計書.md`（gitignore）
-- 主要コマンド:
-
-  ```powershell
-  npm run dev     # 開発サーバ (Turbopack, ホットリロード)
-  npm run build   # 本番ビルド + 型チェック
-  npm run lint    # ESLint
-  npm run start   # 本番モード（先に build が必要）
-  ```
 
 Next.js 16 は `params` / `searchParams` が Promise になるなど破壊的変更があるため、`node_modules/next/dist/docs/` を必ず参照してください（AGENTS.md 冒頭）。
