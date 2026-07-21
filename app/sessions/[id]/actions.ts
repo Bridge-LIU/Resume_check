@@ -454,14 +454,14 @@ export async function summarizeCandidateApiAction(
 
   try {
     const userPrompt = SUMMARY_TEXT_INSTRUCTION + kindNote + resumeText;
-    let raw = await callLlm({
+    const llmResult = await callLlm({
       provider,
       model,
       system: SUMMARY_SYSTEM,
       user: userPrompt,
       jsonMode: true,
     });
-    raw = raw.trim();
+    let raw = llmResult.text.trim();
     if (!raw) {
       return { ok: false, error: "AI から空の応答が返りました。" };
     }
@@ -472,6 +472,10 @@ export async function summarizeCandidateApiAction(
         model,
         inputChars: SUMMARY_SYSTEM.length + userPrompt.length,
         outputChars: raw.length,
+        inputTokens: llmResult.usage?.inputTokens,
+        outputTokens: llmResult.usage?.outputTokens,
+        cacheCreationTokens: llmResult.usage?.cacheCreationTokens,
+        cacheReadTokens: llmResult.usage?.cacheReadTokens,
       },
     });
     const parts = parseSummaryJson(raw);
@@ -633,8 +637,9 @@ export async function generateQuestionsApiAction(
     JSON.stringify(snapshot.role, null, 2);
 
   let responseText: string;
+  let usage: import("@/lib/llm/provider").LlmUsage | undefined;
   try {
-    responseText = await callLlm({
+    const r = await callLlm({
       provider,
       model,
       system: systemPrompt,
@@ -643,6 +648,8 @@ export async function generateQuestionsApiAction(
       maxTokens: estimateQuestionsMaxTokens(nontech, tech),
       cacheSystem: true,
     });
+    responseText = r.text;
+    usage = r.usage;
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -656,6 +663,10 @@ export async function generateQuestionsApiAction(
       questionCounts: { nontech, tech },
       inputChars: systemPrompt.length + user.length,
       outputChars: text.length,
+      inputTokens: usage?.inputTokens,
+      outputTokens: usage?.outputTokens,
+      cacheCreationTokens: usage?.cacheCreationTokens,
+      cacheReadTokens: usage?.cacheReadTokens,
     },
   });
   const existing = getQuestions(id);
@@ -700,8 +711,9 @@ export async function reformatQuestionsApiAction(
   }
 
   let responseText: string;
+  let usage: import("@/lib/llm/provider").LlmUsage | undefined;
   try {
-    responseText = await callLlm({
+    const r = await callLlm({
       provider,
       model,
       system: REFORMAT_SYSTEM_PROMPT,
@@ -709,6 +721,8 @@ export async function reformatQuestionsApiAction(
       // 質問本文の整形なので、元の長さと同等以上を返せるよう余裕を持たせる
       maxTokens: 8000,
     });
+    responseText = r.text;
+    usage = r.usage;
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -735,6 +749,10 @@ export async function reformatQuestionsApiAction(
         REFORMAT_SYSTEM_PROMPT.length +
         (REFORMAT_USER_PREFIX + existing.rawText).length,
       outputChars: text.length,
+      inputTokens: usage?.inputTokens,
+      outputTokens: usage?.outputTokens,
+      cacheCreationTokens: usage?.cacheCreationTokens,
+      cacheReadTokens: usage?.cacheReadTokens,
     },
   });
   bumpSession(id);
@@ -788,13 +806,16 @@ export async function summarizeMinutesApiAction(
   }
 
   let summary: string;
+  let usage: import("@/lib/llm/provider").LlmUsage | undefined;
   try {
-    summary = await callLlm({
+    const r = await callLlm({
       provider,
       model,
       system: MINUTES_SUMMARIZE_SYSTEM,
       user: MINUTES_SUMMARIZE_INSTRUCTION + minutes.text,
     });
+    summary = r.text;
+    usage = r.usage;
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -822,6 +843,10 @@ export async function summarizeMinutesApiAction(
       // 互換用: 旧キーも維持（既存ログ集計が壊れないように）
       originalChars: minutes.text.length,
       summaryChars: summary.length,
+      inputTokens: usage?.inputTokens,
+      outputTokens: usage?.outputTokens,
+      cacheCreationTokens: usage?.cacheCreationTokens,
+      cacheReadTokens: usage?.cacheReadTokens,
     },
   });
   bumpSession(id);
@@ -1132,8 +1157,9 @@ export async function evaluateInterviewApiAction(
     EVAL_OUTPUT_SCHEMA;
 
   let responseText: string;
+  let usage: import("@/lib/llm/provider").LlmUsage | undefined;
   try {
-    responseText = await callLlm({
+    const r = await callLlm({
       provider,
       model,
       system: EVAL_SYSTEM_PROMPT,
@@ -1143,6 +1169,8 @@ export async function evaluateInterviewApiAction(
       cacheSystem: true,
       jsonMode: true,
     });
+    responseText = r.text;
+    usage = r.usage;
   } catch (e) {
     return { ok: false, error: (e as Error).message };
   }
@@ -1179,6 +1207,10 @@ export async function evaluateInterviewApiAction(
       総合スコア: evalData.総合スコア,
       inputChars: EVAL_SYSTEM_PROMPT.length + user.length,
       outputChars: responseText.length,
+      inputTokens: usage?.inputTokens,
+      outputTokens: usage?.outputTokens,
+      cacheCreationTokens: usage?.cacheCreationTokens,
+      cacheReadTokens: usage?.cacheReadTokens,
     },
   });
   bumpSession(id);

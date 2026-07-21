@@ -4,10 +4,10 @@ import type { LlmStage, ProviderId } from "../types";
 import { anthropicAdapter } from "./anthropic";
 import { googleAdapter } from "./google";
 import { openaiAdapter } from "./openai";
-import type { LlmAdapter, LlmCallOptions } from "./types";
+import type { LlmAdapter, LlmCallOptions, LlmCallResult, LlmUsage } from "./types";
 
 export { LlmCallError, LlmKeyError } from "./types";
-export type { LlmCallOptions, LlmStage, ProviderId };
+export type { LlmCallOptions, LlmCallResult, LlmStage, LlmUsage, ProviderId };
 
 const ADAPTERS: Record<ProviderId, LlmAdapter> = {
   anthropic: anthropicAdapter,
@@ -52,8 +52,14 @@ export function hasKey(provider: ProviderId): boolean {
   return ADAPTERS[provider].hasKey();
 }
 
-/** プロバイダを指定して LLM 呼び出し。actions.ts が使うメインエントリ */
-export async function callLlm(opts: LlmCallOptions): Promise<string> {
+/**
+ * プロバイダを指定して LLM 呼び出し。actions.ts が使うメインエントリ。
+ *
+ * 戻り値は `{ text, usage? }`（LlmCallResult）。`usage` はプロバイダのレスポンスから
+ * 取れた真の token 数で、audit meta に書けば cost 集計が概算ではなく実測になる。
+ * プロバイダが usage を返さないケース（過去モデル・エラー等）は undefined でフォールバック。
+ */
+export async function callLlm(opts: LlmCallOptions): Promise<LlmCallResult> {
   return ADAPTERS[opts.provider].call({
     model: opts.model,
     system: opts.system,

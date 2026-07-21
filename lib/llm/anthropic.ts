@@ -1,6 +1,6 @@
 import "server-only";
 import { loadSettings } from "../storage";
-import type { LlmAdapter } from "./types";
+import type { LlmAdapter, LlmCallResult } from "./types";
 import { LlmCallError, LlmKeyError } from "./types";
 
 const API_URL = "https://api.anthropic.com/v1/messages";
@@ -45,7 +45,23 @@ export const anthropicAdapter: LlmAdapter = {
 
     const data = (await res.json()) as {
       content: Array<{ type: string; text?: string }>;
+      usage?: {
+        input_tokens?: number;
+        output_tokens?: number;
+        cache_creation_input_tokens?: number;
+        cache_read_input_tokens?: number;
+      };
     };
-    return data.content.map((c) => c.text ?? "").join("");
+    const text = data.content.map((c) => c.text ?? "").join("");
+    const result: LlmCallResult = { text };
+    if (data.usage) {
+      result.usage = {
+        inputTokens: data.usage.input_tokens ?? 0,
+        outputTokens: data.usage.output_tokens ?? 0,
+        cacheCreationTokens: data.usage.cache_creation_input_tokens,
+        cacheReadTokens: data.usage.cache_read_input_tokens,
+      };
+    }
+    return result;
   },
 };

@@ -19,13 +19,36 @@ export interface LlmCallOptions {
   jsonMode?: boolean;
 }
 
+/**
+ * LLM API 呼び出しから取得する usage 情報。真の token 数（API レスポンス由来）。
+ * cost 集計はこの値を優先し、無ければ文字数 / CHARS_PER_TOKEN で概算する。
+ */
+export interface LlmUsage {
+  /** 入力 token 数（プロバイダのレスポンスから取得） */
+  inputTokens: number;
+  /** 出力 token 数 */
+  outputTokens: number;
+  /** キャッシュ書き込み token 数（Anthropic 対応、他は 0 or undefined） */
+  cacheCreationTokens?: number;
+  /** キャッシュ読み取り token 数（Anthropic 対応、他は 0 or undefined） */
+  cacheReadTokens?: number;
+}
+
+/**
+ * LlmAdapter.call の戻り値。テキスト本文 + 真の token 数（プロバイダから取得できた場合のみ）。
+ */
+export interface LlmCallResult {
+  text: string;
+  usage?: LlmUsage;
+}
+
 export interface LlmAdapter {
   /** プロバイダ ID */
   id: ProviderId;
   /** API キーが設定されているか（環境変数 or settings ファイル） */
   hasKey(): boolean;
   /** プロバイダごとの呼び出し実装 */
-  call(opts: Omit<LlmCallOptions, "provider">): Promise<string>;
+  call(opts: Omit<LlmCallOptions, "provider">): Promise<LlmCallResult>;
 }
 
 /**

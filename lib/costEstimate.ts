@@ -11,7 +11,13 @@
 
 import "server-only";
 import { readAudit, type AuditEvent, type AuditLogEntry } from "./auditLog";
-import { estimateCost, type CostBreakdown } from "./pricing";
+import {
+  estimateCost,
+  estimateCostFromTokens,
+  type CostBreakdown,
+  type ModelPricing,
+} from "./pricing";
+import { readPricingCache } from "./pricingFetch";
 import type { ProviderId } from "./types";
 
 const LLM_EVENTS: AuditEvent[] = [
@@ -49,6 +55,11 @@ export interface CostRecord {
   cost: CostBreakdown;
   sessionId?: string;
   knownPricing: boolean;
+  /**
+   * このレコードの token 数が API レスポンス由来（実測）か文字数由来（概算）か。
+   * "real" = provider の usage フィールドから取得、"estimated" = inputChars/CHARS_PER_TOKEN で概算。
+   */
+  tokenSource: "real" | "estimated";
 }
 
 function parseMeta(entry: AuditLogEntry): {
@@ -56,6 +67,10 @@ function parseMeta(entry: AuditLogEntry): {
   model?: string;
   inputChars?: number;
   outputChars?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheCreationTokens?: number;
+  cacheReadTokens?: number;
 } {
   const m = entry.meta ?? {};
   return {
@@ -63,6 +78,12 @@ function parseMeta(entry: AuditLogEntry): {
     model: typeof m.model === "string" ? m.model : undefined,
     inputChars: typeof m.inputChars === "number" ? m.inputChars : undefined,
     outputChars: typeof m.outputChars === "number" ? m.outputChars : undefined,
+    inputTokens: typeof m.inputTokens === "number" ? m.inputTokens : undefined,
+    outputTokens: typeof m.outputTokens === "number" ? m.outputTokens : undefined,
+    cacheCreationTokens:
+      typeof m.cacheCreationTokens === "number" ? m.cacheCreationTokens : undefined,
+    cacheReadTokens:
+      typeof m.cacheReadTokens === "number" ? m.cacheReadTokens : undefined,
   };
 }
 
@@ -74,16 +95,41 @@ function parseMeta(entry: AuditLogEntry): {
  */
 export function loadCostRecords(limit = 5000): CostRecord[] {
   const entries = readAudit({ limit });
+  // Anthropic 官方 docs から自動取得したキャッシュを最優先で使う（無ければ hardcoded fallback）。
+  // 集計ループ 1 回につき cache 読みは 1 回のみ、record ごとに override として注入する。
+  const pricingCache = readPricingCache();
+  const cachedModels: Record<string, ModelPricing> = pricingCache?.models ?? {};
   const out: CostRecord[] = [];
   for (const e of entries) {
     if (!LLM_EVENTS.includes(e.event)) continue;
     const stage = EVENT_TO_STAGE[e.event];
     if (!stage) continue;
-    const { provider, model, inputChars, outputChars } = parseMeta(e);
+    const {
+      provider,
+      model,
+      inputChars,
+      outputChars,
+      inputTokens,
+      outputTokens,
+      cacheCreationTokens,
+      cacheReadTokens,
+    } = parseMeta(e);
     if (!provider || !model) continue; // 貼付モード等は記録なし
     const inCh = inputChars ?? 0;
     const outCh = outputChars ?? 0;
-    const cost = estimateCost(model, inCh, outCh);
+    const pricingOverride = cachedModels[model] ?? null;
+
+    // 真の token 数（provider の usage 由来）があればそれを使う。
+    // 無い過去ログは inputChars/CHARS_PER_TOKEN で概算にフォールバック。
+    const hasRealTokens = typeof inputTokens === "number" && typeof outputTokens === "number";
+    const cost = hasRealTokens
+      ? estimateCostFromTokens(model, inputTokens!, outputTokens!, {
+          cacheCreationTokens,
+          cacheReadTokens,
+          pricingOverride,
+        })
+      : estimateCost(model, inCh, outCh, { pricingOverride });
+
     out.push({
       ts: e.ts,
       // 月キーも Asia/Tokyo 基準。UTC で切ると月初/月末深夜の記録がズレる。
@@ -96,6 +142,7 @@ export function loadCostRecords(limit = 5000): CostRecord[] {
       cost,
       sessionId: e.sessionId,
       knownPricing: cost.totalUsd > 0 || (inCh === 0 && outCh === 0 ? false : true),
+      tokenSource: hasRealTokens ? "real" : "estimated",
     });
   }
   return out;

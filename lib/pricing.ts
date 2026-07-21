@@ -76,15 +76,17 @@ export interface CostBreakdown {
 }
 
 /**
- * 文字数 → token → コスト の換算。未知モデルは 0 を返す。
+ * 文字数 → token → コスト の換算（概算）。未知モデルは 0 を返す。
  * 単一呼び出しのコストを返す（合算は呼び出し側）。
+ * 真の token 数が API レスポンスから取れる場合は `estimateCostFromTokens` を使う。
  */
 export function estimateCost(
   model: string,
   inputChars: number,
   outputChars: number,
+  opts?: { pricingOverride?: ModelPricing | null },
 ): CostBreakdown {
-  const p = getPricing(model);
+  const p = opts?.pricingOverride ?? getPricing(model);
   const inputTokens = Math.ceil(inputChars / CHARS_PER_TOKEN);
   const outputTokens = Math.ceil(outputChars / CHARS_PER_TOKEN);
   if (!p) {
@@ -98,6 +100,58 @@ export function estimateCost(
     };
   }
   const inputUsd = (inputTokens / 1_000_000) * p.inputUsdPerMTok;
+  const outputUsd = (outputTokens / 1_000_000) * p.outputUsdPerMTok;
+  const totalUsd = inputUsd + outputUsd;
+  return {
+    inputTokens,
+    outputTokens,
+    inputUsd,
+    outputUsd,
+    totalUsd,
+    totalJpy: totalUsd * USD_TO_JPY,
+  };
+}
+
+/**
+ * 真の token 数（provider の usage 由来）からコストを算出。文字数概算より精度が高い。
+ * cache read は 0.1x 割引、cache creation は 1.25x 加算（Anthropic 5m キャッシュ料金体系）。
+ * 未知モデルは 0 を返す。
+ *
+ * `pricingOverride` を渡せば MODEL_PRICING を無視してその単価で計算する（server-only の
+ * 自動取得キャッシュから値を注入するのに使う。pricing.ts 本体は client bundle に載るため
+ * fs アクセス禁止 → 呼び出し側で cache を解決して override として渡す設計）。
+ */
+export function estimateCostFromTokens(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  opts?: {
+    cacheCreationTokens?: number;
+    cacheReadTokens?: number;
+    pricingOverride?: ModelPricing | null;
+  },
+): CostBreakdown {
+  const p = opts?.pricingOverride ?? getPricing(model);
+  if (!p) {
+    return {
+      inputTokens,
+      outputTokens,
+      inputUsd: 0,
+      outputUsd: 0,
+      totalUsd: 0,
+      totalJpy: 0,
+    };
+  }
+  // Anthropic の場合: input_tokens は「cache 以外の通常入力」の値になる。
+  // cache_creation は 1.25x、cache_read は 0.1x で個別課金。
+  const baseInputUsd = (inputTokens / 1_000_000) * p.inputUsdPerMTok;
+  const cacheCreationUsd = opts?.cacheCreationTokens
+    ? (opts.cacheCreationTokens / 1_000_000) * p.inputUsdPerMTok * 1.25
+    : 0;
+  const cacheReadUsd = opts?.cacheReadTokens
+    ? (opts.cacheReadTokens / 1_000_000) * p.inputUsdPerMTok * 0.1
+    : 0;
+  const inputUsd = baseInputUsd + cacheCreationUsd + cacheReadUsd;
   const outputUsd = (outputTokens / 1_000_000) * p.outputUsdPerMTok;
   const totalUsd = inputUsd + outputUsd;
   return {

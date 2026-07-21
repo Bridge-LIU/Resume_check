@@ -14,6 +14,61 @@ import {
   getRetentionSchedulerStatus,
   type RetentionSchedulerStatus,
 } from "@/lib/retentionScheduler";
+import { refreshPricingNow, readPricingCache } from "@/lib/pricingFetch";
+
+/**
+ * Anthropic 官方 docs から Claude 単価を即時再取得。
+ * /settings の「単価を今すぐ更新」ボタン + /cost の refresh ボタンから呼ばれる。
+ */
+export async function refreshPricingNowAction(): Promise<{
+  ok: boolean;
+  error?: string;
+  fetchedAt?: string;
+  modelCount?: number;
+}> {
+  try {
+    const cache = await refreshPricingNow();
+    revalidatePath("/settings");
+    revalidatePath("/cost");
+    return {
+      ok: true,
+      fetchedAt: cache.fetchedAt,
+      modelCount: Object.keys(cache.models).length,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * HTML `<form action={...}>` から呼ぶための void 戻り値版。
+ * UI 側で追加のクライアントコードなしでボタン → 単価再取得ができる。
+ */
+export async function refreshPricingFormAction(): Promise<void> {
+  try {
+    await refreshPricingNow();
+  } catch (e) {
+    console.error("[refreshPricingFormAction] failed:", e);
+    // form action は例外を吐くと Next.js のエラー画面になるため、握りつぶして revalidate だけ返す
+  }
+  revalidatePath("/settings");
+  revalidatePath("/cost");
+}
+
+/** 現在の単価 cache 状態を返す。UI 側で「最終更新: XX 分前」表示に使う。 */
+export async function getPricingCacheStatusAction(): Promise<{
+  fetchedAt: string | null;
+  modelCount: number;
+  source: string | null;
+}> {
+  const cache = readPricingCache();
+  if (!cache) return { fetchedAt: null, modelCount: 0, source: null };
+  return {
+    fetchedAt: cache.fetchedAt,
+    modelCount: Object.keys(cache.models).length,
+    source: cache.source,
+  };
+}
 
 export async function previewSweepAction(): Promise<PreviewItem[]> {
   return previewSweep();

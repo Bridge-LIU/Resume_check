@@ -1,6 +1,6 @@
 import "server-only";
 import { loadSettings } from "../storage";
-import type { LlmAdapter } from "./types";
+import type { LlmAdapter, LlmCallResult } from "./types";
 import { LlmCallError, LlmKeyError } from "./types";
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -51,8 +51,20 @@ export const googleAdapter: LlmAdapter = {
       candidates?: Array<{
         content?: { parts?: Array<{ text?: string }> };
       }>;
+      usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+      };
     };
     const parts = data.candidates?.[0]?.content?.parts ?? [];
-    return parts.map((p) => p.text ?? "").join("");
+    const text = parts.map((p) => p.text ?? "").join("");
+    const result: LlmCallResult = { text };
+    if (data.usageMetadata) {
+      result.usage = {
+        inputTokens: data.usageMetadata.promptTokenCount ?? 0,
+        outputTokens: data.usageMetadata.candidatesTokenCount ?? 0,
+      };
+    }
+    return result;
   },
 };

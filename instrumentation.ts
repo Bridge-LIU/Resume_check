@@ -42,4 +42,11 @@ export async function register(): Promise<void> {
   } catch (e) {
     console.error("[instrumentation] updater selfHealOnBoot failed:", e);
   }
+
+  // Claude 単価を Anthropic 官方 docs から自動取得（24h キャッシュ）。
+  // 起動をブロックしないよう background で流す（fire and forget）。
+  // 失敗しても既存 cache or hardcoded 値でアプリは動作継続する。
+  import("@/lib/pricingFetch")
+    .then((mod) => mod.ensurePricingFreshOrRefresh())
+    .catch((e) => console.error("[instrumentation] pricingFetch failed:", e));
 }

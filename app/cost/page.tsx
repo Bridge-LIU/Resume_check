@@ -17,6 +17,8 @@ import {
   fmtUsd,
   isPricingKnown,
 } from "@/lib/pricing";
+import { readPricingCache } from "@/lib/pricingFetch";
+import { refreshPricingFormAction } from "@/app/settings/actions";
 import { PROVIDERS, TIER_ICON, TIER_LABEL, type Tier } from "@/lib/llm/registry";
 import {
   Collapsible,
@@ -61,9 +63,15 @@ export default async function CostPage() {
   const records = loadCostRecords(5000);
   const total = aggregateTotal(records);
 
+  // 想定単価: Claude 3 モデル分（記録ゼロ時も fallback 値で算出可能）
+  const modelEstimates: ModelEstimate[] = CLAUDE_MODEL_ORDER.map((id) =>
+    estimateModelSetCost(id, records),
+  );
+
   if (records.length === 0) {
     return (
       <div className="space-y-4">
+        <PricingSourceCard estimates={modelEstimates} />
         <PricingPreviewCard />
         <div className="bg-card rounded-xl border shadow-sm">
           <PageHeader title="コスト実績" />
@@ -106,11 +114,6 @@ export default async function CostPage() {
       ? [...byStage].sort((a, b) => b.agg.count - a.agg.count)[0]
       : null;
 
-  // 想定単価: Claude 3 モデル分
-  const modelEstimates: ModelEstimate[] = CLAUDE_MODEL_ORDER.map((id) =>
-    estimateModelSetCost(id, records),
-  );
-
   const unknownModels = Array.from(
     new Set(records.filter((r) => !isPricingKnown(r.model)).map((r) => r.model)),
   );
@@ -127,6 +130,9 @@ export default async function CostPage() {
 
   return (
     <div className="space-y-4">
+      {/* ═══ 単価データ出典 ═══ */}
+      <PricingSourceCard estimates={modelEstimates} />
+
       {/* ═══ ヘッダ + KPI ═══ */}
       <div className="bg-card rounded-xl border shadow-sm">
         <PageHeader
@@ -711,6 +717,76 @@ function CostTable({
         })}
       </tbody>
     </table>
+  );
+}
+
+/* ─── コスト 1 行カード ─── */
+
+function PricingSourceCard({ estimates }: { estimates: ModelEstimate[] }) {
+  const cache = readPricingCache();
+  const fetchedAt = cache?.fetchedAt ?? null;
+
+  let ageLabel = "未取得";
+  if (fetchedAt) {
+    const ageMs = Date.now() - new Date(fetchedAt).getTime();
+    const min = Math.floor(ageMs / 60000);
+    if (min < 1) ageLabel = "たった今";
+    else if (min < 60) ageLabel = `${min} 分前`;
+    else if (min < 24 * 60) ageLabel = `${Math.floor(min / 60)} 時間前`;
+    else ageLabel = `${Math.floor(min / (60 * 24))} 日前`;
+  }
+
+  return (
+    <div className="bg-card border rounded-lg px-4 py-2.5 shadow-sm flex items-center gap-3 text-sm flex-wrap">
+      <span
+        className={`inline-block w-1.5 h-1.5 rounded-full ${
+          cache ? "bg-emerald-500" : "bg-amber-500"
+        }`}
+        aria-hidden
+      />
+      <span className="font-semibold">コスト</span>
+      <span className="text-xs text-muted-foreground">/ 面談 1 回</span>
+      {estimates.map((est, i) => (
+        <span key={est.model} className="inline-flex items-center gap-2">
+          {i > 0 && <span className="text-zinc-300" aria-hidden>・</span>}
+          <span className="text-zinc-700">
+            {shortModelLabel(est.model)}{" "}
+            <span className="font-bold tabular-nums">
+              {fmtJpy(est.setCost.totalJpy)}
+            </span>
+          </span>
+        </span>
+      ))}
+      <span className="ml-auto text-xs text-muted-foreground">
+        {cache ? (
+          <>
+            <a
+              href="https://platform.claude.com/docs/en/about-claude/pricing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline"
+              title={`元: ${cache.source} ・ 取得: ${fetchedAt}`}
+            >
+              最新
+            </a>
+            {" ・ "}
+            {ageLabel}
+          </>
+        ) : (
+          "目安値のみ"
+        )}
+      </span>
+      <form action={refreshPricingFormAction} className="inline-flex">
+        <button
+          type="submit"
+          className="text-zinc-400 hover:text-zinc-700 text-base leading-none"
+          title="今すぐ更新"
+          aria-label="今すぐ更新"
+        >
+          ↻
+        </button>
+      </form>
+    </div>
   );
 }
 

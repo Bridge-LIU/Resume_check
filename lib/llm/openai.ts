@@ -1,6 +1,6 @@
 import "server-only";
 import { loadSettings } from "../storage";
-import type { LlmAdapter } from "./types";
+import type { LlmAdapter, LlmCallResult } from "./types";
 import { LlmCallError, LlmKeyError } from "./types";
 
 const API_URL = "https://api.openai.com/v1/chat/completions";
@@ -50,7 +50,19 @@ export const openaiAdapter: LlmAdapter = {
 
     const data = (await res.json()) as {
       choices: Array<{ message?: { content?: string } }>;
+      usage?: {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+      };
     };
-    return data.choices[0]?.message?.content ?? "";
+    const text = data.choices[0]?.message?.content ?? "";
+    const result: LlmCallResult = { text };
+    if (data.usage) {
+      result.usage = {
+        inputTokens: data.usage.prompt_tokens ?? 0,
+        outputTokens: data.usage.completion_tokens ?? 0,
+      };
+    }
+    return result;
   },
 };
