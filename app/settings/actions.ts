@@ -140,3 +140,51 @@ export async function purgeAllFromTrashAction(): Promise<{
   revalidatePath("/trash");
   return { ok: failed.length === 0, purgedCount, failed };
 }
+
+/**
+ * ゴミ箱から指定した ID を一括復元。
+ * 途中で 1 件失敗しても他は続行し、成功件数と失敗内容をまとめて返す。
+ */
+export async function restoreMultipleFromTrashAction(ids: string[]): Promise<{
+  ok: boolean;
+  restoredCount: number;
+  failed: { id: string; error: string }[];
+}> {
+  const failed: { id: string; error: string }[] = [];
+  let restoredCount = 0;
+  for (const id of ids) {
+    try {
+      restoreFromTrash(id);
+      restoredCount++;
+    } catch (e) {
+      failed.push({ id, error: (e as Error).message });
+    }
+  }
+  revalidatePath("/");
+  revalidatePath("/list");
+  revalidatePath("/trash");
+  return { ok: failed.length === 0, restoredCount, failed };
+}
+
+/**
+ * ゴミ箱から指定した ID を一括完全削除。
+ * 途中で 1 件失敗しても他は続行し、成功件数と失敗内容をまとめて返す。
+ */
+export async function purgeMultipleFromTrashAction(ids: string[]): Promise<{
+  ok: boolean;
+  purgedCount: number;
+  failed: { id: string; error: string }[];
+}> {
+  const failed: { id: string; error: string }[] = [];
+  let purgedCount = 0;
+  for (const id of ids) {
+    try {
+      purgeFromTrash(id);
+      purgedCount++;
+    } catch (e) {
+      failed.push({ id, error: (e as Error).message });
+    }
+  }
+  revalidatePath("/trash");
+  return { ok: failed.length === 0, purgedCount, failed };
+}
