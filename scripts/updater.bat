@@ -145,6 +145,16 @@ if exist "%EXTRACT_DIR%\scripts" (
     if errorlevel 8 goto :rollback
 )
 
+REM Manual files (unicode-named HTML + folder). Delegated to PowerShell because
+REM bat files must stay ASCII per AGENTS.md (CP932 vs UTF-8 parsing hazard).
+if exist "%EXTRACT_DIR%\scripts\update-copy-manual.ps1" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%EXTRACT_DIR%\scripts\update-copy-manual.ps1" -ExtractDir "%EXTRACT_DIR%" -ProjectRoot "%PROJECT_ROOT%"
+    if errorlevel 1 (
+        call :log "[ERROR] manual copy failed"
+        goto :rollback
+    )
+)
+
 call :log "[1/3] New files installed"
 
 REM ================================================================

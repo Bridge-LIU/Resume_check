@@ -184,6 +184,7 @@ jobs:
           Copy-Item start.bat pkg/start.bat
           Copy-Item scripts/updater.bat pkg/scripts/updater.bat
           Copy-Item scripts/restore.bat pkg/scripts/restore.bat
+          Copy-Item scripts/update-copy-manual.ps1 pkg/scripts/update-copy-manual.ps1
 
           # portable Node
           Move-Item node-portable pkg/node-portable
@@ -191,6 +192,15 @@ jobs:
           # マニュアル (エンドユーザ向け統合 HTML + 資材)
           Copy-Item '運用マニュアル.HTML' 'pkg/運用マニュアル.HTML'
           Copy-Item -Recurse 'マニュアル' 'pkg/マニュアル'
+
+          # 手册 header の <span class="ver">vX.Y.Z</span> を release tag version で
+          # stamp する。手册版本 = プログラム版本を打包時に確定させる。
+          $version = '${{ github.ref_name }}' -replace '^v', ''
+          $manualPath = 'pkg/運用マニュアル.HTML'
+          $manualContent = Get-Content -LiteralPath $manualPath -Raw -Encoding UTF8
+          $manualStamped = $manualContent -replace '<span class="ver">v[^<]*</span>', ('<span class="ver">v' + $version + '</span>')
+          Set-Content -LiteralPath $manualPath -Value $manualStamped -Encoding UTF8 -NoNewline
+          Write-Host "Stamped manual version to v$version"
 
           # 既定マスタ (5 役割 + 評価条件)
           Copy-Item data/master/eval_criteria.json pkg/data/master/eval_criteria.json
