@@ -27,6 +27,8 @@ interface Props {
    */
   providers: Partial<Record<ProviderId, ProviderSafeStatus>>;
   envStatus: Partial<Record<ProviderId, boolean>>;
+  /** 保存後の URL param `?saved=<timestamp>`。値が変わるたび "✓ 設定済" バッジが 4 秒再表示される。 */
+  savedAt?: string;
 }
 
 const ACCENT_BG: Record<ProviderId, string> = {
@@ -41,7 +43,7 @@ const PILL_BG: Record<ProviderId, string> = {
   google: "bg-indigo-100 text-indigo-900",
 };
 
-export function ProvidersField({ defaultProvider, providers, envStatus }: Props) {
+export function ProvidersField({ defaultProvider, providers, envStatus, savedAt }: Props) {
   const [selectedDefault, setSelectedDefault] = useState<ProviderId>(defaultProvider);
   const { confirm, ConfirmDialog } = useConfirm();
   const sectionRef = useRef<HTMLElement>(null);
@@ -87,6 +89,7 @@ export function ProvidersField({ defaultProvider, providers, envStatus }: Props)
               hasEnvKey={!!envStatus[id]}
               confirm={confirm}
               onAutoSave={requestFormSubmit}
+              savedAt={savedAt}
             />
           );
         })}
@@ -104,6 +107,7 @@ function ProviderCard({
   hasEnvKey,
   confirm,
   onAutoSave,
+  savedAt,
 }: {
   id: ProviderId;
   info: (typeof PROVIDERS)[ProviderId];
@@ -112,6 +116,7 @@ function ProviderCard({
   hasEnvKey: boolean;
   confirm: ReturnType<typeof useConfirm>["confirm"];
   onAutoSave: () => void;
+  savedAt?: string;
 }) {
   const hasFileKey = config.hasFileKey;
   const isConfigured = hasFileKey || hasEnvKey;
@@ -141,6 +146,19 @@ function ProviderCard({
     : hasFileKey
       ? { label: "✓ 設定済", cls: "text-emerald-600" }
       : { label: "未設定", cls: "text-muted-foreground opacity-70" };
+
+  // "✓ 設定済"（file key）はレンダー後 3 秒で自動フェードアウト。
+  // savedAt は保存後の URL param で毎回異なる値になる。useEffect deps に含める
+  // ことで、Server Action 経由の保存で確実に timer が再起動する。
+  // 環境変数設定済 / 未設定は状態として常時表示。
+  const isTransientBadge = hasFileKey && !hasEnvKey;
+  const [statusVisible, setStatusVisible] = useState(true);
+  useEffect(() => {
+    if (!isTransientBadge) return;
+    setStatusVisible(true);
+    const t = setTimeout(() => setStatusVisible(false), 3000);
+    return () => clearTimeout(t);
+  }, [isTransientBadge, savedAt]);
 
   async function handleToggleEditing(checked: boolean) {
     if (checked && hasFileKey) {
@@ -190,7 +208,13 @@ function ProviderCard({
           )}
         </Label>
         <div className="flex-1"></div>
-        <span className={`text-xs ${status.cls}`}>{status.label}</span>
+        <span
+          className={`text-xs ${status.cls} transition-opacity duration-500 ${
+            isTransientBadge && !statusVisible ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          {status.label}
+        </span>
       </div>
 
       <div className="grid grid-cols-[100px_1fr] gap-2 items-center">

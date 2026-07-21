@@ -144,15 +144,17 @@ async function updateSettings(formData: FormData) {
     redirect(`/settings?error=${encodeURIComponent(msg)}`);
   }
   revalidatePath("/settings");
-  redirect("/settings");
+  // saved=<timestamp> は ProvidersField の "✓ 設定済" バッジ 4 秒表示のトリガ。
+  // 毎保存で新しい値になるため、client の useEffect deps が確実に再実行される。
+  redirect(`/settings?saved=${Date.now()}`);
 }
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
-  const { error: errorMsg } = await searchParams;
+  const { error: errorMsg, saved: savedAt } = await searchParams;
   const s = loadSettings();
   const trashCount = listTrash().length;
   // 画面には key そのものは出さない。設定済かどうかと、環境変数優先かのみ表示。
@@ -194,6 +196,7 @@ export default async function Page({
               defaultProvider={s.defaultProvider}
               providers={providersSafe}
               envStatus={envStatus}
+              savedAt={savedAt}
             />
 
             {/* 質問生成数 — prompt と maxTokens 上限が両方この値から自動算出される */}

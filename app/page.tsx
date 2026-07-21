@@ -181,8 +181,8 @@ export default async function HomePage() {
               次にやること
             </div>
             <ol className="space-y-1.5 text-sm">
-              <NextStep num="1" label="求人情報を確認" href="/master" />
-              <NextStep num="2" label="＋ 面談を作成" href="/new" active />
+              <NextStep num="1" label="求人情報を確認" href="/master" active />
+              <NextStep num="2" label="＋ 面談を作成" href="/new" />
               <NextStep num="3" label="面談者情報 / 求める人材条件 を入力" />
               <NextStep num="4" label="質問リストを AI に生成させる / 貼付する" />
               <NextStep num="5" label="面談内容を貼付 → 評価結果を確認" />
@@ -419,11 +419,13 @@ function NextStep({
   label,
   href,
   active,
+  done,
 }: {
   num: string;
   label: string;
   href?: string;
   active?: boolean;
+  done?: boolean;
 }) {
   const li = (
     <li
@@ -435,12 +437,26 @@ function NextStep({
       <span
         className={
           "w-6 h-6 rounded-full flex items-center justify-center text-2xs font-bold shrink-0 " +
-          (active ? "bg-emerald-600 text-white" : "bg-muted text-muted-foreground")
+          (done
+            ? "bg-emerald-600/20 text-emerald-700 dark:text-emerald-300"
+            : active
+            ? "bg-emerald-600 text-white"
+            : "bg-muted text-muted-foreground")
         }
       >
-        {num}
+        {done ? "✓" : num}
       </span>
-      <span className={active ? "font-medium" : "text-muted-foreground"}>{label}</span>
+      <span
+        className={
+          done
+            ? "text-muted-foreground line-through"
+            : active
+            ? "font-medium"
+            : "text-muted-foreground"
+        }
+      >
+        {label}
+      </span>
       {href && (
         <>
           <div className="flex-1" />
