@@ -38,7 +38,22 @@ yarn-error.log*
 !.env*.example
 
 # 機密：PII（履歴書・面談内容・評価）＋ APIキー含む設定。ローカル保存、git には上げない
-/data/
+# 例外として配布 pkg に同梱する既定マスタ（5 役割 + 評価条件）のみ追跡する。
+# gitignore の仕様上、親ディレクトリを exclude すると子の再包含が効かないため、
+# /data/* + /data/master/roles/* で「内容」を除外しつつ、必要なファイル/ディレクトリ
+# を明示的に unmask する構造にする。開発者ローカルで書き換えた内容が誤って push
+# されないよう git add 時に注意。
+/data/*
+!/data/master/
+/data/master/*
+!/data/master/eval_criteria.json
+!/data/master/roles/
+/data/master/roles/*
+!/data/master/roles/Dev.json
+!/data/master/roles/ITSupport.json
+!/data/master/roles/NW.json
+!/data/master/roles/PMO.json
+!/data/master/roles/Server.json
 
 # 履歴書抽出のローカル検証用サンプル（scripts/dev/gen-resume-samples.mjs 自動生成）
 /test-files/

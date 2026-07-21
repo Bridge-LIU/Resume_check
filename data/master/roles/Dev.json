@@ -1,0 +1,22 @@
+{
+  "id": "Dev",
+  "役割": "開発（アプリケーション）",
+  "経験": "1年以上",
+  "未経験可": true,
+  "条件1_基本人物像": [
+    "JavaScript / TypeScript / Python / Java / Go いずれかでの実務開発経験",
+    "React / Vue / Next.js / Spring Boot / Django 等のフレームワーク経験",
+    "Git / GitHub / GitLab を使ったチーム開発、Pull Request レビュー経験",
+    "RDBMS（MySQL / PostgreSQL 等）を使った SQL 設計・チューニング経験",
+    "REST API / GraphQL の設計・実装経験",
+    "ユニットテスト（Jest / pytest / JUnit 等）の実装習慣",
+    "CI/CD（GitHub Actions / CircleCI / Jenkins 等）に触れた経験",
+    "Agile / スクラム開発の参加経験"
+  ],
+  "条件2_未経験者必須": [
+    "何らかのプログラミング言語での学習経験（スクール・独学・大学問わず）",
+    "Git / GitHub の基本操作（clone / commit / push / PR）ができる",
+    "簡単な HTML / CSS / JavaScript で Web ページを作った経験",
+    "英語ドキュメント（公式ドキュメント・Stack Overflow）を読む姿勢"
+  ]
+}

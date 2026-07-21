@@ -1,0 +1,16 @@
+{
+  "id": "Server",
+  "役割": "サーバ / インフラ",
+  "経験": "2年",
+  "未経験可": false,
+  "条件1_基本人物像": [
+    "Linux（RHEL / CentOS / Ubuntu）または Windows Server の構築・運用経験",
+    "AWS / Azure / GCP のいずれかで EC2 / VPC / RDS 相当の運用経験",
+    "ミドルウェア（Nginx / Apache / MySQL / PostgreSQL 等）の設定・チューニング経験",
+    "Ansible / Terraform 等の IaC / 構成管理ツールでの自動化経験",
+    "Zabbix / Prometheus / CloudWatch 等での監視・アラート設計経験",
+    "シェルスクリプト・Python での運用自動化経験",
+    "夜間バッチ・パッチ適用・障害対応（オンコール）に対応できる"
+  ],
+  "条件2_未経験者必須": []
+}
